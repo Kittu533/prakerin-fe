@@ -1,168 +1,103 @@
-<script setup lang="ts">
-import type { FormSubmitEvent, AuthFormField } from "@nuxt/ui";
-import * as z from "zod";
-import { loginUser } from "~/composables/consume-api-auth/account/auth.login";
-import { useRouter } from "#app";
-import { useDataStore } from "~/stores/data-store";
-
-const fields = ref<AuthFormField[]>([
-  {
-    name: "email",
-    type: "text",
-    label: "Email/NIS",
-    placeholder: "Masukkan email atau NIS Anda",
-    required: true,
-  },
-  {
-    name: "password",
-    type: "password",
-    label: "Password",
-    placeholder: "Masukkan kata sandi Anda",
-    required: true,
-  },
-]);
-
-const schema = z.object({
-  email: z.email("Email tidak valid"),
-  password: z
-    .string("Kata sandi wajib diisi")
-    .min(8, "Minimal 8 karakter"),
-});
-
-type Schema = z.output<typeof schema>;
-
-const router = useRouter();
-const loading = ref(false);
-const error = ref<string | null>(null);
-const dataStore = useDataStore();
-
-function onSubmit(payload: FormSubmitEvent<Schema>) {
-  loading.value = true;
-  error.value = null;
-  
-  const loginData = {
-    email: payload.data.email,
-    password: payload.data.password
-  };
-
-  loginUser(loginData)
-    .then((response) => {
-      if (response.data.success) {
-        console.log("Berhasil login", response.data);
-        
-        // Store user data and tokens in the store
-        const { user, accessToken, refreshToken } = response.data.data;
-        
-        // Set user profile
-        dataStore.setProfile(user);
-        
-        // Set tokens - the store expects signature as well, we'll use empty strings for now
-        // if signatures are needed, they should be part of the response from the API
-        dataStore.setToken(accessToken, '');
-        if (refreshToken) {
-          dataStore.setRefreshToken(refreshToken);
-        }
-        
-        // Redirect to dashboard or home page
-        router.push('/dashboard');
-      } else {
-        error.value = response.data.message || 'Login gagal';
-      }
-    })
-    .catch((err) => {
-      console.error("Login failed", err);
-      error.value = err?.response?.data?.message || 'Terjadi kesalahan saat login';
-    })
-    .finally(() => {
-      loading.value = false;
-    });
-}
-
-definePageMeta({
-  layout: "default",
-});
-
-useHead({
-  title: "Login - SIM Prakerin",
-});
-</script>
-
 <template>
-  <div class="min-h-screen flex bg-white">
-    <!-- Left Aside Panel -->
-    <div class="hidden md:flex md:w-1/2 bg-gradient-to-br from-blue-600 to-blue-800 p-12 flex-col justify-between">
-      <div>
-        <div class="flex items-center mb-12">
-          <div class="w-10 h-10 bg-white rounded-lg flex items-center justify-center mr-3">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-            </svg>
-          </div>
-          <h1 class="text-2xl font-bold text-white">SIM Prakerin</h1>
-        </div>
-        
-        <h2 class="text-3xl font-bold text-white mb-6">Selamat Datang Kembali</h2>
-        <p class="text-blue-100 mb-8 max-w-md">
-          Sistem Informasi Manajemen Praktik Kerja Industri untuk memudahkan pengelolaan kegiatan prakerin bagi siswa, guru pembimbing, dan instansi mitra.
-        </p>
-        
-        <div class="mt-12 grid grid-cols-3 gap-4">
-          <div class="bg-blue-500 bg-opacity-30 p-4 rounded-lg text-center">
-            <div class="text-white text-2xl font-bold">150+</div>
-            <div class="text-blue-100 text-sm">Siswa</div>
-          </div>
-          <div class="bg-blue-500 bg-opacity-30 p-4 rounded-lg text-center">
-            <div class="text-white text-2xl font-bold">25+</div>
-            <div class="text-blue-100 text-sm">Instansi</div>
-          </div>
-          <div class="bg-blue-500 bg-opacity-30 p-4 rounded-lg text-center">
-            <div class="text-white text-2xl font-bold">15+</div>
-            <div class="text-blue-100 text-sm">Guru</div>
-          </div>
-        </div>
-      </div>
-      
-      <div class="relative">
-        <img 
-          src="~/assets/img/logo-skanda.png" 
-          alt="SIM Prakerin Logo" 
-          class="w-48 h-48 object-contain opacity-20"
-        >
-        <div class="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-blue-800 to-transparent"></div>
+  <div class="flex h-screen">
+    <!-- Left Pane -->
+    <div class="hidden lg:flex items-center justify-center flex-1 bg-blue-50">
+      <div class="max-w-md text-center">
+        <svg xmlns="http://www.w3.org/2000/svg" width="524.67004" height="531.39694" class="w-full" viewBox="0 0 524.67004 531.39694">
+          <polygon points="117.67523 88.74385 113.67523 109.74385 133.61763 115.36589 131.1398 92.94604 117.67523 88.74385" fill="#60a5fa" />
+          <path d="M0,523.44458c0,.66003,.53003,1.19,1.19006,1.19H523.48004c.65997,0,1.19-.52997,1.19-1.19,0-.65997-.53003-1.19-1.19-1.19H1.19006c-.66003,0-1.19006,.53003-1.19006,1.19Z" fill="#1e40af" />
+          <g>
+            <path d="M356.03772,238.30865H150.36885c-23.32296,0-42.22995,18.90698-42.22995,42.22995v199.43289c0,23.32291,18.90695,42.22986,42.22986,42.22986h205.66896c23.32297,0,42.22995-18.90698,42.22995-42.22995v-199.43283c0-23.32297-18.90698-42.22995-42.22995-42.22995v.00003Z" fill="#fff" />
+            <path d="M356.03781,523.20093H150.36888c-23.83691,0-43.22998-19.39258-43.22998-43.22949v-199.43262c0-23.83691,19.39307-43.22998,43.22998-43.22998h205.66896c23.83691,0,43.22998,19.39307,43.22998,43.22998v199.43262c0,23.83691-19.39307,43.22949-43.22998,43.22949h-.00003ZM150.36888,239.30882c-22.73438,0-41.22998,18.49562-41.22998,41.23v199.43262c0,22.73438,18.49561,41.22949,41.22998,41.22949h205.66896c22.73438,0,41.22998-18.49512,41.22998-41.22949v-199.43262c0-22.73438-18.49561-41.22998-41.22998-41.22998H150.36888v-.00002Z" fill="#1e40af" />
+            <path d="M370.93558,324.77005h-82.66788c-3.50635,0-6.35907-2.85272-6.35907-6.35907s2.85272-6.35907,6.35907-6.35907h82.66785c3.50635,0,6.35907,2.85272,6.35907,6.35907s-2.85272,6.35907-6.35907,6.35907h.00003Z" fill="#2563eb" />
+            <path d="M293.3822,374.77737h-80.3571c-2.02586,0-3.67427-1.64841-3.67427-3.67429s1.64841-3.67352,3.67427-3.67352h80.3571c2.02588,0,3.67352,1.64764,3.67352,3.67352s-1.64764,3.67426-3.67352,3.67426v.00003Z" fill="#2563eb" />
+            <rect x="133.61763" y="251.96666" width="46.49806" height="5.96129" rx=".31021" ry=".31021" fill="#2563eb" />
+            <circle cx="334.3363" cy="253.15892" r="4.76904" fill="#1e40af" />
+            <circle cx="347.45114" cy="253.15892" r="4.76904" fill="#1e40af" />
+            <circle cx="360.56598" cy="253.15892" r="4.76904" fill="#1e40af" />
+            <path d="M149.86826,394.44458c0,.66003,.53003,1.19,1.19006,1.19h204.28998c.65997,0,1.19-.52997,1.19-1.19,0-.65997-.53003-1.19-1.19-1.19H151.05832c-.66003,0-1.19006,.53003-1.19006,1.19Z" fill="#1e40af" />
+          </g>
+          <g>
+            <path d="M212.17296,100.91704c4.34915-3.59367,9.72871-4.26258,12.0153-1.49438,2.28658,2.7682,.6142,7.92447-3.73698,11.51883-1.71841,1.45964-3.76141,2.48653-5.95805,2.99474l-18.6198,14.99379-6.8499-8.8877,19.08307-13.83763c.91373-2.06202,2.30807-3.87516,4.06638-5.28765h-.00002Z" fill="#60a5fa" />
+            <circle cx="124.1365" cy="80.64255" r="21.99265" fill="#60a5fa" />
+          </g>
+        </svg>
       </div>
     </div>
-    
-    <!-- Login Form Panel -->
-    <div class="w-full md:w-1/2 flex items-center justify-center p-6 lg:p-8">
-      <div class="w-full max-w-md">
-        <div class="text-center mb-10 md:hidden">
-          <h1 class="text-2xl font-bold text-gray-800">SIM Prakerin</h1>
-          <p class="text-gray-600 mt-2">Masuk ke akun Anda</p>
+
+    <!-- Right Pane -->
+    <div class="w-full bg-white lg:w-1/2 flex items-center justify-center">
+      <div class="max-w-md w-full p-6">
+        <h1 class="text-3xl font-semibold mb-6 text-blue-900 text-center">Sign Up</h1>
+        <h2 class="text-sm font-semibold mb-6 text-gray-500 text-center">
+          Join to Our Community with all time access and free
+        </h2>
+        <form @submit.prevent="handleSubmit" class="space-y-4 mt-4">
+          <div>
+            <label for="username" class="block text-sm font-medium text-gray-700">Username</label>
+            <input
+              type="text"
+              id="username"
+              v-model="form.username"
+              class="mt-1 p-2 w-full border border-gray-300 rounded-md focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-300"
+            />
+          </div>
+
+          <div>
+            <label for="email" class="block text-sm font-medium text-gray-700">Email</label>
+            <input
+              type="email"
+              id="email"
+              v-model="form.email"
+              class="mt-1 p-2 w-full border border-gray-300 rounded-md focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-300"
+            />
+          </div>
+
+          <div>
+            <label for="password" class="block text-sm font-medium text-gray-700">Password</label>
+            <input
+              type="password"
+              id="password"
+              v-model="form.password"
+              class="mt-1 p-2 w-full border border-gray-300 rounded-md focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-300"
+            />
+          </div>
+
+          <div>
+            <button
+              type="submit"
+              class="w-full bg-blue-600 text-white p-2 rounded-md hover:bg-blue-700 focus:outline-none focus:bg-blue-700 focus:ring-2 focus:ring-offset-2 focus:ring-blue-600 transition-colors duration-300"
+            >
+              Sign Up
+            </button>
+          </div>
+        </form>
+
+        <div class="mt-4 text-sm text-gray-600 text-center">
+          <p>
+            Already have an account?
+            <NuxtLink to="/login" class="text-blue-600 hover:underline font-medium">
+              Login here
+            </NuxtLink>
+          </p>
         </div>
-        
-        <UPageCard class="w-full max-w-md bg-white rounded-2xl shadow-lg p-6 sm:p-8">
-          <UAuthForm
-            :schema="schema"
-            title="Masuk ke Akun"
-            description="Silakan masukkan kredensial Anda untuk melanjutkan"
-            icon="i-lucide-user"
-            :fields="fields"
-            :loading="loading"
-            @submit="onSubmit"
-          >
-            <div v-if="error" class="mb-4 p-3 bg-red-50 text-red-700 rounded-lg text-sm">
-              {{ error }}
-            </div>
-            <template #footer>
-              <div class="text-center mt-6">
-                <p class="text-gray-500 text-xs mt-4">
-                  © 2025 SIM Prakerin. Hak Cipta Dilindungi.
-                </p>
-              </div>
-            </template>
-          </UAuthForm>
-        </UPageCard>
       </div>
     </div>
   </div>
 </template>
+
+<script setup lang="ts">
+const form = reactive({
+  username: '',
+  email: '',
+  password: ''
+})
+
+const handleSubmit = () => {
+  navigateTo('/siswa')
+}
+</script>
+
+<style scoped>
+/* Additional custom styles if needed */
+</style>
