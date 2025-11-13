@@ -2,7 +2,7 @@
 import type { Config } from 'tailwindcss'
 
 export default <Partial<Config>>{
-  darkMode: 'class',
+  darkMode: 'media', // Disable dark mode support
   theme: {
     extend: {
       colors: {
