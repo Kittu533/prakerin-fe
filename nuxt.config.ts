@@ -27,6 +27,15 @@ export default defineNuxtConfig({
     "@nuxtjs/google-fonts",
     "@vueuse/nuxt",
   ],
+  ui: {
+    theme: {
+      colors: ['primary', 'success', 'warning', 'error']
+    }
+  },
+  colorMode: {
+    preference: 'light',
+    fallback: 'light'
+  },
   googleFonts: {
     families: { Manrope: [400, 700, 800] },
     display: 'swap',

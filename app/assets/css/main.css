@@ -1,4 +1,17 @@
 @import "tailwindcss";
 @import "@nuxt/ui";
 
+body {
+  @apply bg-white;
+}
+
+html {
+  @apply bg-white;
+}
+
+/* Override Nuxt UI dark mode */
+.dark {
+  @apply !bg-white;
+}
+
 
