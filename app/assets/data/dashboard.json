@@ -1,0 +1,99 @@
+{
+  "guru": {
+    "nama": "Bapak Agus Supriyanto, S.Pd.",
+    "inisial": "AS",
+    "role": "Guru Pembimbing PKL"
+  },
+  "summary": {
+    "jumlahSiswaAktif": 12,
+    "jumlahPenempatan": 15,
+    "rataRataKehadiran": 92.3,
+    "logbookPending": 7,
+    "absensiPending": 4
+  },
+  "logbookPending": [
+    {
+      "idLogbook": 201,
+      "namaSiswa": "Ahmad Fajar",
+      "kelas": "XII TM A",
+      "perusahaan": "PT Maju Jaya Teknik",
+      "tanggal": "18-03-2026",
+      "judul": "Pendampingan servis berkala motor matic",
+      "status": "MENUNGGU"
+    },
+    {
+      "idLogbook": 202,
+      "namaSiswa": "Siti Aminah",
+      "kelas": "XII TM B",
+      "perusahaan": "Bengkel Sejahtera Motor",
+      "tanggal": "17-03-2026",
+      "judul": "Pemeriksaan sistem rem & oli",
+      "status": "MENUNGGU"
+    },
+    {
+      "idLogbook": 203,
+      "namaSiswa": "Budi Santoso",
+      "kelas": "XII TM A",
+      "perusahaan": "PT Nusantara Motor",
+      "tanggal": "17-03-2026",
+      "judul": "Briefing keselamatan kerja & housekeeping",
+      "status": "MENUNGGU"
+    },
+    {
+      "idLogbook": 204,
+      "namaSiswa": "Rina Kartika",
+      "kelas": "XII TM C",
+      "perusahaan": "CV Prima Motor",
+      "tanggal": "16-03-2026",
+      "judul": "Pencatatan sparepart masuk",
+      "status": "MENUNGGU"
+    },
+    {
+      "idLogbook": 205,
+      "namaSiswa": "Doni Saputra",
+      "kelas": "XII TM B",
+      "perusahaan": "Bengkel Sejahtera Motor",
+      "tanggal": "16-03-2026",
+      "judul": "Pengecekan motor sebelum serah terima ke pelanggan",
+      "status": "MENUNGGU"
+    }
+  ],
+  "absensiIssue": [
+    {
+      "idAbsensi": 501,
+      "namaSiswa": "Ahmad Fajar",
+      "kelas": "XII TM A",
+      "perusahaan": "PT Maju Jaya Teknik",
+      "tanggal": "18-03-2026",
+      "jamMasuk": "08:35",
+      "jamKeluar": "16:00",
+      "statusAbsensi": "HADIR",
+      "statusGuru": "MENUNGGU",
+      "isBermasalah": true
+    },
+    {
+      "idAbsensi": 502,
+      "namaSiswa": "Budi Santoso",
+      "kelas": "XII TM A",
+      "perusahaan": "PT Nusantara Motor",
+      "tanggal": "17-03-2026",
+      "jamMasuk": "08:05",
+      "jamKeluar": "-",
+      "statusAbsensi": "HADIR",
+      "statusGuru": "MENUNGGU",
+      "isBermasalah": true
+    },
+    {
+      "idAbsensi": 503,
+      "namaSiswa": "Rina Kartika",
+      "kelas": "XII TM C",
+      "perusahaan": "CV Prima Motor",
+      "tanggal": "17-03-2026",
+      "jamMasuk": "-",
+      "jamKeluar": "-",
+      "statusAbsensi": "IZIN",
+      "statusGuru": "MENUNGGU",
+      "isBermasalah": false
+    }
+  ]
+}

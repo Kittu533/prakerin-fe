@@ -1,37 +1,41 @@
 <template>
-  <header class="w-full bg-white shadow-sm">
-    <div class="flex items-center justify-between px-3 sm:px-6 md:px-8 py-3">
-      <!-- Hamburger + Logo kiri -->
-      <div class="flex items-center gap-3">
-        <!-- Hamburger button (mobile only) -->
+  <header class="sticky top-0 z-40 w-full bg-white/95 border-b border-gray-200 backdrop-blur-sm">
+    <div class="flex items-center justify-between px-4 sm:px-6 lg:px-8 py-3.5">
+      <div class="flex items-center gap-4">
+        <!-- Hamburger Menu - Now visible on all screen sizes -->
         <button
           @click="toggleSidebar"
-          class="lg:hidden flex items-center justify-center w-10 h-10 rounded-lg hover:bg-gray-100 transition-colors"
+          class="flex items-center justify-center w-10 h-10 rounded-xl hover:bg-gray-100 active:bg-gray-200 transition-all duration-200 lg:hover:bg-gray-50"
           aria-label="Toggle Sidebar"
+          title="Toggle Sidebar"
         >
-          <svg class="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
-          </svg>
+          <UIcon name="i-heroicons-bars-3" class="w-6 h-6 text-gray-700" />
         </button>
-        
-        <img
-          src="../assets/img/logo-skanda.png"
-          alt="Logo Sekolah"
-          class="h-10 w-10 object-contain"
-        />
+
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center shadow-sm">
+            <span class="text-white font-bold text-lg">S</span>
+          </div>
+          <div class="hidden sm:block">
+            <h1 class="text-sm font-semibold text-gray-900">SIMPRAKERIN</h1>
+            <p class="text-xs text-gray-500">SMK N 2 Wonogiri</p>
+          </div>
+        </div>
       </div>
 
-      <!-- Nama user kanan -->
       <div class="flex items-center gap-3">
-        <span class="text-sm font-medium text-slate-600">
-          Ryobi Surya Atmaja
-        </span>
+        <UButton icon="i-heroicons-bell" color="gray" variant="ghost" size="lg" class="hidden sm:flex" />
 
-        <div
-          class="flex h-10 w-10 items-center justify-center rounded-full bg-blue-500"
-        >
-          <!-- placeholder avatar/logo -->
-          <span class="text-xs font-semibold text-white">RS</span>
+        <div class="flex items-center gap-3 px-3 py-1.5 rounded-xl hover:bg-gray-50 transition-colors cursor-pointer">
+          <div class="hidden md:block text-right">
+            <p class="text-sm font-medium text-gray-900">Ryobi Surya Atmaja</p>
+            <p class="text-xs text-gray-500">XII TM A</p>
+          </div>
+          <UAvatar
+            text="RS"
+            size="md"
+            :ui="{ background: 'bg-gradient-to-br from-emerald-500 to-emerald-600' }"
+          />
         </div>
       </div>
     </div>
@@ -43,6 +47,5 @@ const emit = defineEmits(['toggle-sidebar'])
 
 const toggleSidebar = () => {
   emit('toggle-sidebar')
-  console.log('🍔 Hamburger menu clicked')
 }
 </script>

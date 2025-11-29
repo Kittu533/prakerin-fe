@@ -1,41 +1,46 @@
 <!-- layouts/siswa.vue -->
 <template>
-  <div class="min-h-screen bg-white">
+  <div class="bg-[#f5f5f5]">
     <!-- Header -->
     <AppHeader 
       :user-name="userName"
       :school-name="schoolName"
-      @toggle-sidebar="isSidebarOpen = !isSidebarOpen"
+      @toggle-sidebar="toggleSidebar"
     />
 
     <!-- Main Content Area -->
-    <div class="flex flex-col lg:flex-row relative">
+    <div class="flex">
       <!-- Overlay untuk mobile -->
       <Transition name="fade">
         <div 
-          v-if="isSidebarOpen"
-          @click="isSidebarOpen = false"
-          class="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          v-if="isMobileSidebarOpen && !isDesktop"
+          @click="closeMobileSidebar"
+          class="fixed inset-0 bg-black/50 z-40"
         >
         </div>
       </Transition>
 
-      <!-- Sidebar -->
+      <!-- Sidebar - Responsive behavior -->
+      <!-- Desktop: Always show sidebar, but can be minimized via AppSidebar toggle -->
+      <div class="hidden lg:block">
+        <AppSidebar />
+      </div>
+
+      <!-- Mobile Sidebar - Show/hide via hamburger menu -->
       <Transition name="slide">
         <div 
-          v-show="isSidebarOpen || isDesktop"
-          class="fixed left-0 top-0 h-full z-50 lg:relative lg:z-0"
+          v-show="isMobileSidebarOpen && !isDesktop"
+          class="fixed left-0 top-0 h-screen z-50 lg:hidden"
         >
-          <AppSidebar 
-            :user-name="userName"
-            :user-class="userClass"
-          />
+          <AppSidebar />
         </div>
       </Transition>
 
       <!-- Content -->
-      <main class="flex-1 p-3 sm:p-4 md:p-6">
-        <slot />
+      <main class="flex-1 min-h-screen overflow-x-hidden">
+        <div class="p-3 sm:p-4 md:p-6 lg:p-8">
+          <slot />
+        </div>
       </main>
     </div>
   </div>
@@ -49,21 +54,57 @@ const userName = ref('Ryobi Surya Atmaja')
 const userClass = ref('XII TM A')
 const schoolName = ref('SMK N 2 Wonogiri')
 
-// Sidebar state
-const isSidebarOpen = ref(false)
-const isDesktop = ref(false)
-
-const checkScreenSize = () => {
-  isDesktop.value = window.innerWidth >= 1024 // lg breakpoint
-}
+// Use sidebar composable
+const {
+  isMobileSidebarOpen,
+  isDesktopSidebarMinimized,
+  isDesktop,
+  toggleSidebar,
+  closeMobileSidebar,
+  updateScreenSize,
+  initializeDesktopSidebar
+} = useSidebar()
 
 onMounted(() => {
-  checkScreenSize()
-  window.addEventListener('resize', checkScreenSize)
+  updateScreenSize()
+  initializeDesktopSidebar()
+  window.addEventListener('resize', updateScreenSize)
+  
+  // Debug scroll issues
+  console.log('Layout mounted, checking scroll behavior...')
+  console.log('Document body height:', document.body.scrollHeight)
+  console.log('Window height:', window.innerHeight)
+  console.log('Document overflow:', getComputedStyle(document.documentElement).overflow)
+  console.log('Body overflow:', getComputedStyle(document.body).overflow)
+  
+  // Check main content area
+  setTimeout(() => {
+    const mainElement = document.querySelector('main')
+    const layoutContainer = document.querySelector('.h-screen')
+    
+    if (mainElement) {
+      console.log('Main element found:')
+      console.log('- ScrollHeight:', mainElement.scrollHeight)
+      console.log('- ClientHeight:', mainElement.clientHeight)
+      console.log('- OverflowY:', getComputedStyle(mainElement).overflowY)
+      console.log('- Position:', getComputedStyle(mainElement).position)
+    } else {
+      console.log('Main element not found!')
+    }
+    
+    if (layoutContainer) {
+      console.log('Layout container found:')
+      console.log('- ScrollHeight:', layoutContainer.scrollHeight)
+      console.log('- ClientHeight:', layoutContainer.clientHeight)
+      console.log('- OverflowY:', getComputedStyle(layoutContainer).overflowY)
+    } else {
+      console.log('Layout container not found!')
+    }
+  }, 100)
 })
 
 onUnmounted(() => {
-  window.removeEventListener('resize', checkScreenSize)
+  window.removeEventListener('resize', updateScreenSize)
 })
 </script>
 

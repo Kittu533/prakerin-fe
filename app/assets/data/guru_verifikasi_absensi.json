@@ -1,0 +1,46 @@
+{
+  "items": [
+    {
+      "id": 1,
+      "namaSiswa": "Ahmad Fajar",
+      "kelas": "XII TM A",
+      "perusahaan": "PT Maju Jaya Teknik",
+      "tanggal": "2026-03-18",
+      "jamMasuk": "08:35",
+      "jamKeluar": "16:00",
+      "statusAbsensi": "HADIR",
+      "statusGuru": "MENUNGGU",
+      "statusMentor": "DISETUJUI",
+      "metode": "GPS",
+      "catatan": "Datang terlambat karena hujan deras."
+    },
+    {
+      "id": 2,
+      "namaSiswa": "Siti Aminah",
+      "kelas": "XII TM B",
+      "perusahaan": "Bengkel Sejahtera Motor",
+      "tanggal": "2026-03-17",
+      "jamMasuk": "08:05",
+      "jamKeluar": "15:50",
+      "statusAbsensi": "HADIR",
+      "statusGuru": "MENUNGGU",
+      "statusMentor": "DISETUJUI",
+      "metode": "FACE_RECOGNITION",
+      "catatan": ""
+    },
+    {
+      "id": 3,
+      "namaSiswa": "Budi Santoso",
+      "kelas": "XII TM A",
+      "perusahaan": "PT Nusantara Motor",
+      "tanggal": "2026-03-17",
+      "jamMasuk": "-",
+      "jamKeluar": "-",
+      "statusAbsensi": "IZIN",
+      "statusGuru": "MENUNGGU",
+      "statusMentor": "DISETUJUI",
+      "metode": "MANUAL",
+      "catatan": "Izin karena urusan keluarga."
+    }
+  ]
+}

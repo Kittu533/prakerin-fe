@@ -1,0 +1,52 @@
+[
+  {
+    "id": 1,
+    "tanggal": "2024-11-25",
+    "jamMulai": "08:00",
+    "jamSelesai": "16:00",
+    "aktivitas": "Melakukan instalasi dan konfigurasi server Ubuntu 22.04 LTS. Setup network interface, firewall rules, dan basic security hardening untuk production environment.",
+    "status": "Sudah ACC",
+    "pembimbing": "Lihat Verifikasi",
+    "mitra": "Lihat Verifikasi"
+  },
+  {
+    "id": 2,
+    "tanggal": "2024-11-26",
+    "jamMulai": "08:30",
+    "jamSelesai": "15:30",
+    "aktivitas": "Maintenance database PostgreSQL, backup data harian, optimisasi query performance, dan monitoring system resources untuk aplikasi web perusahaan.",
+    "status": "Menunggu ACC",
+    "pembimbing": "Lihat Verifikasi",
+    "mitra": "Belum Verifikasi"
+  },
+  {
+    "id": 3,
+    "tanggal": "2024-11-27",
+    "jamMulai": "09:00",
+    "jamSelesai": "16:30",
+    "aktivitas": "Pengembangan fitur baru pada aplikasi mobile menggunakan React Native. Implementasi authentication system dengan JWT dan integrasi API REST.",
+    "status": "Sudah ACC",
+    "pembimbing": "Lihat Verifikasi",
+    "mitra": "Lihat Verifikasi"
+  },
+  {
+    "id": 4,
+    "tanggal": "2024-11-28",
+    "jamMulai": "08:15",
+    "jamSelesai": "17:00",
+    "aktivitas": "Testing dan debugging aplikasi web frontend. Code review dengan senior developer, perbaikan UI/UX berdasarkan feedback user testing.",
+    "status": "Menunggu ACC",
+    "pembimbing": "Belum Verifikasi",
+    "mitra": "Belum Verifikasi"
+  },
+  {
+    "id": 5,
+    "tanggal": "2024-11-29",
+    "jamMulai": "08:00",
+    "jamSelesai": "16:00",
+    "aktivitas": "Dokumentasi project dan presentasi progress kepada mentor. Persiapan deployment ke staging environment menggunakan Docker containers.",
+    "status": "Menunggu ACC",
+    "pembimbing": "Lihat Verifikasi",
+    "mitra": "Belum Verifikasi"
+  }
+]

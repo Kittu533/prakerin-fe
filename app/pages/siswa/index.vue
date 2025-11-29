@@ -1,6 +1,6 @@
 <!-- pages/siswa/program.vue -->
 <template>
-  <div>
+  <div >
     <!-- Welcome Card -->
     <div class="bg-gradient-to-r from-blue-500 to-blue-600 rounded-2xl p-8 text-white shadow-lg">
       <div class="flex items-center justify-between">
@@ -28,6 +28,7 @@
 </template>
 
 <script setup>
+
 definePageMeta({
   layout: 'siswa'
 })
