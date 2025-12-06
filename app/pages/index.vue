@@ -49,6 +49,37 @@
             Mohon tunggu sebentar...
           </p>
         </div>
+        
+        <!-- Quick Access for Testing -->
+        <div class="mt-8 p-4 bg-gray-50 rounded-xl">
+          <p class="text-xs text-gray-500 mb-3">Quick Access (Testing)</p>
+          <div class="grid grid-cols-2 gap-2 text-xs">
+            <NuxtLink 
+              to="/mentor" 
+              class="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-center"
+            >
+              Mentor Dashboard
+            </NuxtLink>
+            <NuxtLink 
+              to="/guru" 
+              class="px-3 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors text-center"
+            >
+              Guru Dashboard
+            </NuxtLink>
+            <NuxtLink 
+              to="/siswa" 
+              class="px-3 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors text-center"
+            >
+              Siswa Dashboard
+            </NuxtLink>
+            <NuxtLink 
+              to="/login" 
+              class="px-3 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors text-center"
+            >
+              Login Page
+            </NuxtLink>
+          </div>
+        </div>
       </div>
 
       <!-- Additional info -->
@@ -60,16 +91,8 @@
 </template>
 
 <script setup>
-import { useRouter } from 'vue-router'
-
-const router = useRouter()
-
-// Redirect to login after 2.5 seconds with smooth transition
-onMounted(() => {
-  setTimeout(() => {
-    router.push('/login')
-  }, 2500)
-})
+// Removed auto-redirect for testing purposes
+// User can now manually navigate to different roles
 
 useHead({
   title: 'SIM Prakerin - Sistem Informasi Manajemen Praktik Kerja Industri',

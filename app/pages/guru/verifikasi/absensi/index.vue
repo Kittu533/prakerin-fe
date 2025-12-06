@@ -1,97 +1,141 @@
 <template>
-  <section class="space-y-6 sm:space-y-8">
-    <!-- HEADER -->
-    <div
-      class="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm sm:rounded-3xl sm:p-6"
-    >
-      <div
-        class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
-      >
-        <div>
-          <p class="text-xs font-medium uppercase tracking-wide text-blue-600">
-            Verifikasi Absensi
-          </p>
-          <h1 class="mt-1 text-xl font-bold text-slate-900 sm:text-2xl">
-            Daftar Absensi Siswa Bimbingan
-          </h1>
-          <p class="mt-1 text-xs text-slate-500 sm:text-sm">
-            Tinjau dan verifikasi absensi yang diajukan siswa untuk semua
-            penempatan yang Anda bimbing.
-          </p>
+  <div class="min-h-screen bg-gray-50">
+    <!-- Main Wrapper with White Background -->
+    <div class="bg-white min-h-screen">
+      <!-- Content Section -->
+      <div class="w-full px-6 py-6">
+        <!-- Breadcrumb Section -->
+        <div class="mb-6">
+          <nav class="flex items-center text-sm mb-4">
+            <NuxtLink to="/guru" class="text-gray-500 hover:text-gray-700">Dashboard</NuxtLink>
+            <svg class="h-4 w-4 mx-2 text-gray-300" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+            </svg>
+            <span class="text-gray-500 hover:text-gray-700">Verifikasi</span>
+            <svg class="h-4 w-4 mx-2 text-gray-300" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+            </svg>
+            <span class="text-gray-900 font-medium">Absensi</span>
+          </nav>
         </div>
 
-        <nav class="flex items-center gap-2 text-xs text-slate-400 sm:text-sm">
-          <NuxtLink to="/guru" class="hover:text-blue-600">Dashboard</NuxtLink>
-          <span>›</span>
-          <span class="font-semibold text-blue-600">Verifikasi Absensi</span>
-        </nav>
+        <!-- Header Section -->
+        <div class="bg-white rounded-lg border border-gray-200 p-6 shadow-sm mb-6">
+          <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            <div>
+              <div class="flex items-center gap-2 mb-2">
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                  Verifikasi Absensi
+                </span>
+              </div>
+              <h1 class="text-2xl font-bold text-gray-900 mb-2">
+                Daftar Absensi Siswa Bimbingan
+              </h1>
+              <p class="text-sm text-gray-600" style="font-size: 14px;">
+                Tinjau dan verifikasi absensi yang diajukan siswa untuk semua penempatan yang Anda bimbing.
+              </p>
+            </div>
+
+            <div class="flex gap-3">
+              <UButton
+                variant="outline"
+                size="md"
+                icon="i-lucide-download"
+              >
+                Export Data
+              </UButton>
+              <UButton
+                variant="outline"
+                size="md"
+                icon="i-lucide-refresh-cw"
+                @click="resetFilter"
+              >
+                Reset Filter
+              </UButton>
+            </div>
+          </div>
+        </div>
+
+        <!-- Filter Section -->
+        <div class="mb-6">
+          <div class="bg-gray-50 rounded-lg border border-gray-200 p-6">
+            <div class="flex flex-wrap gap-4 items-end">
+              <div class="flex-1 min-w-[200px]">
+                <label class="block text-sm font-medium text-gray-700 mb-2" style="font-size: 14px;">Perusahaan</label>
+                <USelect
+                  v-model="filterPerusahaan"
+                  :options="[
+                    { label: 'Semua Perusahaan', value: '' },
+                    ...perusahaanOptions.map(p => ({ label: p, value: p }))
+                  ]"
+                  size="md"
+                  placeholder="Pilih perusahaan"
+                />
+              </div>
+
+              <div class="min-w-[180px]">
+                <label class="block text-sm font-medium text-gray-700 mb-2" style="font-size: 14px;">Status Absensi</label>
+                <USelect
+                  v-model="filterStatusAbsensi"
+                  :options="[
+                    { label: 'Semua Status', value: '' },
+                    { label: 'Hadir', value: 'HADIR' },
+                    { label: 'Izin', value: 'IZIN' },
+                    { label: 'Sakit', value: 'SAKIT' },
+                    { label: 'Alpa', value: 'ALPA' }
+                  ]"
+                  size="md"
+                  placeholder="Status absensi"
+                />
+              </div>
+
+              <div class="min-w-[180px]">
+                <label class="block text-sm font-medium text-gray-700 mb-2" style="font-size: 14px;">Status Verifikasi</label>
+                <USelect
+                  v-model="filterVerifikasiGuru"
+                  :options="[
+                    { label: 'Semua Verifikasi', value: '' },
+                    { label: 'Menunggu', value: 'MENUNGGU' },
+                    { label: 'Disetujui', value: 'DISETUJUI' },
+                    { label: 'Ditolak', value: 'DITOLAK' }
+                  ]"
+                  size="md"
+                  placeholder="Status verifikasi"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Data Table Section -->
+        <div class="bg-white rounded-lg border border-gray-200 shadow-sm">
+          <div class="px-6 py-4 border-b border-gray-100">
+            <div class="flex items-center justify-between">
+              <div>
+                <h2 class="text-xl font-semibold text-gray-900">Absensi Menunggu Verifikasi</h2>
+                <p class="text-sm text-gray-600 mt-1" style="font-size: 14px;">{{ filteredAbsensi.length }} data absensi perlu direview</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Table Container -->
+          <div class="w-full">
+            <AppDataTable
+              :items="filteredAbsensi"
+              :columns="columns"
+              :page-size="10"
+              :searchable="false"
+              class="w-full"
+            />
+          </div>
+        </div>
       </div>
     </div>
-
-    <!-- TABLE -->
-    <AppDataTable
-      :items="filteredAbsensi"
-      :columns="columns"
-      title="Absensi menunggu verifikasi"
-      description="Filter berdasarkan status absensi, verifikasi, dan perusahaan."
-      :page-size="10"
-      :search-keys="['namaSiswa', 'kelas', 'perusahaan', 'tanggal', 'statusAbsensi', 'catatanSiswa', 'catatanMentor', 'catatanGuru']"
-    >
-      <template #toolbar-right>
-        <div class="flex flex-wrap items-center gap-2 sm:gap-3">
-          <!-- Filter perusahaan -->
-          <select
-            v-model="filterPerusahaan"
-            class="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs text-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-100"
-          >
-            <option value="">Semua perusahaan</option>
-            <option
-              v-for="p in perusahaanOptions"
-              :key="p"
-              :value="p"
-            >
-              {{ p }}
-            </option>
-          </select>
-
-          <!-- Filter status absensi -->
-          <select
-            v-model="filterStatusAbsensi"
-            class="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs text-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-100"
-          >
-            <option value="">Semua status</option>
-            <option value="HADIR">Hadir</option>
-            <option value="IZIN">Izin</option>
-            <option value="SAKIT">Sakit</option>
-            <option value="ALPA">Alpa</option>
-          </select>
-
-          <!-- Filter status verifikasi guru -->
-          <select
-            v-model="filterVerifikasiGuru"
-            class="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs text-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-100"
-          >
-            <option value="">Semua verifikasi</option>
-            <option value="MENUNGGU">Belum diverifikasi</option>
-            <option value="DISETUJUI">Disetujui</option>
-            <option value="DITOLAK">Ditolak</option>
-          </select>
-
-          <button
-            type="button"
-            class="rounded-full border border-slate-200 px-3 py-1.5 text-[11px] font-medium text-slate-500 hover:border-blue-500 hover:text-blue-600"
-            @click="resetFilter"
-          >
-            Reset filter
-          </button>
-        </div>
-      </template>
-    </AppDataTable>
-  </section>
+  </div>
 </template>
 
 <script setup lang="ts">
-import { computed, h, ref, resolveComponent } from 'vue'
+import { computed, h, ref } from 'vue'
 import type { TableColumn } from '@nuxt/ui'
 import AppDataTable from '~/components/common/AppDataTable.vue'
 
@@ -200,8 +244,6 @@ const resetFilter = () => {
 
 /* ---------- UI HELPERS ---------- */
 
-const UButton = resolveComponent('UButton')
-
 const badgeStatusAbsensi = (status: StatusAbsensi) => {
   if (status === 'HADIR') {
     return 'bg-emerald-50 text-emerald-700 border border-emerald-100'
@@ -245,22 +287,71 @@ const columns = computed<TableColumn<AbsensiVerifikasiRow>[]>(() => [
   {
     accessorKey: 'tanggal',
     header: 'Tanggal',
+    cell: ({ row }) => h('div', { 
+      class: 'text-gray-900 font-medium', 
+      style: 'font-size: 14px;' 
+    }, row.original.tanggal),
+    meta: {
+      class: {
+        th: 'min-w-[100px] py-3.5 px-4',
+        td: 'min-w-[100px] py-3 px-4',
+      },
+    },
   },
   {
     accessorKey: 'namaSiswa',
     header: 'Siswa',
-    cell: ({ row }) =>
-      `${row.original.namaSiswa} • ${row.original.kelas}`,
+    cell: ({ row }) => h('div', { class: 'min-w-0' }, [
+      h('div', { 
+        class: 'text-gray-900 font-semibold truncate', 
+        style: 'font-size: 14px;' 
+      }, row.original.namaSiswa),
+      h('div', { 
+        class: 'text-gray-500 truncate mt-0.5', 
+        style: 'font-size: 12px;' 
+      }, row.original.kelas)
+    ]),
+    meta: {
+      class: {
+        th: 'min-w-[150px] py-3.5 px-4',
+        td: 'min-w-[150px] py-3 px-4',
+      },
+    },
   },
   {
     accessorKey: 'perusahaan',
     header: 'Perusahaan',
+    cell: ({ row }) => h('div', { 
+      class: 'text-gray-900 truncate', 
+      style: 'font-size: 14px;',
+      title: row.original.perusahaan 
+    }, row.original.perusahaan),
+    meta: {
+      class: {
+        th: 'hidden md:table-cell min-w-[180px] py-3.5 px-4',
+        td: 'hidden md:table-cell min-w-[180px] py-3 px-4',
+      },
+    },
   },
   {
     id: 'jam',
-    header: 'Jam',
-    cell: ({ row }) =>
-      `${row.original.jamMasuk} - ${row.original.jamKeluar}`,
+    header: 'Waktu',
+    cell: ({ row }) => h('div', { class: 'text-center' }, [
+      h('div', { 
+        class: 'text-gray-900 font-medium', 
+        style: 'font-size: 14px;' 
+      }, row.original.jamMasuk),
+      h('div', { 
+        class: 'text-gray-500', 
+        style: 'font-size: 12px;' 
+      }, row.original.jamKeluar)
+    ]),
+    meta: {
+      class: {
+        th: 'hidden lg:table-cell min-w-[80px] py-3.5 px-4 text-center',
+        td: 'hidden lg:table-cell min-w-[80px] py-3 px-4 text-center',
+      },
+    },
   },
   {
     accessorKey: 'statusAbsensi',
@@ -270,22 +361,28 @@ const columns = computed<TableColumn<AbsensiVerifikasiRow>[]>(() => [
         'span',
         {
           class:
-            'inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold ' +
+            'inline-flex items-center rounded-lg px-2.5 py-1.5 text-xs font-semibold ' +
             badgeStatusAbsensi(row.original.statusAbsensi),
         },
         row.original.statusAbsensi,
       ),
+    meta: {
+      class: {
+        th: 'min-w-[100px] py-3.5 px-4 text-center',
+        td: 'min-w-[100px] py-3 px-4 text-center',
+      },
+    },
   },
   {
     id: 'verifikasi',
     header: 'Verifikasi',
     cell: ({ row }) =>
-      h('div', { class: 'space-y-0.5 text-[11px]' }, [
+      h('div', { class: 'space-y-1' }, [
         h(
-          'p',
+          'div',
           {
             class:
-              'font-medium ' +
+              'text-xs font-medium ' +
               (row.original.statusVerifikasiMentor === 'DISETUJUI'
                 ? 'text-emerald-700'
                 : row.original.statusVerifikasiMentor === 'DITOLAK'
@@ -295,10 +392,10 @@ const columns = computed<TableColumn<AbsensiVerifikasiRow>[]>(() => [
           `Mentor: ${row.original.statusVerifikasiMentor}`,
         ),
         h(
-          'p',
+          'div',
           {
             class:
-              'font-medium ' +
+              'text-xs font-medium ' +
               (row.original.statusVerifikasiGuru === 'DISETUJUI'
                 ? 'text-emerald-700'
                 : row.original.statusVerifikasiGuru === 'DITOLAK'
@@ -308,50 +405,59 @@ const columns = computed<TableColumn<AbsensiVerifikasiRow>[]>(() => [
           `Guru: ${row.original.statusVerifikasiGuru}`,
         ),
       ]),
+    meta: {
+      class: {
+        th: 'hidden lg:table-cell min-w-[120px] py-3.5 px-4',
+        td: 'hidden lg:table-cell min-w-[120px] py-3 px-4',
+      },
+    },
   },
   {
-    accessorKey: 'metode',
-    header: 'Metode',
-  },
-  {
-    accessorKey: 'catatanSiswa',
+    id: 'catatan',
     header: 'Catatan',
-    cell: ({ row }) =>
-      row.original.catatanSiswa ||
-      row.original.catatanMentor ||
-      row.original.catatanGuru ||
-      '-',
+    cell: ({ row }) => {
+      const catatan = row.original.catatanSiswa || row.original.catatanMentor || row.original.catatanGuru || '-'
+      return h('div', { 
+        class: 'text-gray-600 text-xs max-w-[150px] truncate',
+        title: catatan,
+        style: 'font-size: 14px;'
+      }, catatan)
+    },
+    meta: {
+      class: {
+        th: 'hidden xl:table-cell min-w-[150px] py-3.5 px-4',
+        td: 'hidden xl:table-cell min-w-[150px] py-3 px-4',
+      },
+    },
   },
   {
     id: 'actions',
     header: 'Aksi',
     meta: {
       class: {
-        th: 'text-right w-32',
-        td: 'text-right',
+        th: 'text-right min-w-[140px] py-3.5 px-4',
+        td: 'text-right min-w-[140px] py-3 px-4',
       },
     },
     cell: ({ row }) =>
       h('div', { class: 'flex justify-end gap-2' }, [
         h(
-          UButton,
+          'button',
           {
-            size: 'xs',
-            color: 'primary',
-            variant: 'soft',
+            type: 'button',
+            class: 'inline-flex items-center px-2.5 py-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg transition-all duration-200',
             onClick: () => setujuiAbsensi(row.original),
           },
-          { default: () => 'Terima' },
+          'Terima',
         ),
         h(
-          UButton,
+          'button',
           {
-            size: 'xs',
-            color: 'error',
-            variant: 'soft',
+            type: 'button',
+            class: 'inline-flex items-center px-2.5 py-1.5 text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-lg transition-all duration-200',
             onClick: () => tolakAbsensi(row.original),
           },
-          { default: () => 'Tolak' },
+          'Tolak',
         ),
       ]),
   },

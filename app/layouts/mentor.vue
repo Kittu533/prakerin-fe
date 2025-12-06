@@ -1,9 +1,8 @@
-<!-- layouts/siswa.vue -->
 <template>
   <div class="bg-[#f5f5f5]">
     <!-- Header -->
     <AppHeader 
-      :role="'siswa'"
+      :role="'mentor'"
       :user-name="userName"
       :school-name="schoolName"
       @toggle-sidebar="toggleSidebar"
@@ -24,7 +23,7 @@
       <!-- Sidebar - Responsive behavior -->
       <!-- Desktop: Always show sidebar, but can be minimized via AppSidebar toggle -->
       <div class="hidden lg:block">
-        <AppSidebar />
+        <AppSidebar :role="'mentor'" />
       </div>
 
       <!-- Mobile Sidebar - Show/hide via hamburger menu -->
@@ -33,7 +32,7 @@
           v-show="isMobileSidebarOpen && !isDesktop"
           class="fixed left-0 top-0 h-screen z-50 lg:hidden"
         >
-          <AppSidebar />
+          <AppSidebar :role="'mentor'" />
         </div>
       </Transition>
 
@@ -50,9 +49,9 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
 
-// Data siswa bisa diambil dari API/store
-const userName = ref('Ryobi Surya Atmaja')
-const userClass = ref('XII TM A')
+// Data mentor bisa diambil dari API/store
+const userName = ref('Mentor PKL')
+const userClass = ref('')
 const schoolName = ref('SMK N 2 Wonogiri')
 
 // Use sidebar composable
@@ -72,7 +71,7 @@ onMounted(() => {
   window.addEventListener('resize', updateScreenSize)
   
   // Debug scroll issues
-  console.log('Layout mounted, checking scroll behavior...')
+  console.log('Mentor layout mounted, checking scroll behavior...')
   console.log('Document body height:', document.body.scrollHeight)
   console.log('Window height:', window.innerHeight)
   console.log('Document overflow:', getComputedStyle(document.documentElement).overflow)

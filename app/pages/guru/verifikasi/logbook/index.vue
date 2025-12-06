@@ -1,114 +1,254 @@
 <template>
-  <section class="space-y-6 sm:space-y-8">
-    <!-- HEADER -->
-    <div
-      class="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm sm:rounded-3xl sm:p-6"
-    >
+  <div class="bg-white min-h-screen">
+    <section class="space-y-6 sm:space-y-8 p-4 sm:p-6">
+      <!-- HEADER -->
+      <div
+        class="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm sm:rounded-3xl sm:p-6"
+      >
       <div
         class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
       >
-        <div>
-          <p class="text-xs font-medium uppercase tracking-wide text-blue-600">
+        <div class="space-y-3">
+          <nav class="flex items-center gap-2 text-base text-slate-500 mb-6">
+            <NuxtLink to="/guru" class="hover:text-blue-600 transition-colors">
+              Dashboard
+            </NuxtLink>
+            <UIcon name="i-heroicons-chevron-right" class="w-5 h-5" />
+            <span class="text-blue-600 font-medium">Verifikasi</span>
+            <UIcon name="i-heroicons-chevron-right" class="w-5 h-5" />
+            <span class="text-slate-900 font-medium">Logbook</span>
+          </nav>
+          
+          <UBadge color="blue" variant="subtle" size="lg" class="mb-4">
             Verifikasi Logbook
-          </p>
-          <h1 class="mt-1 text-xl font-bold text-slate-900 sm:text-2xl">
+          </UBadge>
+          <h1 class="text-2xl font-bold text-slate-900 sm:text-3xl">
             Logbook Menunggu Persetujuan
           </h1>
-          <p class="mt-1 text-xs text-slate-500 sm:text-sm">
+          <p class="text-base text-slate-600">
             Review isi logbook siswa sebelum menyetujui atau menolak.
           </p>
         </div>
-
-        <nav class="flex items-center gap-2 text-xs text-slate-400 sm:text-sm">
-          <NuxtLink to="/guru" class="hover:text-blue-600">Dashboard</NuxtLink>
-          <span>›</span>
-          <span class="font-semibold text-blue-600">Verifikasi Logbook</span>
-        </nav>
       </div>
+    </div>
+
+    <!-- FILTER SECTION -->
+    <div class="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
+      <!-- Filter Controls Row -->
+      <div class="flex flex-wrap items-center gap-4 mb-6">
+        <!-- Calendar Icon -->
+        <div class="flex items-center justify-center w-10 h-10 bg-green-100 rounded-lg">
+          <UIcon name="i-heroicons-calendar-days" class="w-5 h-5 text-green-600" />
+        </div>
+        
+        <!-- Filter Icon -->
+        <div class="flex items-center justify-center w-10 h-10 bg-green-100 rounded-lg">
+          <UIcon name="i-heroicons-funnel" class="w-5 h-5 text-green-600" />
+        </div>
+        
+        <!-- Search Input -->
+        <div class="flex-1 min-w-[300px]">
+          <UInput 
+            v-model="searchQuery"
+            placeholder="Search here"
+            icon="i-heroicons-magnifying-glass"
+            size="lg"
+            class="w-full"
+            :ui="{ rounded: 'rounded-xl', icon: { leading: { pointer: '' } } }"
+          />
+        </div>
+        
+        <!-- Search Button -->
+        <UButton 
+          color="green" 
+          size="lg"
+          @click="performSearch"
+          class="px-6"
+        >
+          <UIcon name="i-heroicons-magnifying-glass" class="w-5 h-5" />
+        </UButton>
+      </div>
+      
+      <!-- Filter Headers Row -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+        <!-- Status Filter -->
+        <div>
+          <label class="block text-sm font-medium text-slate-700 mb-2">
+            Status
+          </label>
+          <USelectMenu
+            v-model="filterStatus"
+            :options="statusFilterOptions"
+            placeholder="Pilih Status"
+            size="lg"
+            class="w-full"
+            :ui="{ rounded: 'rounded-xl' }"
+          >
+            <template #option="{ option }">
+              <div class="flex items-center gap-3">
+                <UIcon :name="option.icon" :class="`w-4 h-4 text-${option.color}-500`" />
+                <span class="text-sm font-medium">{{ option.label }}</span>
+              </div>
+            </template>
+            <template #label>
+              <div v-if="filterStatus" class="flex items-center gap-2">
+                <UIcon :name="getStatusIcon(filterStatus)" :class="`w-4 h-4 text-${getStatusColor(filterStatus)}-500`" />
+                <span class="text-sm">{{ getStatusLabel(filterStatus) }}</span>
+              </div>
+              <span v-else class="text-slate-500 text-sm">Pilih Status</span>
+            </template>
+          </USelectMenu>
+        </div>
+        
+        <!-- Company Filter -->
+        <div>
+          <label class="block text-sm font-medium text-slate-700 mb-2">
+            Perusahaan
+          </label>
+          <USelectMenu
+            v-model="filterPerusahaan"
+            :options="uniqueCompanies"
+            placeholder="Pilih Perusahaan"
+            searchable
+            size="lg"
+            class="w-full"
+            :ui="{ rounded: 'rounded-xl' }"
+          >
+            <template #option="{ option }">
+              <div class="flex items-center gap-3">
+                <UIcon :name="option.icon" class="w-4 h-4 text-blue-500" />
+                <span class="text-sm font-medium">{{ option.label }}</span>
+              </div>
+            </template>
+            <template #label>
+              <div v-if="filterPerusahaan" class="flex items-center gap-2">
+                <UIcon name="i-heroicons-building-office" class="w-4 h-4 text-blue-500" />
+                <span class="text-sm">{{ filterPerusahaan }}</span>
+              </div>
+              <span v-else class="text-slate-500 text-sm">Pilih Perusahaan</span>
+            </template>
+          </USelectMenu>
+        </div>
+        
+        <!-- Reset Button -->
+        <div class="flex items-end">
+          <UButton 
+            color="gray" 
+            variant="outline" 
+            size="lg"
+            @click="resetAllFilters"
+            :disabled="!hasActiveFilters"
+            class="w-full transition-all duration-200"
+          >
+            <UIcon name="i-heroicons-arrow-path" class="w-4 h-4 mr-2" />
+            Reset Filters
+          </UButton>
+        </div>
+      </div>
+
     </div>
 
     <!-- TABLE -->
     <AppDataTable
       :items="filteredLogbook"
       :columns="columns"
-      title="Logbook siswa"
-      description="Filter berdasarkan status persetujuan dan perusahaan."
-      :page-size="10"
+      :page-size="15"
       :search-keys="['namaSiswa', 'kelas', 'perusahaan', 'tanggal', 'judul', 'statusPersetujuan']"
+      class="text-base"
     >
-      <template #toolbar-right>
-        <div class="flex flex-wrap items-center gap-2 sm:gap-3">
-          <!-- Filter perusahaan -->
-          <select
-            v-model="filterPerusahaan"
-            class="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs text-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-100"
-          >
-            <option value="">Semua perusahaan</option>
-            <option
-              v-for="p in perusahaanOptions"
-              :key="p"
-              :value="p"
-            >
-              {{ p }}
-            </option>
-          </select>
+  </AppDataTable>
 
-          <!-- Filter status -->
-          <select
-            v-model="filterStatus"
-            class="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs text-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-100"
-          >
-            <option value="">Semua status</option>
-            <option value="MENUNGGU">Menunggu</option>
-            <option value="DISETUJUI">Disetujui</option>
-            <option value="DITOLAK">Ditolak</option>
-          </select>
-
-          <button
-            type="button"
-            class="rounded-full border border-slate-200 px-3 py-1.5 text-[11px] font-medium text-slate-500 hover:border-blue-500 hover:text-blue-600"
-            @click="resetFilter"
-          >
-            Reset filter
-          </button>
-        </div>
-      </template>
-    </AppDataTable>
-
-    <!-- Modal detail (dummy) -->
-    <UModal v-model:open="isDetailOpen" title="Detail Logbook">
+    <!-- Modal detail with slug -->
+    <UModal 
+      v-model:open="isDetailOpen" 
+      :title="`Detail Logbook #${selectedLogbook?.id || ''}`"
+      :ui="{ width: 'max-w-4xl' }"
+    >
       <template #body>
-        <div v-if="selectedLogbook" class="space-y-3 text-sm text-slate-700">
-          <p class="text-xs font-medium uppercase text-slate-500">
-            {{ selectedLogbook.tanggal }} •
-            {{ selectedLogbook.namaSiswa }} ({{ selectedLogbook.kelas }})
-          </p>
-          <h3 class="text-base font-semibold text-slate-900">
-            {{ selectedLogbook.judul }}
-          </h3>
-          <p class="text-xs text-slate-500">
-            Perusahaan: {{ selectedLogbook.perusahaan }}
-          </p>
-          <hr class="my-2 border-slate-100" />
-          <p class="text-[13px] leading-relaxed">
-            (Dummy) Isi lengkap logbook akan ditampilkan di sini nanti setelah
-            tersambung ke API.
-          </p>
+        <div v-if="selectedLogbook" class="space-y-6 text-base text-slate-700">
+          <!-- Header Info -->
+          <div class="bg-slate-50 rounded-xl p-6">
+            <div class="flex items-center gap-3 mb-3">
+              <UBadge color="blue" variant="subtle" size="lg">
+                LOG-{{ String(selectedLogbook.id).padStart(3, '0') }}
+              </UBadge>
+              <UBadge 
+                :color="statusBadgeColor(selectedLogbook.statusPersetujuan)" 
+                variant="soft"
+                size="lg"
+              >
+                {{ selectedLogbook.statusPersetujuan }}
+              </UBadge>
+            </div>
+            <h3 class="text-xl font-semibold text-slate-900 mb-2">
+              {{ selectedLogbook.judul }}
+            </h3>
+            <p class="text-base text-slate-600 mb-1">
+              {{ selectedLogbook.tanggal }} • {{ selectedLogbook.namaSiswa }} ({{ selectedLogbook.kelas }})
+            </p>
+            <p class="text-base text-slate-500">
+              Perusahaan: {{ selectedLogbook.perusahaan }}
+            </p>
+          </div>
+          
+          <!-- Rating Section -->
+          <div class="grid grid-cols-2 gap-6">
+            <div class="bg-blue-50 rounded-xl p-4">
+              <p class="text-sm font-medium text-blue-600 mb-2">Rating Mentor</p>
+              <p class="text-2xl font-bold text-blue-700">
+                {{ selectedLogbook.ratingMentor || '-' }}/5
+              </p>
+            </div>
+            <div class="bg-green-50 rounded-xl p-4">
+              <p class="text-sm font-medium text-green-600 mb-2">Rating Guru</p>
+              <p class="text-2xl font-bold text-green-700">
+                {{ selectedLogbook.ratingGuru || '-' }}/5
+              </p>
+            </div>
+          </div>
+          
+          <!-- Content Placeholder -->
+          <div class="border border-slate-200 rounded-xl p-6">
+            <p class="text-base text-slate-600 italic">
+              Konten lengkap logbook akan ditampilkan di sini setelah integrasi dengan API.
+            </p>
+          </div>
         </div>
       </template>
       <template #footer="{ close }">
-        <div class="flex w-full justify-end gap-2">
-          <UButton size="sm" color="neutral" variant="outline" @click="close">
+        <div class="flex w-full justify-between">
+          <div class="flex gap-3">
+            <UButton 
+              v-if="selectedLogbook?.statusPersetujuan === 'MENUNGGU'" 
+              size="lg" 
+              color="green" 
+              @click="approveLogbook(selectedLogbook)"
+            >
+              <UIcon name="i-heroicons-check" class="w-5 h-5 mr-2" />
+              Setujui
+            </UButton>
+            <UButton 
+              v-if="selectedLogbook?.statusPersetujuan === 'MENUNGGU'" 
+              size="lg" 
+              color="red" 
+              @click="rejectLogbook(selectedLogbook)"
+            >
+              <UIcon name="i-heroicons-x-mark" class="w-5 h-5 mr-2" />
+              Tolak
+            </UButton>
+          </div>
+          <UButton size="lg" color="gray" variant="outline" @click="close">
             Tutup
           </UButton>
         </div>
       </template>
     </UModal>
-  </section>
+    </section>
+  </div>
 </template>
 
 <script setup lang="ts">
-import { computed, h, ref, resolveComponent } from 'vue'
+import { computed, h, ref, resolveComponent, watch } from 'vue'
 import type { TableColumn } from '@nuxt/ui'
 import AppDataTable from '~/components/common/AppDataTable.vue'
 
@@ -189,6 +329,91 @@ const items = ref<LogbookVerifikasiRow[]>([
 
 const filterPerusahaan = ref<string>('')
 const filterStatus = ref<StatusPersetujuan | ''>('MENUNGGU') // default: yang menunggu
+const searchQuery = ref<string>('')
+
+// Debounced search
+const debouncedSearchQuery = ref<string>('')
+
+// Debounce utility function
+const debounce = (fn: Function, delay: number) => {
+  let timeoutId: ReturnType<typeof setTimeout>
+  return (...args: any[]) => {
+    clearTimeout(timeoutId)
+    timeoutId = setTimeout(() => fn(...args), delay)
+  }
+}
+
+// Debounced search function
+const updateDebouncedSearch = debounce(() => {
+  debouncedSearchQuery.value = searchQuery.value
+}, 300)
+
+// Watch for search changes
+watch(searchQuery, () => {
+  updateDebouncedSearch()
+})
+
+// Search action
+const performSearch = () => {
+  debouncedSearchQuery.value = searchQuery.value
+}
+
+// Computed properties for enhanced dropdowns
+const uniqueCompanies = computed(() => {
+  const companies = new Set<string>()
+  items.value.forEach((row) => companies.add(row.perusahaan))
+  return Array.from(companies).map(company => ({
+    value: company,
+    label: company,
+    icon: 'i-heroicons-building-office'
+  }))
+})
+
+const statusFilterOptions = computed(() => [
+  { value: '', label: 'Semua Status', color: 'gray', icon: 'i-heroicons-list-bullet' },
+  { value: 'MENUNGGU', label: 'Menunggu', color: 'yellow', icon: 'i-heroicons-clock' },
+  { value: 'DISETUJUI', label: 'Disetujui', color: 'green', icon: 'i-heroicons-check-circle' },
+  { value: 'DITOLAK', label: 'Ditolak', color: 'red', icon: 'i-heroicons-x-circle' }
+])
+
+const statusOptions = computed(() => [
+  { value: 'MENUNGGU', label: 'Menunggu', color: 'yellow', icon: 'i-heroicons-clock' },
+  { value: 'DISETUJUI', label: 'Disetujui', color: 'green', icon: 'i-heroicons-check-circle' },
+  { value: 'DITOLAK', label: 'Ditolak', color: 'red', icon: 'i-heroicons-x-circle' }
+])
+
+// Quick filter functions
+const setQuickFilter = (type: string) => {
+  if (type === 'menunggu') {
+    filterStatus.value = 'MENUNGGU'
+    filterPerusahaan.value = ''
+  } else if (type === 'disetujui') {
+    filterStatus.value = 'DISETUJUI'
+    filterPerusahaan.value = ''
+  } else if (type === 'ditolak') {
+    filterStatus.value = 'DITOLAK'
+    filterPerusahaan.value = ''
+  } else if (type === 'reset') {
+    resetAllFilters()
+  }
+}
+
+// Reset all filters
+const resetAllFilters = () => {
+  filterStatus.value = ''
+  filterPerusahaan.value = ''
+  searchQuery.value = ''
+  debouncedSearchQuery.value = ''
+}
+
+// Check if any filters are active
+const hasActiveFilters = computed(() => {
+  return !!(
+    filterStatus.value ||
+    filterPerusahaan.value ||
+    searchQuery.value
+  )
+})
 
 const perusahaanOptions = computed(() => {
   const set = new Set<string>()
@@ -198,22 +423,72 @@ const perusahaanOptions = computed(() => {
 
 const filteredLogbook = computed(() =>
   items.value.filter((row) => {
+    // Filter by company
     if (filterPerusahaan.value && row.perusahaan !== filterPerusahaan.value)
       return false
+    // Filter by status
     if (filterStatus.value && row.statusPersetujuan !== filterStatus.value)
       return false
+    // Debounced search functionality
+    if (debouncedSearchQuery.value.trim()) {
+      const search = debouncedSearchQuery.value.toLowerCase()
+      const matchesSearch = 
+        row.namaSiswa.toLowerCase().includes(search) ||
+        row.kelas.toLowerCase().includes(search) ||
+        row.perusahaan.toLowerCase().includes(search) ||
+        row.judul.toLowerCase().includes(search) ||
+        row.tanggal.includes(search)
+      if (!matchesSearch) return false
+    }
     return true
   }),
 )
 
 const resetFilter = () => {
-  filterPerusahaan.value = ''
-  filterStatus.value = 'MENUNGGU'
+  resetAllFilters()
 }
 
 /* ---------- UI HELPERS ---------- */
 
 const UButton = resolveComponent('UButton')
+
+// Status badge color helper
+const statusBadgeColor = (status: StatusPersetujuan) => {
+  switch (status) {
+    case 'DISETUJUI': return 'green'
+    case 'MENUNGGU': return 'yellow'
+    case 'DITOLAK': return 'red'
+    default: return 'gray'
+  }
+}
+
+// Helper functions for status display
+const getStatusIcon = (status: StatusPersetujuan) => {
+  switch (status) {
+    case 'MENUNGGU': return 'i-heroicons-clock'
+    case 'DISETUJUI': return 'i-heroicons-check-circle'
+    case 'DITOLAK': return 'i-heroicons-x-circle'
+    default: return 'i-heroicons-question-mark-circle'
+  }
+}
+
+const getStatusColor = (status: StatusPersetujuan) => {
+  switch (status) {
+    case 'MENUNGGU': return 'yellow'
+    case 'DISETUJUI': return 'green'
+    case 'DITOLAK': return 'red'
+    default: return 'gray'
+  }
+}
+
+const getStatusLabel = (status: StatusPersetujuan) => {
+  switch (status) {
+    case 'MENUNGGU': return 'Menunggu'
+    case 'DISETUJUI': return 'Disetujui'
+    case 'DITOLAK': return 'Ditolak'
+    default: return status
+  }
+}
 
 const badgeStatus = (status: StatusPersetujuan) => {
   if (status === 'DISETUJUI') {
@@ -237,14 +512,24 @@ const openDetail = (row: LogbookVerifikasiRow) => {
 
 /* ---------- ACTIONS (dummy) ---------- */
 
-const setujuiLogbook = (row: LogbookVerifikasiRow) => {
+const approveLogbook = (row: LogbookVerifikasiRow) => {
   row.statusPersetujuan = 'DISETUJUI'
   console.log('✅ Setujui logbook (dummy):', row)
+  isDetailOpen.value = false
+}
+
+const rejectLogbook = (row: LogbookVerifikasiRow) => {
+  row.statusPersetujuan = 'DITOLAK'
+  console.log('❌ Tolak logbook (dummy):', row)
+  isDetailOpen.value = false
+}
+
+const setujuiLogbook = (row: LogbookVerifikasiRow) => {
+  approveLogbook(row)
 }
 
 const tolakLogbook = (row: LogbookVerifikasiRow) => {
-  row.statusPersetujuan = 'DITOLAK'
-  console.log('❌ Tolak logbook (dummy):', row)
+  rejectLogbook(row)
 }
 
 /* ---------- COLUMNS ---------- */
@@ -253,20 +538,32 @@ const columns = computed<TableColumn<LogbookVerifikasiRow>[]>(() => [
   {
     accessorKey: 'tanggal',
     header: 'Tanggal',
+    meta: {
+      class: 'text-base font-medium',
+    },
   },
   {
     accessorKey: 'namaSiswa',
     header: 'Siswa',
     cell: ({ row }) =>
       `${row.original.namaSiswa} • ${row.original.kelas}`,
+    meta: {
+      class: 'text-base',
+    },
   },
   {
     accessorKey: 'perusahaan',
     header: 'Perusahaan',
+    meta: {
+      class: 'text-base',
+    },
   },
   {
     accessorKey: 'judul',
     header: 'Judul kegiatan',
+    meta: {
+      class: 'text-base',
+    },
   },
   {
     accessorKey: 'statusPersetujuan',
@@ -276,7 +573,7 @@ const columns = computed<TableColumn<LogbookVerifikasiRow>[]>(() => [
         'span',
         {
           class:
-            'inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold ' +
+            'inline-flex items-center rounded-full px-3 py-1.5 text-sm font-semibold ' +
             badgeStatus(row.original.statusPersetujuan),
         },
         row.original.statusPersetujuan,
@@ -286,10 +583,10 @@ const columns = computed<TableColumn<LogbookVerifikasiRow>[]>(() => [
     id: 'rating',
     header: 'Rating',
     cell: ({ row }) =>
-      h('div', { class: 'text-[11px] text-slate-700' }, [
+      h('div', { class: 'text-sm text-slate-700' }, [
         h(
           'p',
-          null,
+          { class: 'mb-1' },
           `Mentor: ${row.original.ratingMentor ?? '-'} / 5`,
         ),
         h(
@@ -304,7 +601,7 @@ const columns = computed<TableColumn<LogbookVerifikasiRow>[]>(() => [
     header: 'Aksi',
     meta: {
       class: {
-        th: 'text-right w-40',
+        th: 'text-right w-48',
         td: 'text-right',
       },
     },
@@ -313,7 +610,7 @@ const columns = computed<TableColumn<LogbookVerifikasiRow>[]>(() => [
         h(
           UButton,
           {
-            size: 'xs',
+            size: 'sm',
             variant: 'outline',
             color: 'neutral',
             onClick: () => openDetail(row.original),
@@ -323,7 +620,7 @@ const columns = computed<TableColumn<LogbookVerifikasiRow>[]>(() => [
         h(
           UButton,
           {
-            size: 'xs',
+            size: 'sm',
             color: 'primary',
             variant: 'soft',
             onClick: () => setujuiLogbook(row.original),
@@ -333,7 +630,7 @@ const columns = computed<TableColumn<LogbookVerifikasiRow>[]>(() => [
         h(
           UButton,
           {
-            size: 'xs',
+            size: 'sm',
             color: 'error',
             variant: 'soft',
             onClick: () => tolakLogbook(row.original),

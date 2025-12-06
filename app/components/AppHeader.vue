@@ -13,12 +13,30 @@
         </button>
 
         <div class="flex items-center gap-3">
-          <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center shadow-sm">
-            <span class="text-white font-bold text-lg">S</span>
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-br flex items-center justify-center shadow-sm"
+            :class="
+              role === 'mentor' ? 'from-blue-400 to-blue-600' : 
+              role === 'guru' ? 'from-purple-400 to-purple-600' :
+              'from-emerald-400 to-emerald-600'
+            "
+          >
+            <span class="text-white font-bold text-lg">
+              {{ 
+                role === 'mentor' ? 'M' : 
+                role === 'guru' ? 'G' : 
+                'S' 
+              }}
+            </span>
           </div>
           <div class="hidden sm:block">
-            <h1 class="text-sm font-semibold text-gray-900">SIMPRAKERIN</h1>
-            <p class="text-xs text-gray-500">SMK N 2 Wonogiri</p>
+            <h1 class="text-sm font-semibold text-gray-900">
+              {{ 
+                role === 'mentor' ? 'MENTOR PKL' : 
+                role === 'guru' ? 'GURU PKL' : 
+                'SIMPRAKERIN' 
+              }}
+            </h1>
+            <p class="text-xs text-gray-500">{{ schoolName || 'SMK N 2 Wonogiri' }}</p>
           </div>
         </div>
       </div>
@@ -28,13 +46,37 @@
 
         <div class="flex items-center gap-3 px-3 py-1.5 rounded-xl hover:bg-gray-50 transition-colors cursor-pointer">
           <div class="hidden md:block text-right">
-            <p class="text-sm font-medium text-gray-900">Ryobi Surya Atmaja</p>
-            <p class="text-xs text-gray-500">XII TM A</p>
+            <p class="text-sm font-medium text-gray-900">
+              {{ 
+                userName || 
+                (role === 'mentor' ? 'Mentor PKL' : 
+                 role === 'guru' ? 'Guru PKL' : 
+                 'Ryobi Surya Atmaja') 
+              }}
+            </p>
+            <p class="text-xs text-gray-500">
+              {{ 
+                role === 'mentor' ? 'mentor@school.edu' : 
+                role === 'guru' ? 'guru@school.edu' :
+                'XII TM A' 
+              }}
+            </p>
           </div>
           <UAvatar
-            text="RS"
+            :text="
+              role === 'mentor' ? 'MP' : 
+              role === 'guru' ? 'GP' :
+              'RS'
+            "
             size="md"
-            :ui="{ background: 'bg-gradient-to-br from-emerald-500 to-emerald-600' }"
+            :ui="{ 
+              background: 
+                role === 'mentor' 
+                  ? 'bg-gradient-to-br from-blue-500 to-blue-600' 
+                  : role === 'guru'
+                    ? 'bg-gradient-to-br from-purple-500 to-purple-600'
+                    : 'bg-gradient-to-br from-emerald-500 to-emerald-600' 
+            }"
           />
         </div>
       </div>
@@ -42,7 +84,19 @@
   </header>
 </template>
 
-<script setup>
+<script setup lang="ts">
+interface Props {
+  role?: string
+  userName?: string
+  schoolName?: string
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  role: 'siswa',
+  userName: '',
+  schoolName: ''
+})
+
 const emit = defineEmits(['toggle-sidebar'])
 
 const toggleSidebar = () => {

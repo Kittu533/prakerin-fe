@@ -1,61 +1,80 @@
 <!-- layouts/guru.vue -->
 <template>
-  <div class="min-h-screen bg-[#f5f5f5]">
-    <!-- Header umum -->
+  <div class="bg-[#f5f5f5]">
+    <!-- Header -->
     <AppHeader 
+      :role="'guru'"
       :user-name="userName"
       :school-name="schoolName"
-      @toggle-sidebar="isSidebarOpen = !isSidebarOpen"
+      @toggle-sidebar="toggleSidebar"
     />
 
     <!-- Main Content Area -->
-    <div class="relative flex">
-      <!-- Overlay + sidebar MOBILE -->
+    <div class="flex">
+      <!-- Overlay untuk mobile -->
       <Transition name="fade">
-        <div
-          v-if="isSidebarOpen"
-          @click="isSidebarOpen = false"
-          class="fixed inset-0 z-40 bg-black/50 lg:hidden"
-        />
-      </Transition>
-
-      <Transition name="slide">
-        <div
-          v-if="isSidebarOpen"
-          class="fixed left-0 top-0 z-50 h-full lg:hidden"
+        <div 
+          v-if="isMobileSidebarOpen && !isDesktop"
+          @click="closeMobileSidebar"
+          class="fixed inset-0 bg-black/50 z-40"
         >
-          <GuruSidebar
-            :user-name="userName"
-            :user-role="userRole"
-          />
         </div>
       </Transition>
 
-      <!-- Sidebar DESKTOP -->
-      <div class="hidden lg:block lg:h-[calc(100vh-4rem)]">
-        <!-- 4rem kira-kira tinggi header, kalau beda tinggal sesuaikan -->
-        <GuruSidebar
-          :user-name="userName"
-          :user-role="userRole"
-        />
+      <!-- Sidebar - Responsive behavior -->
+      <!-- Desktop: Always show sidebar, but can be minimized via GuruSidebar toggle -->
+      <div class="hidden lg:block">
+        <GuruSidebar />
       </div>
 
+      <!-- Mobile Sidebar - Show/hide via hamburger menu -->
+      <Transition name="slide">
+        <div 
+          v-show="isMobileSidebarOpen && !isDesktop"
+          class="fixed left-0 top-0 h-screen z-50 lg:hidden"
+        >
+          <GuruSidebar />
+        </div>
+      </Transition>
+
       <!-- Content -->
-      <main class="flex-1 p-3 sm:p-4 md:p-6">
-        <slot />
+      <main class="flex-1 min-h-screen overflow-x-hidden">
+        <div class="p-3 sm:p-4 md:p-6 lg:p-8">
+          <slot />
+        </div>
       </main>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 
-const userName = ref('Nama Guru Pembimbing')
+// Data guru bisa diambil dari API/store
+const userName = ref('Dr. Ahmad Wijaya, M.Pd')
 const userRole = ref('Guru Pembimbing PKL')
 const schoolName = ref('SMK N 2 Wonogiri')
 
-const isSidebarOpen = ref(false)
+// Use sidebar composable
+const {
+  isMobileSidebarOpen,
+  isDesktopSidebarMinimized,
+  isDesktop,
+  toggleSidebar,
+  closeMobileSidebar,
+  updateScreenSize,
+  initializeDesktopSidebar
+} = useSidebar()
+
+onMounted(() => {
+  updateScreenSize()
+  initializeDesktopSidebar()
+  window.addEventListener('resize', updateScreenSize)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', updateScreenSize)
+})
 </script>
 
 <style scoped>
