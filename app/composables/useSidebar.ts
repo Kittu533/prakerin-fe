@@ -11,7 +11,7 @@ export const useSidebar = () => {
   
   // Initialize desktop sidebar state from localStorage
   const initializeDesktopSidebar = () => {
-    if (process.client) {
+    if (import.meta.client) {
       const savedState = localStorage.getItem('sidebar-minimized')
       if (savedState) {
         isDesktopSidebarMinimized.value = JSON.parse(savedState)
@@ -19,17 +19,10 @@ export const useSidebar = () => {
     }
   }
   
-  // Toggle mobile sidebar
-  const toggleMobileSidebar = () => {
-    isMobileSidebarOpen.value = !isMobileSidebarOpen.value
-  }
-  
   // Toggle desktop sidebar (minimize/expand)
   const toggleDesktopSidebar = () => {
     isDesktopSidebarMinimized.value = !isDesktopSidebarMinimized.value
-    
-    // Save to localStorage
-    if (process.client) {
+    if (import.meta.client) {
       localStorage.setItem('sidebar-minimized', JSON.stringify(isDesktopSidebarMinimized.value))
     }
   }
@@ -39,7 +32,7 @@ export const useSidebar = () => {
     if (isDesktop.value) {
       toggleDesktopSidebar()
     } else {
-      toggleMobileSidebar()
+      isMobileSidebarOpen.value = !isMobileSidebarOpen.value
     }
   }
   
@@ -48,26 +41,20 @@ export const useSidebar = () => {
     isMobileSidebarOpen.value = false
   }
   
-  // Update screen size and handle responsive behavior
+  // Update screen size
   const updateScreenSize = () => {
     const wasDesktop = isDesktop.value
     isDesktop.value = window.innerWidth >= 1024
-    
-    // If switching from mobile to desktop, close mobile sidebar
     if (!wasDesktop && isDesktop.value) {
       isMobileSidebarOpen.value = false
     }
   }
   
   return {
-    // State
-    isMobileSidebarOpen: readonly(isMobileSidebarOpen),
-    isDesktopSidebarMinimized: readonly(isDesktopSidebarMinimized),
-    isDesktop: readonly(isDesktop),
-    
-    // Methods
+    isMobileSidebarOpen,
+    isDesktopSidebarMinimized,
+    isDesktop,
     toggleSidebar,
-    toggleMobileSidebar,
     toggleDesktopSidebar,
     closeMobileSidebar,
     updateScreenSize,

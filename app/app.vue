@@ -35,7 +35,7 @@ useSeoMeta({
   <UApp>
     <NuxtLoadingIndicator />
     <NuxtLayout>
-      <NuxtPage />
+      <NuxtPage :page-key="route => route.path" />
     </NuxtLayout>
   </UApp>
 </template>

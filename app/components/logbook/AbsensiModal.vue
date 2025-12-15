@@ -381,7 +381,7 @@ const submitAbsensi = async () => {
     toast?.add({
       title: 'Absensi berhasil',
       description: `Absensi ${timeNow} telah terkirim dan menunggu verifikasi pembimbing.`,
-      color: 'green'
+      color: 'success'
     })
 
     emit('success', attendanceRecord)

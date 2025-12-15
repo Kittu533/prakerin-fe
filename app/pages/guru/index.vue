@@ -1,499 +1,306 @@
-<!-- pages/guru/index.vue -->
 <template>
-  <div class="bg-white min-h-screen">
-    <section class="space-y-6 sm:space-y-8 p-4 sm:p-6">
-      <!-- Breadcrumb -->
-      <nav class="flex items-center gap-2 text-base text-slate-500 mb-6">
-        <span class="font-semibold text-blue-600">Dashboard Guru</span>
-      </nav>
-
-      <!-- HERO / HEADER -->
-      <div class="rounded-2xl border border-slate-100 bg-white p-6 sm:p-8 shadow-sm">
-        <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-          <div class="flex-1">
-            <UBadge color="primary" variant="subtle" size="lg" class="mb-4">
-              Dashboard Pembimbing
-            </UBadge>
-            <h1 class="text-3xl font-bold sm:text-4xl text-slate-900">
-              Selamat datang, {{ guruData.nama }}
-            </h1>
-            <p class="mt-3 max-w-2xl text-lg text-slate-600">
-              Pantau progres PKL siswa bimbingan Anda dengan visualisasi data yang komprehensif
-            </p>
+  <div class="space-y-6">
+    <!-- Header -->
+    <div class="bg-sky-500 rounded-2xl p-6 text-white">
+      <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div>
+          <div class="inline-flex items-center gap-2 px-3 py-1 bg-white/20 rounded-full text-xs font-medium mb-3">
+            <span class="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+            Dashboard Aktif
           </div>
-
-          <div class="flex items-center gap-4 rounded-2xl bg-slate-50 border border-slate-200 px-6 py-4 shrink-0">
-            <div class="flex h-12 w-12 items-center justify-center rounded-full bg-blue-600 text-white text-xl font-semibold">
-              {{ guruData.inisial }}
-            </div>
-            <div>
-              <p class="font-semibold text-slate-900 text-lg">
-                {{ guruData.nama }}
-              </p>
-              <p class="text-blue-600 text-base">
-                {{ guruData.role }}
-              </p>
-            </div>
+          <h1 v-if="!loading" class="text-2xl lg:text-3xl font-bold mb-1">Selamat {{ greeting }}, {{ guru.nama }}</h1>
+          <USkeleton v-else class="h-9 w-72 mb-2" :ui="{ background: 'bg-white/20' }" />
+          <p class="text-sky-100">{{ currentDate }}</p>
+        </div>
+        <div class="flex items-center gap-4">
+          <div class="hidden lg:block text-right">
+            <p class="text-sky-200 text-sm">Periode PKL</p>
+            <p class="font-semibold">Juli - Desember 2024</p>
+          </div>
+          <div class="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center text-xl font-bold">
+            {{ guru.inisial }}
           </div>
         </div>
       </div>
+    </div>
 
-      <!-- KPI CARDS -->
-      <div class="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-        <!-- Siswa bimbingan aktif -->
-        <div class="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm hover:shadow-md transition-all duration-200">
-          <div class="flex items-center gap-4">
-            <div class="p-3 rounded-xl bg-blue-50 text-blue-600">
-              <UIcon name="i-heroicons-user-group" class="w-8 h-8" />
+    <!-- Stats -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <template v-if="loading">
+        <div v-for="i in 4" :key="i" class="bg-white rounded-xl p-5 border border-slate-200">
+          <USkeleton class="h-4 w-20 mb-3" />
+          <USkeleton class="h-8 w-16 mb-2" />
+          <USkeleton class="h-3 w-24" />
+        </div>
+      </template>
+      <template v-else>
+        <div class="bg-white rounded-xl p-5 border border-slate-200 hover:border-sky-300 hover:shadow-md transition-all cursor-pointer" @click="navigateTo('/guru/siswa-bimbingan')">
+          <div class="flex items-center justify-between mb-3">
+            <div class="p-2 rounded-lg bg-sky-100 text-sky-600">
+              <Icon name="lucide:users" class="w-5 h-5" />
             </div>
-            <div class="flex-1 min-w-0">
-              <p class="text-base font-medium text-slate-500 truncate">
-                Siswa Bimbingan
-              </p>
-              <p class="mt-1 text-3xl font-bold text-slate-900">
-                {{ summaryData.jumlahSiswaAktif }}
-              </p>
-              <p class="mt-1 text-base text-slate-500">
-                Dari {{ summaryData.jumlahPenempatan }} penempatan
-              </p>
+            <Icon name="lucide:arrow-up-right" class="w-4 h-4 text-slate-400" />
+          </div>
+          <p class="text-2xl font-bold text-slate-900">{{ stats.totalSiswa }}</p>
+          <p class="text-sm text-slate-500">Siswa Bimbingan</p>
+        </div>
+
+        <div class="bg-white rounded-xl p-5 border border-slate-200 hover:border-green-300 hover:shadow-md transition-all cursor-pointer" @click="navigateTo('/guru/absensi')">
+          <div class="flex items-center justify-between mb-3">
+            <div class="p-2 rounded-lg bg-green-100 text-green-600">
+              <Icon name="lucide:bar-chart-3" class="w-5 h-5" />
             </div>
+            <UBadge color="success" variant="subtle" size="xs">{{ stats.kehadiran }}%</UBadge>
+          </div>
+          <p class="text-2xl font-bold text-slate-900">{{ stats.kehadiran }}%</p>
+          <p class="text-sm text-slate-500">Rata-rata Kehadiran</p>
+        </div>
+
+        <div class="bg-white rounded-xl p-5 border border-slate-200 hover:border-amber-300 hover:shadow-md transition-all cursor-pointer" @click="navigateTo('/guru/verifikasi-logbook')">
+          <div class="flex items-center justify-between mb-3">
+            <div class="p-2 rounded-lg bg-amber-100 text-amber-600">
+              <Icon name="lucide:book-open" class="w-5 h-5" />
+            </div>
+            <UBadge v-if="stats.logbookPending" color="warning" variant="subtle" size="xs">Pending</UBadge>
+          </div>
+          <p class="text-2xl font-bold text-slate-900">{{ stats.logbookPending }}</p>
+          <p class="text-sm text-slate-500">Logbook Pending</p>
+        </div>
+
+        <div class="bg-white rounded-xl p-5 border border-slate-200 hover:border-red-300 hover:shadow-md transition-all cursor-pointer" @click="navigateTo('/guru/absensi')">
+          <div class="flex items-center justify-between mb-3">
+            <div class="p-2 rounded-lg bg-red-100 text-red-600">
+              <Icon name="lucide:alert-circle" class="w-5 h-5" />
+            </div>
+            <UBadge v-if="stats.absensiPending" color="error" variant="subtle" size="xs">{{ stats.absensiPending }} baru</UBadge>
+          </div>
+          <p class="text-2xl font-bold text-slate-900">{{ stats.absensiPending }}</p>
+          <p class="text-sm text-slate-500">Absensi Pending</p>
+        </div>
+      </template>
+    </div>
+
+    <!-- Content Grid -->
+    <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+      <!-- Left -->
+      <div class="xl:col-span-2 space-y-6">
+        <!-- Quick Actions -->
+        <div class="bg-white rounded-xl border border-slate-200">
+          <div class="px-6 py-4 border-b border-slate-100">
+            <h2 class="font-semibold text-slate-900">Aksi Cepat</h2>
+          </div>
+          <div class="p-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <NuxtLink to="/guru/verifikasi-logbook" class="flex flex-col items-center gap-3 p-4 rounded-xl bg-sky-50 border border-sky-100 hover:border-sky-300 hover:shadow-sm transition-all">
+              <div class="p-3 rounded-xl bg-sky-500 text-white">
+                <Icon name="lucide:book-open" class="w-5 h-5" />
+              </div>
+              <span class="text-sm font-medium text-slate-700 text-center">Verifikasi Logbook</span>
+            </NuxtLink>
+
+            <NuxtLink to="/guru/absensi" class="flex flex-col items-center gap-3 p-4 rounded-xl bg-green-50 border border-green-100 hover:border-green-300 hover:shadow-sm transition-all">
+              <div class="p-3 rounded-xl bg-green-500 text-white">
+                <Icon name="lucide:calendar-check" class="w-5 h-5" />
+              </div>
+              <span class="text-sm font-medium text-slate-700 text-center">Validasi Absensi</span>
+            </NuxtLink>
+
+            <NuxtLink to="/guru/kunjungan/create" class="flex flex-col items-center gap-3 p-4 rounded-xl bg-blue-50 border border-blue-100 hover:border-blue-300 hover:shadow-sm transition-all">
+              <div class="p-3 rounded-xl bg-blue-500 text-white">
+                <Icon name="lucide:map-pin" class="w-5 h-5" />
+              </div>
+              <span class="text-sm font-medium text-slate-700 text-center">Input Kunjungan</span>
+            </NuxtLink>
+
+            <NuxtLink to="/guru/penilaian-nilai" class="flex flex-col items-center gap-3 p-4 rounded-xl bg-amber-50 border border-amber-100 hover:border-amber-300 hover:shadow-sm transition-all">
+              <div class="p-3 rounded-xl bg-amber-500 text-white">
+                <Icon name="lucide:award" class="w-5 h-5" />
+              </div>
+              <span class="text-sm font-medium text-slate-700 text-center">Input Nilai</span>
+            </NuxtLink>
           </div>
         </div>
 
-        <!-- Rata-rata kehadiran -->
-        <div class="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm hover:shadow-md transition-all duration-200">
-          <div class="flex items-center gap-4">
-            <div class="p-3 rounded-xl bg-green-50 text-green-600">
-              <UIcon name="i-heroicons-check-circle" class="w-8 h-8" />
-            </div>
-            <div class="flex-1 min-w-0">
-              <p class="text-base font-medium text-slate-500 truncate">
-                Rata-rata Kehadiran
-              </p>
-              <p class="mt-1 text-3xl font-bold text-slate-900">
-                {{ summaryData.rataRataKehadiran }}%
-              </p>
-              <p class="mt-1 text-base text-slate-500">
-                Seluruh penempatan aktif
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <!-- Logbook pending verifikasi -->
-        <div class="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm hover:shadow-md transition-all duration-200">
-          <div class="flex items-center gap-4">
-            <div class="p-3 rounded-xl bg-yellow-50 text-yellow-600">
-              <UIcon name="i-heroicons-clock" class="w-8 h-8" />
-            </div>
-            <div class="flex-1 min-w-0">
-              <p class="text-base font-medium text-slate-500 truncate">
-                Logbook Pending
-              </p>
-              <p class="mt-1 text-3xl font-bold text-slate-900">
-                {{ summaryData.logbookPending }}
-              </p>
-              <p class="mt-1 text-base text-slate-500">
-                Perlu verifikasi Anda
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <!-- Absensi pending / bermasalah -->
-        <div class="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm hover:shadow-md transition-all duration-200">
-          <div class="flex items-center gap-4">
-            <div class="p-3 rounded-xl bg-red-50 text-red-600">
-              <UIcon name="i-heroicons-exclamation-triangle" class="w-8 h-8" />
-            </div>
-            <div class="flex-1 min-w-0">
-              <p class="text-base font-medium text-slate-500 truncate">
-                Absensi Bermasalah
-              </p>
-              <p class="mt-1 text-3xl font-bold text-slate-900">
-                {{ summaryData.absensiPending }}
-              </p>
-              <p class="mt-1 text-base text-slate-500">
-                Perlu direview
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- CHARTS SECTION -->
-      <div class="grid gap-6 lg:grid-cols-2">
-        <!-- Logbook Status Chart -->
-        <div class="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
-          <div class="flex items-center justify-between mb-6">
+        <!-- Students Table -->
+        <div class="bg-white rounded-xl border border-slate-200">
+          <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
             <div>
-              <h2 class="text-xl font-bold text-slate-900">
-                Status Verifikasi Logbook
-              </h2>
-              <p class="text-base text-slate-600 mt-1">
-                {{ logbookPendingItems.length }} logbook menunggu verifikasi
-              </p>
+              <h2 class="font-semibold text-slate-900">Siswa Bimbingan</h2>
+              <p class="text-sm text-slate-500">Daftar siswa PKL yang Anda bimbing</p>
             </div>
-            <UButton
-              color="primary"
-              variant="outline"
-              size="sm"
-              @click="goVerifikasiLogbook"
-            >
-              <UIcon name="i-heroicons-eye" class="w-4 h-4 mr-2" />
-              Lihat Detail
+            <UButton to="/guru/siswa-bimbingan" variant="ghost" color="primary" size="sm" trailing-icon="i-lucide-arrow-right">
+              Lihat Semua
             </UButton>
           </div>
           
-          <div class="relative h-80">
-            <canvas ref="logbookChart" class="w-full h-full"></canvas>
-          </div>
-
-          <!-- Legend -->
-          <div class="mt-6 grid grid-cols-3 gap-4">
-            <div class="text-center">
-              <div class="w-4 h-4 bg-green-500 rounded-full mx-auto mb-2"></div>
-              <p class="text-sm font-medium text-slate-900">{{ logbookStats.disetujui }}</p>
-              <p class="text-xs text-slate-500">Disetujui</p>
+          <div v-if="loading" class="p-4 space-y-3">
+            <div v-for="i in 4" :key="i" class="flex items-center gap-4 p-3">
+              <USkeleton class="w-10 h-10 rounded-xl" />
+              <div class="flex-1 space-y-2">
+                <USkeleton class="h-4 w-32" />
+                <USkeleton class="h-3 w-24" />
+              </div>
+              <USkeleton class="h-6 w-16 rounded-full" />
             </div>
-            <div class="text-center">
-              <div class="w-4 h-4 bg-yellow-500 rounded-full mx-auto mb-2"></div>
-              <p class="text-sm font-medium text-slate-900">{{ logbookStats.menunggu }}</p>
-              <p class="text-xs text-slate-500">Menunggu</p>
-            </div>
-            <div class="text-center">
-              <div class="w-4 h-4 bg-red-500 rounded-full mx-auto mb-2"></div>
-              <p class="text-sm font-medium text-slate-900">{{ logbookStats.ditolak }}</p>
-              <p class="text-xs text-slate-500">Ditolak</p>
-            </div>
-          </div>
-        </div>
-
-        <!-- Attendance Chart -->
-        <div class="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
-          <div class="flex items-center justify-between mb-6">
-            <div>
-              <h2 class="text-xl font-bold text-slate-900">
-                Overview Kehadiran Siswa
-              </h2>
-              <p class="text-base text-slate-600 mt-1">
-                {{ absensiIssueItems.length }} absensi perlu ditinjau
-              </p>
-            </div>
-            <UButton
-              color="success"
-              variant="outline"
-              size="sm"
-              @click="goVerifikasiAbsensi"
-            >
-              <UIcon name="i-heroicons-chart-bar" class="w-4 h-4 mr-2" />
-              Lihat Detail
-            </UButton>
           </div>
           
-          <div class="relative h-80">
-            <canvas ref="attendanceChart" class="w-full h-full"></canvas>
-          </div>
-
-          <!-- Stats -->
-          <div class="mt-6 grid grid-cols-4 gap-4">
-            <div class="text-center">
-              <div class="w-4 h-4 bg-green-500 rounded-full mx-auto mb-2"></div>
-              <p class="text-sm font-medium text-slate-900">{{ attendanceStats.hadir }}</p>
-              <p class="text-xs text-slate-500">Hadir</p>
-            </div>
-            <div class="text-center">
-              <div class="w-4 h-4 bg-blue-500 rounded-full mx-auto mb-2"></div>
-              <p class="text-sm font-medium text-slate-900">{{ attendanceStats.izin }}</p>
-              <p class="text-xs text-slate-500">Izin</p>
-            </div>
-            <div class="text-center">
-              <div class="w-4 h-4 bg-yellow-500 rounded-full mx-auto mb-2"></div>
-              <p class="text-sm font-medium text-slate-900">{{ attendanceStats.sakit }}</p>
-              <p class="text-xs text-slate-500">Sakit</p>
-            </div>
-            <div class="text-center">
-              <div class="w-4 h-4 bg-red-500 rounded-full mx-auto mb-2"></div>
-              <p class="text-sm font-medium text-slate-900">{{ attendanceStats.alpha }}</p>
-              <p class="text-xs text-slate-500">Alpha</p>
+          <div v-else class="divide-y divide-slate-100">
+            <div v-for="siswa in students" :key="siswa.id" class="flex items-center gap-4 px-6 py-4 hover:bg-slate-50 transition-colors cursor-pointer" @click="navigateTo(`/guru/siswa-bimbingan/${siswa.id}`)">
+              <div class="w-10 h-10 rounded-xl flex items-center justify-center font-semibold text-sm" :class="siswa.status === 'Aktif' ? 'bg-sky-100 text-sky-700' : 'bg-slate-100 text-slate-600'">
+                {{ siswa.inisial }}
+              </div>
+              <div class="flex-1 min-w-0">
+                <p class="font-medium text-slate-900 truncate">{{ siswa.nama }}</p>
+                <p class="text-sm text-slate-500">{{ siswa.kelas }} • {{ siswa.industri }}</p>
+              </div>
+              <div class="flex items-center gap-3">
+                <div class="hidden sm:flex items-center gap-1.5">
+                  <div class="w-8 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                    <div class="h-full rounded-full" :class="siswa.kehadiran >= 80 ? 'bg-green-500' : 'bg-red-500'" :style="{ width: `${siswa.kehadiran}%` }" />
+                  </div>
+                  <span class="text-xs font-medium" :class="siswa.kehadiran >= 80 ? 'text-green-600' : 'text-red-600'">{{ siswa.kehadiran }}%</span>
+                </div>
+                <UBadge :color="siswa.status === 'Aktif' ? 'success' : 'neutral'" variant="subtle" size="xs">{{ siswa.status }}</UBadge>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- QUICK ACCESS CARDS -->
-      <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-        <!-- Penempatan -->
-        <div class="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer" @click="navigateTo('/guru/penempatan')">
-          <div class="flex items-center gap-4">
-            <div class="p-3 rounded-xl bg-purple-50 text-purple-600">
-              <UIcon name="i-heroicons-map-pin" class="w-6 h-6" />
+      <!-- Right -->
+      <div class="space-y-6">
+        <!-- Notifications -->
+        <div class="bg-white rounded-xl border border-slate-200">
+          <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+            <h2 class="font-semibold text-slate-900">Notifikasi</h2>
+            <UBadge v-if="notifications.length" color="error" variant="solid" size="xs">{{ notifications.length }}</UBadge>
+          </div>
+          
+          <div v-if="loading" class="p-4 space-y-3">
+            <div v-for="i in 3" :key="i" class="flex gap-3">
+              <USkeleton class="w-8 h-8 rounded-lg shrink-0" />
+              <div class="flex-1 space-y-2">
+                <USkeleton class="h-4 w-full" />
+                <USkeleton class="h-3 w-20" />
+              </div>
             </div>
-            <div>
-              <h3 class="text-lg font-semibold text-slate-900">Penempatan</h3>
-              <p class="text-base text-slate-500">Kelola penempatan siswa</p>
+          </div>
+          
+          <div v-else class="divide-y divide-slate-100 max-h-72 overflow-y-auto">
+            <div v-for="notif in notifications" :key="notif.id" class="px-5 py-3 hover:bg-slate-50 transition-colors cursor-pointer">
+              <div class="flex gap-3">
+                <div class="p-2 rounded-lg shrink-0" :class="notifStyle[notif.type]">
+                  <Icon :name="notif.icon" class="w-4 h-4" />
+                </div>
+                <div class="flex-1 min-w-0">
+                  <p class="text-sm text-slate-700">{{ notif.message }}</p>
+                  <p class="text-xs text-slate-400 mt-1">{{ notif.time }}</p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
-        <!-- Penilaian -->
-        <div class="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer" @click="navigateTo('/guru/penilaian')">
-          <div class="flex items-center gap-4">
-            <div class="p-3 rounded-xl bg-indigo-50 text-indigo-600">
-              <UIcon name="i-heroicons-star" class="w-6 h-6" />
+        <!-- Activity -->
+        <div class="bg-white rounded-xl border border-slate-200">
+          <div class="px-5 py-4 border-b border-slate-100">
+            <h2 class="font-semibold text-slate-900">Ringkasan Aktivitas</h2>
+          </div>
+          <div v-if="loading" class="p-5 space-y-4">
+            <USkeleton v-for="i in 3" :key="i" class="h-4 w-full" />
+          </div>
+          <div v-else class="p-5 space-y-4">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-green-500" />
+                <span class="text-sm text-slate-600">Kunjungan Bulan Ini</span>
+              </div>
+              <span class="font-semibold text-slate-900">{{ activity.kunjungan }}</span>
             </div>
-            <div>
-              <h3 class="text-lg font-semibold text-slate-900">Penilaian</h3>
-              <p class="text-base text-slate-500">Berikan nilai siswa</p>
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-sky-500" />
+                <span class="text-sm text-slate-600">Logbook Diverifikasi</span>
+              </div>
+              <span class="font-semibold text-slate-900">{{ activity.logbook }}</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-amber-500" />
+                <span class="text-sm text-slate-600">Nilai Diinput</span>
+              </div>
+              <span class="font-semibold text-slate-900">{{ activity.nilai }}</span>
             </div>
           </div>
         </div>
 
-        <!-- Dokumen -->
-        <div class="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer" @click="navigateTo('/guru/dokumen')">
-          <div class="flex items-center gap-4">
-            <div class="p-3 rounded-xl bg-teal-50 text-teal-600">
-              <UIcon name="i-heroicons-document-text" class="w-6 h-6" />
-            </div>
-            <div>
-              <h3 class="text-lg font-semibold text-slate-900">Dokumen</h3>
-              <p class="text-base text-slate-500">Kelola dokumen PKL</p>
+        <!-- Schedule -->
+        <div class="bg-sky-500 rounded-xl p-5 text-white">
+          <div class="flex items-center gap-2 mb-4">
+            <Icon name="lucide:calendar" class="w-5 h-5" />
+            <h3 class="font-semibold">Jadwal Kunjungan</h3>
+          </div>
+          <div v-if="nextVisit">
+            <p class="text-sky-100 text-sm">Kunjungan berikutnya</p>
+            <p class="font-semibold text-lg">{{ nextVisit.industri }}</p>
+            <div class="flex items-center gap-2 text-sm text-sky-100 mt-1">
+              <Icon name="lucide:clock" class="w-4 h-4" />
+              <span>{{ nextVisit.tanggal }}</span>
             </div>
           </div>
-        </div>
-
-        <!-- Laporan Akhir -->
-        <div class="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer" @click="navigateTo('/guru/laporan-akhir')">
-          <div class="flex items-center gap-4">
-            <div class="p-3 rounded-xl bg-orange-50 text-orange-600">
-              <UIcon name="i-heroicons-document-chart-bar" class="w-6 h-6" />
-            </div>
-            <div>
-              <h3 class="text-lg font-semibold text-slate-900">Laporan Akhir</h3>
-              <p class="text-base text-slate-500">Review laporan siswa</p>
-            </div>
-          </div>
+          <div v-else class="text-sky-100 text-sm">Belum ada jadwal</div>
+          <UButton to="/guru/kunjungan/create" color="white" variant="soft" size="sm" class="mt-4 w-full">
+            <Icon name="lucide:plus" class="w-4 h-4 mr-1" />
+            Tambah Jadwal
+          </UButton>
         </div>
       </div>
-    </section>
+    </div>
   </div>
 </template>
 
-<script setup lang="ts">
-import { computed, ref, onMounted, nextTick } from 'vue'
-import { Chart, registerables } from 'chart.js'
-import type { 
-  GuruProfile, 
-  DashboardSummary, 
-  LogbookDashboardRow, 
-  AbsensiDashboardRow, 
-  StatusPersetujuan, 
-  StatusAbsensi 
-} from '~/types/guru'
+<script setup>
+definePageMeta({ layout: 'guru' })
 
-// Register Chart.js components
-Chart.register(...registerables)
+const loading = ref(true)
+const guru = reactive({ nama: 'Budi Santoso, S.Pd', inisial: 'BS' })
+const stats = reactive({ totalSiswa: 0, kehadiran: 0, logbookPending: 0, absensiPending: 0 })
+const activity = reactive({ kunjungan: 0, logbook: 0, nilai: 0 })
+const notifications = ref([])
+const students = ref([])
+const nextVisit = ref(null)
 
-// Import JSON data
-import guruProfileData from '~/assets/data/guru_profile.json'
-import summaryDataJson from '~/assets/data/guru_summary.json'
-import logbookPendingData from '~/assets/data/guru_logbook_pending.json'
-import absensiPendingData from '~/assets/data/guru_absensi_pending.json'
-
-definePageMeta({
-  layout: 'guru',
-  title: 'Dashboard Guru',
+const greeting = computed(() => {
+  const h = new Date().getHours()
+  return h < 12 ? 'Pagi' : h < 15 ? 'Siang' : h < 18 ? 'Sore' : 'Malam'
 })
 
-/* ---------- DATA ---------- */
-const guruData: GuruProfile = guruProfileData
-const summaryData: DashboardSummary = summaryDataJson
-const logbookPendingItems: LogbookDashboardRow[] = logbookPendingData as LogbookDashboardRow[]
-const absensiIssueItems: AbsensiDashboardRow[] = absensiPendingData as AbsensiDashboardRow[]
+const currentDate = computed(() => new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }))
 
-/* ---------- CHART REFERENCES ---------- */
-const logbookChart = ref<HTMLCanvasElement>()
-const attendanceChart = ref<HTMLCanvasElement>()
-let logbookChartInstance: Chart | null = null
-let attendanceChartInstance: Chart | null = null
-
-/* ---------- COMPUTED STATS ---------- */
-const logbookStats = computed(() => {
-  const stats = { disetujui: 0, menunggu: 0, ditolak: 0 }
-  
-  logbookPendingItems.forEach(item => {
-    if (item.status === 'DISETUJUI') stats.disetujui++
-    else if (item.status === 'MENUNGGU') stats.menunggu++
-    else stats.ditolak++
-  })
-  
-  return stats
-})
-
-const attendanceStats = computed(() => {
-  const stats = { hadir: 0, izin: 0, sakit: 0, alpha: 0 }
-  
-  absensiIssueItems.forEach(item => {
-    if (item.statusAbsensi === 'HADIR') stats.hadir++
-    else if (item.statusAbsensi === 'IZIN') stats.izin++
-    else if (item.statusAbsensi === 'SAKIT') stats.sakit++
-    else stats.alpha++
-  })
-  
-  return stats
-})
-
-/* ---------- NAVIGATION METHODS ---------- */
-const goVerifikasiLogbook = () => {
-  navigateTo('/guru/verifikasi/logbook')
+const notifStyle = {
+  warning: 'bg-amber-100 text-amber-600',
+  error: 'bg-red-100 text-red-600',
+  success: 'bg-green-100 text-green-600',
+  info: 'bg-sky-100 text-sky-600'
 }
 
-const goVerifikasiAbsensi = () => {
-  navigateTo('/guru/verifikasi/absensi')
-}
-
-/* ---------- CHART INITIALIZATION ---------- */
-const initLogbookChart = () => {
-  if (!logbookChart.value) return
-
-  const ctx = logbookChart.value.getContext('2d')
-  if (!ctx) return
-
-  // Destroy existing chart
-  if (logbookChartInstance) {
-    logbookChartInstance.destroy()
-  }
-
-  const stats = logbookStats.value
-
-  logbookChartInstance = new Chart(ctx, {
-    type: 'doughnut',
-    data: {
-      labels: ['Disetujui', 'Menunggu', 'Ditolak'],
-      datasets: [{
-        data: [stats.disetujui, stats.menunggu, stats.ditolak],
-        backgroundColor: [
-          '#10b981', // green-500
-          '#eab308', // yellow-500
-          '#ef4444'  // red-500
-        ],
-        borderWidth: 0,
-        hoverOffset: 8
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: {
-          display: false
-        },
-        tooltip: {
-          callbacks: {
-            label: function(context) {
-              const label = context.label || ''
-              const value = context.parsed || 0
-              const total = stats.disetujui + stats.menunggu + stats.ditolak
-              const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : '0'
-              return `${label}: ${value} (${percentage}%)`
-            }
-          }
-        }
-      },
-      cutout: '60%'
-    }
-  })
-}
-
-const initAttendanceChart = () => {
-  if (!attendanceChart.value) return
-
-  const ctx = attendanceChart.value.getContext('2d')
-  if (!ctx) return
-
-  // Destroy existing chart
-  if (attendanceChartInstance) {
-    attendanceChartInstance.destroy()
-  }
-
-  const stats = attendanceStats.value
-
-  attendanceChartInstance = new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels: ['Hadir', 'Izin', 'Sakit', 'Alpha'],
-      datasets: [{
-        label: 'Jumlah',
-        data: [stats.hadir, stats.izin, stats.sakit, stats.alpha],
-        backgroundColor: [
-          '#10b981', // green-500
-          '#3b82f6', // blue-500
-          '#eab308', // yellow-500
-          '#ef4444'  // red-500
-        ],
-        borderRadius: 8,
-        borderSkipped: false,
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: {
-          display: false
-        },
-        tooltip: {
-          callbacks: {
-            label: function(context) {
-              const value = context.parsed.y || 0
-              const total = stats.hadir + stats.izin + stats.sakit + stats.alpha
-              const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : '0'
-              return `${value} siswa (${percentage}%)`
-            }
-          }
-        }
-      },
-      scales: {
-        y: {
-          beginAtZero: true,
-          ticks: {
-            stepSize: 1,
-            callback: function(value) {
-              return Math.floor(Number(value)).toString()
-            }
-          },
-          grid: {
-            color: 'rgb(241 245 249)', // slate-100
-          }
-        },
-        x: {
-          grid: {
-            display: false
-          }
-        }
-      }
-    }
-  })
-}
-
-/* ---------- LIFECYCLE ---------- */
 onMounted(async () => {
-  await nextTick()
-  
-  // Initialize charts with delay to ensure DOM is ready
-  setTimeout(() => {
-    initLogbookChart()
-    initAttendanceChart()
-  }, 100)
+  await new Promise(r => setTimeout(r, 800))
+  Object.assign(stats, { totalSiswa: 24, kehadiran: 92, logbookPending: 12, absensiPending: 5 })
+  Object.assign(activity, { kunjungan: 6, logbook: 48, nilai: 18 })
+  notifications.value = [
+    { id: 1, type: 'warning', icon: 'lucide:clock', message: '12 logbook menunggu verifikasi', time: '5 menit lalu' },
+    { id: 2, type: 'info', icon: 'lucide:user-plus', message: 'Siswa baru ditambahkan', time: '1 jam lalu' },
+    { id: 3, type: 'error', icon: 'lucide:alert-triangle', message: 'Kehadiran Ahmad < 80%', time: '2 jam lalu' }
+  ]
+  students.value = [
+    { id: 1, nama: 'Ryobi Surya Atmaja', inisial: 'RS', kelas: 'XII RPL 1', industri: 'PT. Telkom', kehadiran: 95, status: 'Aktif' },
+    { id: 2, nama: 'Dewi Sartika', inisial: 'DS', kelas: 'XII RPL 2', industri: 'PT. Gojek', kehadiran: 88, status: 'Aktif' },
+    { id: 3, nama: 'Ahmad Fauzi', inisial: 'AF', kelas: 'XII TKJ 1', industri: 'CV. Digital', kehadiran: 72, status: 'Aktif' },
+    { id: 4, nama: 'Siti Nurhaliza', inisial: 'SN', kelas: 'XII MM 1', industri: 'PT. Media', kehadiran: 100, status: 'Selesai' }
+  ]
+  nextVisit.value = { industri: 'PT. Telkom Indonesia', tanggal: 'Rabu, 18 Desember 2024' }
+  loading.value = false
 })
 
-// Cleanup
-onBeforeUnmount(() => {
-  if (logbookChartInstance) {
-    logbookChartInstance.destroy()
-  }
-  if (attendanceChartInstance) {
-    attendanceChartInstance.destroy()
-  }
-})
+useHead({ title: 'Dashboard | Guru PKL' })
 </script>

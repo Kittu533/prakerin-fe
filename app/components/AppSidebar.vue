@@ -1,425 +1,241 @@
 <template>
   <aside 
-    class="h-full bg-[#f5f5f5] lg:min-h-screen transition-all duration-300 ease-in-out relative"
-    :class="isMinimized ? 'w-16' : 'w-80'"
+    class="h-screen bg-white border-r border-slate-200 transition-all duration-300 flex flex-col"
+    :class="isMinimized ? 'w-[72px]' : 'w-72'"
   >
-    <div class="flex h-full flex-col bg-white shadow-xl rounded-xl border-r border-gray-200 lg:min-h-screen overflow-hidden">
-      <!-- Header Section -->
-      <div class="flex-shrink-0 px-6 py-8">
+    <!-- Logo Section -->
+    <div class="p-4 border-b border-slate-100">
+      <div class="flex items-center gap-3" :class="isMinimized ? 'justify-center' : ''">
         <div 
-          class="text-center pb-6 border-b border-gray-200 transition-all duration-300"
-          :class="isMinimized ? 'mb-2' : 'mb-6'"
+          class="flex items-center justify-center rounded-xl shrink-0 transition-all duration-300"
+          :class="[
+            isMinimized ? 'w-10 h-10' : 'w-11 h-11',
+            role === 'mentor' ? 'bg-gradient-to-br from-blue-500 to-indigo-600' : 'bg-gradient-to-br from-blue-500 to-blue-600'
+          ]"
         >
-          <div 
-            class="bg-gradient-to-br rounded-2xl flex items-center justify-center mx-auto mb-4 transition-all duration-300"
-            :class="[
-              isMinimized ? 'w-8 h-8' : 'w-16 h-16',
-              role === 'mentor' ? 'from-blue-400 to-indigo-500' : 'from-emerald-400 to-teal-500'
-            ]"
-          >
-            <span 
-              class="text-white font-bold transition-all duration-300"
-              :class="isMinimized ? 'text-sm' : 'text-2xl'"
-            >
-              {{ role === 'mentor' ? 'M' : 'S' }}
-            </span>
-          </div>
-          <div v-show="!isMinimized" class="transition-all duration-300">
-            <h2 class="font-bold text-gray-900 text-lg">
-              {{ role === 'mentor' ? 'MENTOR PKL' : 'SIMPRAKERIN' }}
-            </h2>
-            <p class="text-sm text-gray-500 mt-2">SMK N 2 Wonogiri</p>
-          </div>
+          <span class="text-white font-bold" :class="isMinimized ? 'text-sm' : 'text-lg'">
+            {{ role === 'mentor' ? 'M' : 'SP' }}
+          </span>
+        </div>
+        <div v-show="!isMinimized" class="min-w-0">
+          <h2 class="font-bold text-slate-900 text-sm truncate">
+            {{ role === 'mentor' ? 'MENTOR PKL' : 'SIMPRAKERIN' }}
+          </h2>
+          <p class="text-xs text-slate-500 truncate">SMK N 2 Wonogiri</p>
         </div>
       </div>
+    </div>
 
-      <!-- Navigation Section -->
-      <div class="flex-1 overflow-y-auto px-6">
-        <!-- Mentor Navigation -->
-        <nav v-if="role === 'mentor'" class="space-y-4">
-          <!-- Dashboard -->
-          <NuxtLink
-            to="/mentor"
-            class="group flex w-full items-center rounded-xl px-4 py-4 text-base font-medium transition-all duration-200"
+    <!-- Navigation -->
+    <nav class="flex-1 overflow-y-auto p-3 space-y-1">
+      <!-- Siswa Navigation -->
+      <template v-if="role === 'siswa'">
+        <!-- Dashboard -->
+        <SidebarItem
+          to="/siswa"
+          icon="i-heroicons-squares-2x2"
+          label="Dashboard"
+          :active="$route.path === '/siswa'"
+          :minimized="isMinimized"
+        />
+
+        <!-- Program -->
+        <SidebarItem
+          to="/siswa/program"
+          icon="i-heroicons-briefcase"
+          label="Program"
+          :active="activeMain === 'program'"
+          :minimized="isMinimized"
+        />
+
+        <!-- Profile with submenu -->
+        <div class="relative">
+          <button
+            @click="toggleProfile"
+            class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors"
             :class="[
-              $route.path === '/mentor' 
-                ? 'bg-blue-50 text-blue-700'
-                : 'text-gray-700 hover:bg-gray-50',
-              isMinimized ? 'justify-center' : 'gap-4'
+              activeMain === 'profile' ? 'bg-blue-50 text-blue-700' : 'text-slate-700 hover:bg-slate-50',
+              isMinimized ? 'justify-center' : ''
             ]"
-            :title="isMinimized ? 'Dashboard' : ''"
+            :title="isMinimized ? 'Profile' : ''"
           >
+            <UIcon name="i-heroicons-user-circle" class="w-5 h-5 shrink-0" />
+            <span v-show="!isMinimized" class="flex-1 text-left">Profile</span>
             <UIcon
-              name="i-heroicons-squares-2x2"
-              class="w-6 h-6 shrink-0"
+              v-show="!isMinimized"
+              :name="isProfileOpen ? 'i-heroicons-chevron-up' : 'i-heroicons-chevron-down'"
+              class="w-4 h-4 transition-transform"
             />
-            <span v-show="!isMinimized" class="transition-all duration-300">Dashboard</span>
-          </NuxtLink>
+          </button>
 
-          <!-- Monitoring Section Label -->
-          <div v-show="!isMinimized" class="pt-4 pb-2">
-            <p class="px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-              Monitoring
-            </p>
-          </div>
-
-          <!-- Penempatan Siswa -->
-          <NuxtLink
-            to="/mentor/penempatan"
-            class="group flex w-full items-center rounded-xl px-4 py-4 text-base font-medium transition-all duration-200"
-            :class="[
-              $route.path.startsWith('/mentor/penempatan') 
-                ? 'bg-blue-50 text-blue-700'
-                : 'text-gray-700 hover:bg-gray-50',
-              isMinimized ? 'justify-center' : 'gap-4'
-            ]"
-            :title="isMinimized ? 'Penempatan Siswa' : ''"
+          <!-- Submenu -->
+          <Transition
+            enter-active-class="transition duration-150 ease-out"
+            enter-from-class="opacity-0 -translate-y-1"
+            enter-to-class="opacity-100 translate-y-0"
+            leave-active-class="transition duration-100 ease-in"
+            leave-from-class="opacity-100 translate-y-0"
+            leave-to-class="opacity-0 -translate-y-1"
           >
-            <UIcon
-              name="i-heroicons-map-pin"
-              class="w-6 h-6 shrink-0"
-            />
-            <span v-show="!isMinimized" class="transition-all duration-300">Penempatan Siswa</span>
-          </NuxtLink>
+            <div v-show="isProfileOpen && !isMinimized" class="mt-1 ml-4 pl-4 border-l-2 border-slate-200 space-y-1">
+              <NuxtLink
+                to="/siswa/profile/data-diri"
+                class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors"
+                :class="activeProfileSub === 'data-diri' ? 'bg-blue-50 text-blue-700 font-medium' : 'text-slate-600 hover:bg-slate-50'"
+              >
+                <UIcon name="i-heroicons-identification" class="w-4 h-4" />
+                <span>Data Diri</span>
+              </NuxtLink>
+              <NuxtLink
+                to="/siswa/profile/daftar-program"
+                class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors"
+                :class="activeProfileSub === 'daftar-program' ? 'bg-blue-50 text-blue-700 font-medium' : 'text-slate-600 hover:bg-slate-50'"
+              >
+                <UIcon name="i-heroicons-clipboard-document-list" class="w-4 h-4" />
+                <span>Daftar Program</span>
+              </NuxtLink>
+              <NuxtLink
+                to="/siswa/profile/document"
+                class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors"
+                :class="activeProfileSub === 'document' ? 'bg-blue-50 text-blue-700 font-medium' : 'text-slate-600 hover:bg-slate-50'"
+              >
+                <UIcon name="i-heroicons-document-text" class="w-4 h-4" />
+                <span>Dokumen PKL</span>
+              </NuxtLink>
+            </div>
+          </Transition>
 
-          <!-- Verifikasi Section Label -->
-          <div v-show="!isMinimized" class="pt-4 pb-2">
-            <p class="px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-              Verifikasi
-            </p>
-          </div>
-
-          <!-- Verifikasi Absensi -->
-          <NuxtLink
-            to="/mentor/verifikasi/absensi"
-            class="group flex w-full items-center rounded-xl px-4 py-4 text-base font-medium transition-all duration-200"
-            :class="[
-              $route.path.startsWith('/mentor/verifikasi/absensi') 
-                ? 'bg-blue-50 text-blue-700'
-                : 'text-gray-700 hover:bg-gray-50',
-              isMinimized ? 'justify-center' : 'gap-4'
-            ]"
-            :title="isMinimized ? 'Verifikasi Absensi' : ''"
+          <!-- Minimized Popup -->
+          <Transition
+            enter-active-class="transition duration-150 ease-out"
+            enter-from-class="opacity-0 scale-95"
+            enter-to-class="opacity-100 scale-100"
+            leave-active-class="transition duration-100 ease-in"
+            leave-from-class="opacity-100 scale-100"
+            leave-to-class="opacity-0 scale-95"
           >
-            <UIcon
-              name="i-heroicons-calendar-days"
-              class="w-6 h-6 shrink-0"
-            />
-            <span v-show="!isMinimized" class="transition-all duration-300">Verifikasi Absensi</span>
-          </NuxtLink>
-
-          <!-- Verifikasi Logbook -->
-          <NuxtLink
-            to="/mentor/verifikasi/logbook"
-            class="group flex w-full items-center rounded-xl px-4 py-4 text-base font-medium transition-all duration-200"
-            :class="[
-              $route.path.startsWith('/mentor/verifikasi/logbook') 
-                ? 'bg-blue-50 text-blue-700'
-                : 'text-gray-700 hover:bg-gray-50',
-              isMinimized ? 'justify-center' : 'gap-4'
-            ]"
-            :title="isMinimized ? 'Verifikasi Logbook' : ''"
-          >
-            <UIcon
-              name="i-heroicons-document-text"
-              class="w-6 h-6 shrink-0"
-            />
-            <span v-show="!isMinimized" class="transition-all duration-300">Verifikasi Logbook</span>
-          </NuxtLink>
-
-          <!-- Penilaian -->
-          <NuxtLink
-            to="/mentor/penilaian"
-            class="group flex w-full items-center rounded-xl px-4 py-4 text-base font-medium transition-all duration-200"
-            :class="[
-              $route.path.startsWith('/mentor/penilaian') 
-                ? 'bg-blue-50 text-blue-700'
-                : 'text-gray-700 hover:bg-gray-50',
-              isMinimized ? 'justify-center' : 'gap-4'
-            ]"
-            :title="isMinimized ? 'Penilaian' : ''"
-          >
-            <UIcon
-              name="i-heroicons-star"
-              class="w-6 h-6 shrink-0"
-            />
-            <span v-show="!isMinimized" class="transition-all duration-300">Penilaian</span>
-          </NuxtLink>
-
-          <!-- Logbook Menu -->
-          <NuxtLink
-            to="/mentor/logbook"
-            class="group flex w-full items-center rounded-xl px-4 py-4 text-base font-medium transition-all duration-200"
-            :class="[
-              $route.path.startsWith('/mentor/logbook') 
-                ? 'bg-blue-50 text-blue-700'
-                : 'text-gray-700 hover:bg-gray-50',
-              isMinimized ? 'justify-center' : 'gap-4'
-            ]"
-            :title="isMinimized ? 'Logbook' : ''"
-          >
-            <UIcon
-              name="i-heroicons-book-open"
-              class="w-6 h-6 shrink-0"
-            />
-            <span v-show="!isMinimized" class="transition-all duration-300">Logbook</span>
-          </NuxtLink>
-        </nav>
-
-        <!-- Siswa Navigation -->
-        <nav v-else class="space-y-4">
-          <NuxtLink
-            to="/siswa/program"
-            class="group flex w-full items-center rounded-xl px-4 py-4 text-base font-medium transition-all duration-200"
-            :class="[
-              activeMain === 'program'
-                ? 'bg-blue-50 text-blue-700'
-                : 'text-gray-700 hover:bg-gray-50',
-              isMinimized ? 'justify-center' : 'gap-4'
-            ]"
-            :title="isMinimized ? 'Program' : ''"
-          >
-            <UIcon
-              name="i-heroicons-briefcase"
-              class="w-6 h-6 shrink-0"
-            />
-            <span v-show="!isMinimized" class="transition-all duration-300">Program</span>
-          </NuxtLink>
-
-          <div class="space-y-3">
-            <button
-              type="button"
-              @click="toggleProfile"
-              class="group flex w-full items-center rounded-xl px-4 py-4 text-base font-medium transition-all duration-200"
-              :class="[
-                activeMain === 'profile'
-                  ? 'bg-blue-50 text-blue-700'
-                  : 'text-gray-700 hover:bg-gray-50',
-                isMinimized ? 'justify-center' : 'justify-between'
-              ]"
-              :title="isMinimized ? 'Profile' : ''"
+            <div 
+              v-if="isMinimized && isProfileOpen" 
+              class="absolute left-full top-0 ml-2 w-48 bg-white shadow-lg rounded-xl border border-slate-200 py-2 z-50"
             >
-              <div class="flex items-center" :class="isMinimized ? '' : 'gap-4'">
-                <UIcon
-                  name="i-heroicons-user-circle"
-                  class="w-6 h-6 shrink-0"
-                />
-                <span v-show="!isMinimized" class="transition-all duration-300">Profile</span>
-              </div>
-              <UIcon
-                v-show="!isMinimized"
-                :name="isProfileOpen ? 'i-heroicons-chevron-up' : 'i-heroicons-chevron-down'"
-                class="w-5 h-5 transition-transform duration-200"
-              />
-            </button>
-
-            <transition
-              enter-active-class="transition duration-200 ease-out"
-              enter-from-class="opacity-0 -translate-y-2"
-              enter-to-class="opacity-100 translate-y-0"
-              leave-active-class="transition duration-150 ease-in"
-              leave-from-class="opacity-100 translate-y-0"
-              leave-to-class="opacity-0 -translate-y-2"
-            >
-              <div v-show="isProfileOpen && !isMinimized" class="space-y-3 pl-10">
-                <button
-                  type="button"
-                  @click="navigateToDataDiri"
-                  class="group flex w-full items-center gap-4 rounded-lg px-4 py-3 text-sm font-medium transition-all duration-200"
-                  :class="activeProfileSub === 'data-diri'
-                    ? 'bg-blue-100 text-blue-700'
-                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'"
-                >
-                  <UIcon
-                    name="i-heroicons-identification"
-                    class="w-5 h-5"
-                  />
-                  <span>Data Diri</span>
-                </button>
-
-                <button
-                  type="button"
-                  @click="navigateToDaftarProgram"
-                  class="group flex w-full items-center gap-4 rounded-lg px-4 py-3 text-sm font-medium transition-all duration-200"
-                  :class="activeProfileSub === 'daftar-program'
-                    ? 'bg-blue-100 text-blue-700'
-                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'"
-                >
-                  <UIcon
-                    name="i-heroicons-clipboard-document-list"
-                    class="w-5 h-5"
-                  />
-                  <span>Daftar Program</span>
-                </button>
-
-                <button
-                  type="button"
-                  @click="navigateToDokumen"
-                  class="group flex w-full items-center gap-4 rounded-lg px-4 py-3 text-sm font-medium transition-all duration-200"
-                  :class="activeProfileSub === 'document'
-                    ? 'bg-blue-100 text-blue-700'
-                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'"
-                >
-                  <UIcon
-                    name="i-heroicons-document-text"
-                    class="w-5 h-5"
-                  />
-                  <span>Dokumen PKL</span>
-                </button>
-              </div>
-            </transition>
-
-            <!-- Minimized Profile Menu Popup -->
-            <div v-if="isMinimized && isProfileOpen" 
-                 class="absolute left-full top-0 ml-2 min-w-48 bg-white shadow-lg rounded-lg border border-gray-200 py-2 z-50">
-              <button
-                type="button"
-                @click="navigateToDataDiri"
-                class="block w-full text-left px-4 py-2.5 text-sm font-medium transition-all duration-200"
-                :class="activeProfileSub === 'data-diri'
-                  ? 'bg-blue-50 text-blue-700'
-                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'"
+              <p class="px-3 py-1.5 text-xs font-semibold text-slate-400 uppercase">Profile</p>
+              <NuxtLink
+                to="/siswa/profile/data-diri"
+                @click="isProfileOpen = false"
+                class="flex items-center gap-2 px-3 py-2 text-sm transition-colors"
+                :class="activeProfileSub === 'data-diri' ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-50'"
               >
                 Data Diri
-              </button>
-              <button
-                type="button"
-                @click="navigateToDaftarProgram"
-                class="block w-full text-left px-4 py-2.5 text-sm font-medium transition-all duration-200"
-                :class="activeProfileSub === 'daftar-program'
-                  ? 'bg-blue-50 text-blue-700'
-                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'"
+              </NuxtLink>
+              <NuxtLink
+                to="/siswa/profile/daftar-program"
+                @click="isProfileOpen = false"
+                class="flex items-center gap-2 px-3 py-2 text-sm transition-colors"
+                :class="activeProfileSub === 'daftar-program' ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-50'"
               >
                 Daftar Program
-              </button>
-              <button
-                type="button"
-                @click="navigateToDokumen"
-                class="block w-full text-left px-4 py-2.5 text-sm font-medium transition-all duration-200"
-                :class="activeProfileSub === 'document'
-                  ? 'bg-blue-50 text-blue-700'
-                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'"
+              </NuxtLink>
+              <NuxtLink
+                to="/siswa/profile/document"
+                @click="isProfileOpen = false"
+                class="flex items-center gap-2 px-3 py-2 text-sm transition-colors"
+                :class="activeProfileSub === 'document' ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-50'"
               >
                 Dokumen PKL
-              </button>
+              </NuxtLink>
             </div>
-          </div>
-
-          <NuxtLink
-            to="/siswa/logbook"
-            class="group flex w-full items-center rounded-xl px-4 py-4 text-base font-medium transition-all duration-200"
-            :class="[
-              activeMain === 'logbook'
-                ? 'bg-blue-50 text-blue-700'
-                : 'text-gray-700 hover:bg-gray-50',
-              isMinimized ? 'justify-center' : 'gap-4'
-            ]"
-            :title="isMinimized ? 'Logbook' : ''"
-          >
-            <UIcon
-              name="i-heroicons-book-open"
-              class="w-6 h-6 shrink-0"
-            />
-            <span v-show="!isMinimized" class="transition-all duration-300">Logbook</span>
-          </NuxtLink>
-        </nav>
-      </div>
-
-      <!-- Footer Section -->
-      <div class="flex-shrink-0 border-t border-gray-200">
-        <!-- Minimize Toggle Button (only for non-mentor roles) -->
-        <div v-if="role !== 'mentor'" class="px-6 py-4 border-b border-gray-200">
-          <button
-            @click="toggleSidebar"
-            class="group flex w-full items-center rounded-xl px-4 py-3 text-base font-medium text-gray-700 hover:bg-gray-50 transition-all duration-200"
-            :class="isMinimized ? 'justify-center' : 'gap-4'"
-            :title="isMinimized ? (isMinimized ? 'Expand' : 'Collapse') : ''"
-          >
-            <UIcon
-              :name="isMinimized ? 'i-heroicons-chevron-right' : 'i-heroicons-chevron-left'"
-              class="w-5 h-5 shrink-0"
-            />
-            <span v-show="!isMinimized" class="transition-all duration-300">
-              {{ isMinimized ? 'Expand' : 'Collapse' }}
-            </span>
-          </button>
+          </Transition>
         </div>
 
-        <!-- User Info (only for non-mentor roles) -->
-        <div v-if="role !== 'mentor'" class="px-6 py-4">
-          <div class="flex items-center" :class="isMinimized ? 'justify-center' : 'gap-4'">
-            <img
-              :src="`https://ui-avatars.com/api/?name=Siswa&background=10b981&color=fff`"
-              alt="Profile"
-              class="h-10 w-10 rounded-xl"
-            />
-            <div v-show="!isMinimized" class="flex-1 transition-all duration-300">
-              <p class="text-sm font-semibold text-gray-900">Ryobi Surya Atmaja</p>
-              <p class="text-xs text-gray-500">XII TM A</p>
-            </div>
-          </div>
-        </div>
+        <!-- Logbook -->
+        <SidebarItem
+          to="/siswa/logbook"
+          icon="i-heroicons-book-open"
+          label="Logbook"
+          :active="activeMain === 'logbook'"
+          :minimized="isMinimized"
+        />
+      </template>
 
-        <!-- Logout -->
-        <div class="px-6 py-4">
-          <button
-            @click="logout"
-            class="group flex w-full items-center rounded-xl px-4 py-3 text-base font-medium text-red-600 hover:bg-red-50 transition-all duration-200"
-            :class="isMinimized ? 'justify-center' : 'justify-between'"
-            :title="isMinimized ? 'Keluar' : ''"
-          >
-            <div class="flex items-center" :class="isMinimized ? '' : 'gap-4'">
-              <UIcon
-                name="i-heroicons-arrow-right-on-rectangle"
-                class="w-5 h-5"
-              />
-              <span v-show="!isMinimized" class="transition-all duration-300">Keluar</span>
-            </div>
-          </button>
+      <!-- Mentor Navigation -->
+      <template v-else-if="role === 'mentor'">
+        <SidebarItem to="/mentor" icon="i-heroicons-squares-2x2" label="Dashboard" :active="$route.path === '/mentor'" :minimized="isMinimized" />
+        
+        <div v-show="!isMinimized" class="pt-4 pb-2">
+          <p class="px-3 text-xs font-semibold text-slate-400 uppercase tracking-wider">Monitoring</p>
+        </div>
+        
+        <SidebarItem to="/mentor/penempatan" icon="i-heroicons-map-pin" label="Penempatan Siswa" :active="$route.path.startsWith('/mentor/penempatan')" :minimized="isMinimized" />
+        
+        <div v-show="!isMinimized" class="pt-4 pb-2">
+          <p class="px-3 text-xs font-semibold text-slate-400 uppercase tracking-wider">Verifikasi</p>
+        </div>
+        
+        <SidebarItem to="/mentor/verifikasi/absensi" icon="i-heroicons-calendar-days" label="Verifikasi Absensi" :active="$route.path.startsWith('/mentor/verifikasi/absensi')" :minimized="isMinimized" />
+        <SidebarItem to="/mentor/verifikasi/logbook" icon="i-heroicons-document-text" label="Verifikasi Logbook" :active="$route.path.startsWith('/mentor/verifikasi/logbook')" :minimized="isMinimized" />
+        <SidebarItem to="/mentor/penilaian" icon="i-heroicons-star" label="Penilaian" :active="$route.path.startsWith('/mentor/penilaian')" :minimized="isMinimized" />
+      </template>
+    </nav>
+
+    <!-- Footer -->
+    <div class="border-t border-slate-100 p-3 space-y-2">
+      <!-- Toggle Button -->
+      <button
+        @click="toggleSidebar"
+        class="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-slate-600 hover:bg-slate-50 transition-colors"
+        :class="isMinimized ? 'justify-center' : ''"
+        :title="isMinimized ? 'Expand' : 'Collapse'"
+      >
+        <UIcon :name="isMinimized ? 'i-heroicons-chevron-double-right' : 'i-heroicons-chevron-double-left'" class="w-5 h-5" />
+        <span v-show="!isMinimized">Collapse</span>
+      </button>
+
+      <!-- User Info -->
+      <div 
+        class="flex items-center gap-3 p-2 rounded-lg bg-slate-50"
+        :class="isMinimized ? 'justify-center' : ''"
+      >
+        <img
+          src="https://ui-avatars.com/api/?name=RS&background=3b82f6&color=fff&size=40"
+          alt="Profile"
+          class="w-9 h-9 rounded-lg shrink-0"
+        />
+        <div v-show="!isMinimized" class="flex-1 min-w-0">
+          <p class="text-sm font-medium text-slate-900 truncate">Ryobi Surya A.</p>
+          <p class="text-xs text-slate-500 truncate">XII RPL 1</p>
         </div>
       </div>
+
+      <!-- Logout -->
+      <button
+        @click="logout"
+        class="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-red-600 hover:bg-red-50 transition-colors"
+        :class="isMinimized ? 'justify-center' : ''"
+        :title="isMinimized ? 'Keluar' : ''"
+      >
+        <UIcon name="i-heroicons-arrow-right-on-rectangle" class="w-5 h-5" />
+        <span v-show="!isMinimized">Keluar</span>
+      </button>
     </div>
   </aside>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch, onMounted } from 'vue'
-
-interface Props {
-  isMinimized?: boolean
+const props = withDefaults(defineProps<{
   role?: string
-}
-
-const props = withDefaults(defineProps<Props>(), {
-  isMinimized: false,
+}>(), {
   role: 'siswa'
 })
 
-defineEmits(['toggle-minimize'])
-
 const route = useRoute()
+const { isDesktopSidebarMinimized, toggleDesktopSidebar } = useSidebar()
 
-// Use shared sidebar state
-const {
-  isDesktopSidebarMinimized,
-  isDesktop,
-  toggleDesktopSidebar,
-} = useSidebar()
-
-// Use the shared state instead of local state
 const isMinimized = isDesktopSidebarMinimized
 const isProfileOpen = ref(false)
 
-// Toggle functions
-const toggleSidebar = () => {
-  toggleDesktopSidebar()
-}
+const toggleSidebar = () => toggleDesktopSidebar()
+const toggleProfile = () => { isProfileOpen.value = !isProfileOpen.value }
 
-const toggleProfile = () => {
-  isProfileOpen.value = !isProfileOpen.value
-}
-
-// Active state computeds
 const activeMain = computed(() => {
   const path = route.path
   if (path.startsWith('/siswa/profile')) return 'profile'
@@ -430,72 +246,17 @@ const activeMain = computed(() => {
 
 const activeProfileSub = computed(() => {
   const path = route.path
-  if (path.startsWith('/siswa/profile/document')) return 'document'
-  if (path.startsWith('/siswa/profile/daftar-program')) return 'daftar-program'
-  if (path.startsWith('/siswa/profile/data-diri')) return 'data-diri'
-  if (path === '/siswa/profile') return 'data-diri'
+  if (path.includes('/document')) return 'document'
+  if (path.includes('/daftar-program')) return 'daftar-program'
+  if (path.includes('/data-diri')) return 'data-diri'
   return ''
 })
 
-// Watch for profile route changes
-watch(
-  activeMain,
-  (val) => {
-    if (val === 'profile' && !isMinimized.value) {
-      isProfileOpen.value = true
-    }
-  },
-  { immediate: true }
-)
+watch(activeMain, (val) => {
+  if (val === 'profile' && !isMinimized.value) isProfileOpen.value = true
+}, { immediate: true })
 
-// Watch for sidebar minimization to close profile menu
-watch(
-  isMinimized,
-  (newValue) => {
-    if (newValue) {
-      isProfileOpen.value = false
-    }
-  }
-)
+watch(isMinimized, (val) => { if (val) isProfileOpen.value = false })
 
-// Navigation functions
-const navigateToDataDiri = () => {
-  navigateTo('/siswa/profile/data-diri')
-}
-
-const navigateToDaftarProgram = () => {
-  navigateTo('/siswa/profile/daftar-program')
-}
-
-const navigateToDokumen = () => {
-  navigateTo('/siswa/profile/document')
-}
-
-const logout = () => {
-  // Handle logout logic here
-  navigateTo('/login')
-}
-
-// Debug scroll behavior
-onMounted(() => {
-  console.log('Sidebar mounted, checking sidebar scroll...')
-  setTimeout(() => {
-    const sidebarElement = document.querySelector('aside')
-    const sidebarContent = document.querySelector('.overflow-y-auto')
-    
-    if (sidebarElement) {
-      console.log('Sidebar element:')
-      console.log('- ScrollHeight:', sidebarElement.scrollHeight)
-      console.log('- ClientHeight:', sidebarElement.clientHeight)
-      console.log('- OverflowY:', getComputedStyle(sidebarElement).overflowY)
-    }
-    
-    if (sidebarContent) {
-      console.log('Sidebar content area:')
-      console.log('- ScrollHeight:', sidebarContent.scrollHeight)
-      console.log('- ClientHeight:', sidebarContent.clientHeight)
-      console.log('- OverflowY:', getComputedStyle(sidebarContent).overflowY)
-    }
-  }, 100)
-})
+const logout = () => navigateTo('/login')
 </script>

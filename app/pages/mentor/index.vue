@@ -1,297 +1,139 @@
 <template>
-  <NuxtLayout name="mentor">
-    <div class="bg-white min-h-screen">
-      <div class="p-6">
-        <!-- Breadcrumb -->
-        <UBreadcrumb class="mb-6" :links="[
-          {
-            label: 'Dashboard',
-            icon: 'i-heroicons-squares-2x2'
-          }
-        ]" />
+  <div class="space-y-6">
+    <div>
+      <h1 class="text-xl lg:text-2xl font-bold text-slate-900">Dashboard Mentor</h1>
+      <p class="text-sm text-slate-500">Selamat datang, Pak Joko</p>
+    </div>
 
-        <!-- Header -->
-        <div class="mb-8">
-          <h1 class="text-2xl font-bold text-slate-900">Dashboard Mentor</h1>
-          <p class="text-slate-600 mt-1">Monitoring dan verifikasi kegiatan PKL siswa</p>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <div class="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
-            <div class="flex items-center">
-              <div class="shrink-0">
-                <div class="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center">
-                  <UIcon name="i-heroicons-user-group" class="w-6 h-6 text-blue-600" />
-                </div>
-              </div>
-              <div class="ml-4">
-                <p class="text-sm font-medium text-slate-600">Total Siswa PKL</p>
-                <p class="text-2xl font-bold text-slate-900">{{ stats.totalSiswa }}</p>
-              </div>
-            </div>
-          </div>
-
-          <div class="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
-            <div class="flex items-center">
-              <div class="shrink-0">
-                <div class="w-10 h-10 bg-green-50 rounded-lg flex items-center justify-center">
-                  <UIcon name="i-heroicons-check-circle" class="w-6 h-6 text-green-600" />
-                </div>
-              </div>
-              <div class="ml-4">
-                <p class="text-sm font-medium text-slate-600">Absensi Terverifikasi</p>
-                <p class="text-2xl font-bold text-slate-900">{{ stats.absensiVerified }}</p>
-              </div>
-            </div>
-          </div>
-
-          <div class="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
-            <div class="flex items-center">
-              <div class="shrink-0">
-                <div class="w-10 h-10 bg-yellow-50 rounded-lg flex items-center justify-center">
-                  <UIcon name="i-heroicons-clock" class="w-6 h-6 text-yellow-600" />
-                </div>
-              </div>
-              <div class="ml-4">
-                <p class="text-sm font-medium text-slate-600">Menunggu Verifikasi</p>
-                <p class="text-2xl font-bold text-slate-900">{{ stats.pendingVerification }}</p>
-              </div>
-            </div>
-          </div>
-
-          <div class="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
-            <div class="flex items-center">
-              <div class="shrink-0">
-                <div class="w-10 h-10 bg-purple-50 rounded-lg flex items-center justify-center">
-                  <UIcon name="i-heroicons-document-text" class="w-6 h-6 text-purple-600" />
-                </div>
-              </div>
-              <div class="ml-4">
-                <p class="text-sm font-medium text-slate-600">Logbook Verified</p>
-                <p class="text-2xl font-bold text-slate-900">{{ stats.logbookVerified }}</p>
-              </div>
-            </div>
-          </div>
-        </div>      <!-- Content Grid -->
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <!-- Recent Activities -->
-        <div class="bg-white rounded-lg shadow-sm border border-slate-200">
-          <div class="px-6 py-4 border-b border-slate-200">
-            <h2 class="text-lg font-semibold text-slate-900">Aktivitas Terbaru</h2>
-          </div>
-          <div class="p-6">
-            <div class="space-y-4">
-              <div v-for="activity in recentActivities" :key="activity.id" class="flex items-start space-x-3">
-                <div class="shrink-0">
-                  <div 
-                    class="w-8 h-8 rounded-full flex items-center justify-center"
-                    :class="getActivityColor(activity.type)"
-                  >
-                    <UIcon :name="getActivityIcon(activity.type)" class="w-4 h-4" />
-                  </div>
-                </div>
-                <div class="flex-1 min-w-0">
-                  <p class="text-sm font-medium text-slate-900">{{ activity.title }}</p>
-                  <p class="text-sm text-slate-600">{{ activity.description }}</p>
-                  <p class="text-xs text-slate-500 mt-1">{{ formatDate(activity.timestamp) }}</p>
-                </div>
-              </div>
-            </div>
+    <!-- Stats -->
+    <div v-if="loading" class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <USkeleton v-for="i in 4" :key="i" class="h-28 rounded-xl" />
+    </div>
+    <div v-else class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div v-for="stat in stats" :key="stat.label" class="bg-white rounded-xl border border-slate-200 p-5">
+        <div class="flex items-center justify-between mb-3">
+          <div class="w-10 h-10 rounded-lg flex items-center justify-center" :class="stat.bg">
+            <Icon :name="stat.icon" class="w-5 h-5" :class="stat.color" />
           </div>
         </div>
+        <p class="text-2xl font-bold text-slate-900">{{ stat.value }}</p>
+        <p class="text-sm text-slate-500">{{ stat.label }}</p>
+      </div>
+    </div>
 
-        <!-- Siswa Yang Perlu Perhatian -->
-        <div class="bg-white rounded-lg shadow-sm border border-slate-200">
-          <div class="px-6 py-4 border-b border-slate-200">
-            <h2 class="text-lg font-semibold text-slate-900">Siswa Perlu Perhatian</h2>
-          </div>
-          <div class="p-6">
-            <div class="space-y-4">
-              <div v-for="siswa in attentionNeeded" :key="siswa.id" class="flex items-center justify-between p-3 border border-slate-200 rounded-lg">
-                <div class="flex items-center space-x-3">
-                  <img 
-                    :src="`https://ui-avatars.com/api/?name=${siswa.nama}&background=0ea5e9&color=fff`" 
-                    :alt="siswa.nama"
-                    class="w-10 h-10 rounded-full"
-                  />
-                  <div>
-                    <p class="text-sm font-medium text-slate-900">{{ siswa.nama }}</p>
-                    <p class="text-xs text-slate-600">{{ siswa.perusahaan }}</p>
-                  </div>
-                </div>
-                <div class="text-right">
-                  <span 
-                    class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
-                    :class="getStatusColor(siswa.status)"
-                  >
-                    {{ siswa.status }}
-                  </span>
-                  <p class="text-xs text-slate-500 mt-1">{{ siswa.lastActivity }}</p>
-                </div>
-              </div>
+    <div class="grid lg:grid-cols-2 gap-6">
+      <!-- Pending Verifications -->
+      <div class="bg-white rounded-xl border border-slate-200 p-5">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="font-semibold text-slate-900">Menunggu Verifikasi</h3>
+          <UButton variant="ghost" color="primary" size="xs" to="/mentor/absensi">Lihat Semua</UButton>
+        </div>
+        <div v-if="loading" class="space-y-3">
+          <USkeleton v-for="i in 3" :key="i" class="h-16 rounded-lg" />
+        </div>
+        <div v-else class="space-y-3">
+          <div v-for="item in pendingItems" :key="item.id" class="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
+            <div class="w-10 h-10 rounded-lg flex items-center justify-center" :class="item.type === 'absensi' ? 'bg-warning-100 text-warning-600' : 'bg-primary-100 text-primary-600'">
+              <Icon :name="item.type === 'absensi' ? 'lucide:calendar-check' : 'lucide:book-open'" class="w-5 h-5" />
             </div>
+            <div class="flex-1 min-w-0">
+              <p class="text-sm font-medium text-slate-900">{{ item.siswa }}</p>
+              <p class="text-xs text-slate-500">{{ item.desc }}</p>
+            </div>
+            <UBadge color="warning" variant="subtle" size="xs">Pending</UBadge>
           </div>
         </div>
       </div>
 
-      <!-- Quick Actions -->
-      <div class="mt-8">
-        <h2 class="text-lg font-semibold text-slate-900 mb-4">Quick Actions</h2>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <NuxtLink
-            to="/mentor/verifikasi/absensi"
-            class="flex items-center p-4 bg-white border border-slate-200 rounded-lg hover:border-blue-300 hover:shadow-sm transition-all group"
-          >
-            <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center group-hover:bg-blue-200 transition-colors">
-              <UIcon name="i-heroicons-calendar-days" class="w-6 h-6 text-blue-600" />
-            </div>
-            <div class="ml-3">
-              <p class="text-sm font-medium text-slate-900">Verifikasi Absensi</p>
-              <p class="text-xs text-slate-600">{{ stats.pendingAbsensi }} pending</p>
-            </div>
-          </NuxtLink>
-
-          <NuxtLink
-            to="/mentor/verifikasi/logbook"
-            class="flex items-center p-4 bg-white border border-slate-200 rounded-lg hover:border-green-300 hover:shadow-sm transition-all group"
-          >
-            <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center group-hover:bg-green-200 transition-colors">
-              <UIcon name="i-heroicons-document-text" class="w-6 h-6 text-green-600" />
-            </div>
-            <div class="ml-3">
-              <p class="text-sm font-medium text-slate-900">Verifikasi Logbook</p>
-              <p class="text-xs text-slate-600">{{ stats.pendingLogbook }} pending</p>
-            </div>
-          </NuxtLink>
-
-          <NuxtLink
-            to="/mentor/penilaian"
-            class="flex items-center p-4 bg-white border border-slate-200 rounded-lg hover:border-purple-300 hover:shadow-sm transition-all group"
-          >
-            <div class="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center group-hover:bg-purple-200 transition-colors">
-              <UIcon name="i-heroicons-star" class="w-6 h-6 text-purple-600" />
-            </div>
-            <div class="ml-3">
-              <p class="text-sm font-medium text-slate-900">Penilaian Siswa</p>
-              <p class="text-xs text-slate-600">{{ stats.pendingPenilaian }} pending</p>
-            </div>
-          </NuxtLink>
+      <!-- Siswa Bimbingan -->
+      <div class="bg-white rounded-xl border border-slate-200 p-5">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="font-semibold text-slate-900">Siswa Bimbingan</h3>
+          <UButton variant="ghost" color="primary" size="xs" to="/mentor/siswa">Lihat Semua</UButton>
         </div>
+        <div v-if="loading" class="space-y-3">
+          <USkeleton v-for="i in 4" :key="i" class="h-14 rounded-lg" />
+        </div>
+        <div v-else class="space-y-3">
+          <div v-for="siswa in siswaList" :key="siswa.id" class="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
+            <div class="w-10 h-10 rounded-lg bg-primary-100 flex items-center justify-center text-primary-600 text-sm font-semibold">
+              {{ siswa.nama.split(' ').map((n: string) => n[0]).join('').slice(0, 2) }}
+            </div>
+            <div class="flex-1 min-w-0">
+              <p class="text-sm font-medium text-slate-900">{{ siswa.nama }}</p>
+              <p class="text-xs text-slate-500">{{ siswa.kelas }}</p>
+            </div>
+            <div class="text-right">
+              <p class="text-sm font-medium" :class="siswa.absensi >= 80 ? 'text-success-600' : 'text-error-600'">{{ siswa.absensi }}%</p>
+              <p class="text-xs text-slate-500">Kehadiran</p>
+            </div>
+          </div>
         </div>
       </div>
     </div>
-  </NuxtLayout>
+
+    <!-- Quick Actions -->
+    <div class="bg-white rounded-xl border border-slate-200 p-5">
+      <h3 class="font-semibold text-slate-900 mb-4">Aksi Cepat</h3>
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <NuxtLink to="/mentor/absensi" class="flex flex-col items-center gap-2 p-4 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors">
+          <div class="w-10 h-10 rounded-lg bg-warning-100 flex items-center justify-center">
+            <Icon name="lucide:calendar-check" class="w-5 h-5 text-warning-600" />
+          </div>
+          <span class="text-sm text-slate-700">Verifikasi Absensi</span>
+        </NuxtLink>
+        <NuxtLink to="/mentor/logbook" class="flex flex-col items-center gap-2 p-4 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors">
+          <div class="w-10 h-10 rounded-lg bg-primary-100 flex items-center justify-center">
+            <Icon name="lucide:book-open" class="w-5 h-5 text-primary-600" />
+          </div>
+          <span class="text-sm text-slate-700">Verifikasi Logbook</span>
+        </NuxtLink>
+        <NuxtLink to="/mentor/penilaian" class="flex flex-col items-center gap-2 p-4 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors">
+          <div class="w-10 h-10 rounded-lg bg-success-100 flex items-center justify-center">
+            <Icon name="lucide:star" class="w-5 h-5 text-success-600" />
+          </div>
+          <span class="text-sm text-slate-700">Input Penilaian</span>
+        </NuxtLink>
+        <NuxtLink to="/mentor/siswa" class="flex flex-col items-center gap-2 p-4 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors">
+          <div class="w-10 h-10 rounded-lg bg-neutral-100 flex items-center justify-center">
+            <Icon name="lucide:users" class="w-5 h-5 text-neutral-600" />
+          </div>
+          <span class="text-sm text-slate-700">Lihat Siswa</span>
+        </NuxtLink>
+      </div>
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
-// Mock data
-const stats = ref({
-  totalSiswa: 45,
-  absensiVerified: 38,
-  pendingVerification: 12,
-  logbookVerified: 42,
-  pendingAbsensi: 7,
-  pendingLogbook: 5,
-  pendingPenilaian: 8
-})
+definePageMeta({ layout: 'mentor' })
 
-const recentActivities = ref([
-  {
-    id: 1,
-    type: 'absensi',
-    title: 'Absensi Diverifikasi',
-    description: 'Ahmad Wijaya - PT. Maju Bersama',
-    timestamp: new Date(Date.now() - 1000 * 60 * 30) // 30 minutes ago
-  },
-  {
-    id: 2,
-    type: 'logbook',
-    title: 'Logbook Baru',
-    description: 'Siti Nurhaliza - CV. Digital Solution',
-    timestamp: new Date(Date.now() - 1000 * 60 * 60) // 1 hour ago
-  },
-  {
-    id: 3,
-    type: 'penilaian',
-    title: 'Penilaian Selesai',
-    description: 'Budi Santoso - PT. Tech Nusantara',
-    timestamp: new Date(Date.now() - 1000 * 60 * 120) // 2 hours ago
-  },
-  {
-    id: 4,
-    type: 'absensi',
-    title: 'Absensi Tertunda',
-    description: 'Rina Permata - PT. Kreasi Digital',
-    timestamp: new Date(Date.now() - 1000 * 60 * 180) // 3 hours ago
-  }
+const loading = ref(true)
+
+const stats = ref([
+  { label: 'Siswa Bimbingan', value: 5, icon: 'lucide:users', bg: 'bg-primary-100', color: 'text-primary-600' },
+  { label: 'Absensi Pending', value: 8, icon: 'lucide:calendar-check', bg: 'bg-warning-100', color: 'text-warning-600' },
+  { label: 'Logbook Pending', value: 12, icon: 'lucide:book-open', bg: 'bg-warning-100', color: 'text-warning-600' },
+  { label: 'Sudah Dinilai', value: 3, icon: 'lucide:star', bg: 'bg-success-100', color: 'text-success-600' }
 ])
 
-const attentionNeeded = ref([
-  {
-    id: 1,
-    nama: 'Ahmad Wijaya',
-    perusahaan: 'PT. Maju Bersama',
-    status: 'Absen 3 Hari',
-    lastActivity: '3 hari yang lalu'
-  },
-  {
-    id: 2,
-    nama: 'Siti Nurhaliza',
-    perusahaan: 'CV. Digital Solution',
-    status: 'Logbook Kosong',
-    lastActivity: '1 minggu yang lalu'
-  },
-  {
-    id: 3,
-    nama: 'Budi Santoso',
-    perusahaan: 'PT. Tech Nusantara',
-    status: 'Nilai Rendah',
-    lastActivity: '2 hari yang lalu'
-  }
+const pendingItems = ref([
+  { id: 1, siswa: 'Budi Santoso', type: 'absensi', desc: 'Absensi 16 Des 2024' },
+  { id: 2, siswa: 'Ani Wijaya', type: 'logbook', desc: 'Logbook: Membuat UI Dashboard' },
+  { id: 3, siswa: 'Deni Pratama', type: 'absensi', desc: 'Absensi 15 Des 2024' }
 ])
 
-// Helper functions
-const getActivityColor = (type: string) => {
-  switch (type) {
-    case 'absensi': return 'bg-blue-100 text-blue-600'
-    case 'logbook': return 'bg-green-100 text-green-600'
-    case 'penilaian': return 'bg-purple-100 text-purple-600'
-    default: return 'bg-slate-100 text-slate-600'
-  }
-}
+const siswaList = ref([
+  { id: 1, nama: 'Budi Santoso', kelas: 'XII RPL 1', absensi: 95 },
+  { id: 2, nama: 'Ani Wijaya', kelas: 'XII RPL 1', absensi: 88 },
+  { id: 3, nama: 'Deni Pratama', kelas: 'XII RPL 2', absensi: 72 },
+  { id: 4, nama: 'Siti Aminah', kelas: 'XII TKJ 1', absensi: 90 }
+])
 
-const getActivityIcon = (type: string) => {
-  switch (type) {
-    case 'absensi': return 'i-heroicons-calendar-days'
-    case 'logbook': return 'i-heroicons-document-text'
-    case 'penilaian': return 'i-heroicons-star'
-    default: return 'i-heroicons-information-circle'
-  }
-}
-
-const getStatusColor = (status: string) => {
-  if (status.includes('Absen')) return 'bg-red-100 text-red-800'
-  if (status.includes('Kosong')) return 'bg-yellow-100 text-yellow-800'
-  if (status.includes('Rendah')) return 'bg-orange-100 text-orange-800'
-  return 'bg-slate-100 text-slate-800'
-}
-
-const formatDate = (date: Date) => {
-  const now = new Date()
-  const diff = now.getTime() - date.getTime()
-  const minutes = Math.floor(diff / (1000 * 60))
-  const hours = Math.floor(diff / (1000 * 60 * 60))
-  
-  if (minutes < 60) {
-    return `${minutes} menit yang lalu`
-  } else if (hours < 24) {
-    return `${hours} jam yang lalu`
-  } else {
-    return date.toLocaleDateString('id-ID')
-  }
-}
-
-definePageMeta({
-  layout: false
+onMounted(async () => {
+  await new Promise(r => setTimeout(r, 600))
+  loading.value = false
 })
+
+useHead({ title: 'Dashboard | Mentor' })
 </script>

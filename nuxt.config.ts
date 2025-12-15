@@ -18,7 +18,7 @@ export default defineNuxtConfig({
   ],
   ui: {
     theme: {
-      colors: ['primary', 'success', 'warning', 'error']
+      colors: ['primary', 'secondary', 'success', 'warning', 'error', 'info', 'neutral']
     }
   },
   colorMode: {
@@ -26,19 +26,11 @@ export default defineNuxtConfig({
     fallback: 'light'
   },
   googleFonts: {
-    families: { Poppins: [400, 700, 800] },
+    families: { 
+      'Plus Jakarta Sans': [300, 400, 500, 600, 700, 800] 
+    },
     display: 'swap',
     preload: true,
-  },
-  app: {
-    head: {
-      link: [
-        {
-          rel: 'stylesheet',
-          href: 'https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap'
-        }
-      ]
-    }
   },
   routeRules: {
     '/': { prerender: true }

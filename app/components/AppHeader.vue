@@ -1,83 +1,43 @@
 <template>
-  <header class="sticky top-0 z-40 w-full bg-white/95 border-b border-gray-200 backdrop-blur-sm">
-    <div class="flex items-center justify-between px-4 sm:px-6 lg:px-8 py-3.5">
-      <div class="flex items-center gap-4">
-        <!-- Hamburger Menu - Now visible on all screen sizes -->
+  <header class="sticky top-0 z-40 w-full bg-white border-b border-slate-200">
+    <div class="flex items-center justify-between px-3 sm:px-4 lg:px-6 h-14 sm:h-16">
+      <!-- Left Section -->
+      <div class="flex items-center gap-2 sm:gap-3">
+        <!-- Hamburger Menu -->
         <button
-          @click="toggleSidebar"
-          class="flex items-center justify-center w-10 h-10 rounded-xl hover:bg-gray-100 active:bg-gray-200 transition-all duration-200 lg:hover:bg-gray-50"
+          @click="$emit('toggle-sidebar')"
+          class="flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-lg hover:bg-slate-100 transition-colors"
           aria-label="Toggle Sidebar"
-          title="Toggle Sidebar"
         >
-          <UIcon name="i-heroicons-bars-3" class="w-6 h-6 text-gray-700" />
+          <Icon name="lucide:menu" class="w-5 h-5 sm:w-6 sm:h-6 text-slate-700" />
         </button>
 
-        <div class="flex items-center gap-3">
-          <div class="w-10 h-10 rounded-xl bg-gradient-to-br flex items-center justify-center shadow-sm"
-            :class="
-              role === 'mentor' ? 'from-blue-400 to-blue-600' : 
-              role === 'guru' ? 'from-purple-400 to-purple-600' :
-              'from-emerald-400 to-emerald-600'
-            "
-          >
-            <span class="text-white font-bold text-lg">
-              {{ 
-                role === 'mentor' ? 'M' : 
-                role === 'guru' ? 'G' : 
-                'S' 
-              }}
-            </span>
+        <!-- Logo (mobile only) -->
+        <div class="flex items-center gap-2 lg:hidden">
+          <div class="w-8 h-8 rounded-lg flex items-center justify-center" :class="roleBg">
+            <span class="text-white font-bold text-sm">{{ roleInitial }}</span>
           </div>
-          <div class="hidden sm:block">
-            <h1 class="text-sm font-semibold text-gray-900">
-              {{ 
-                role === 'mentor' ? 'MENTOR PKL' : 
-                role === 'guru' ? 'GURU PKL' : 
-                'SIMPRAKERIN' 
-              }}
-            </h1>
-            <p class="text-xs text-gray-500">{{ schoolName || 'SMK N 2 Wonogiri' }}</p>
-          </div>
+          <span class="font-semibold text-slate-900 text-sm hidden sm:block">{{ roleTitle }}</span>
         </div>
       </div>
 
-      <div class="flex items-center gap-3">
-        <UButton icon="i-heroicons-bell" color="gray" variant="ghost" size="lg" class="hidden sm:flex" />
+      <!-- Right Section -->
+      <div class="flex items-center gap-2 sm:gap-3">
+        <!-- Notification -->
+        <button class="flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-lg hover:bg-slate-100 transition-colors relative">
+          <Icon name="lucide:bell" class="w-5 h-5 text-slate-600" />
+          <span class="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full" />
+        </button>
 
-        <div class="flex items-center gap-3 px-3 py-1.5 rounded-xl hover:bg-gray-50 transition-colors cursor-pointer">
-          <div class="hidden md:block text-right">
-            <p class="text-sm font-medium text-gray-900">
-              {{ 
-                userName || 
-                (role === 'mentor' ? 'Mentor PKL' : 
-                 role === 'guru' ? 'Guru PKL' : 
-                 'Ryobi Surya Atmaja') 
-              }}
-            </p>
-            <p class="text-xs text-gray-500">
-              {{ 
-                role === 'mentor' ? 'mentor@school.edu' : 
-                role === 'guru' ? 'guru@school.edu' :
-                'XII TM A' 
-              }}
-            </p>
+        <!-- User Profile -->
+        <div class="flex items-center gap-2 sm:gap-3 pl-2 sm:pl-3 border-l border-slate-200">
+          <div class="hidden sm:block text-right">
+            <p class="text-sm font-medium text-slate-900 truncate max-w-[120px] lg:max-w-[180px]">{{ displayName }}</p>
+            <p class="text-xs text-slate-500">{{ displayRole }}</p>
           </div>
-          <UAvatar
-            :text="
-              role === 'mentor' ? 'MP' : 
-              role === 'guru' ? 'GP' :
-              'RS'
-            "
-            size="md"
-            :ui="{ 
-              background: 
-                role === 'mentor' 
-                  ? 'bg-gradient-to-br from-blue-500 to-blue-600' 
-                  : role === 'guru'
-                    ? 'bg-gradient-to-br from-purple-500 to-purple-600'
-                    : 'bg-gradient-to-br from-emerald-500 to-emerald-600' 
-            }"
-          />
+          <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center text-white font-semibold text-sm" :class="roleBg">
+            {{ userInitial }}
+          </div>
         </div>
       </div>
     </div>
@@ -86,7 +46,7 @@
 
 <script setup lang="ts">
 interface Props {
-  role?: string
+  role?: 'siswa' | 'mentor' | 'guru'
   userName?: string
   schoolName?: string
 }
@@ -94,12 +54,42 @@ interface Props {
 const props = withDefaults(defineProps<Props>(), {
   role: 'siswa',
   userName: '',
-  schoolName: ''
+  schoolName: 'SMK N 2 Wonogiri'
 })
 
-const emit = defineEmits(['toggle-sidebar'])
+defineEmits(['toggle-sidebar'])
 
-const toggleSidebar = () => {
-  emit('toggle-sidebar')
-}
+const roleBg = computed(() => {
+  const colors = { siswa: 'bg-blue-600', mentor: 'bg-indigo-600', guru: 'bg-sky-500' }
+  return colors[props.role] || colors.siswa
+})
+
+const roleInitial = computed(() => {
+  const initials = { siswa: 'SP', mentor: 'M', guru: 'G' }
+  return initials[props.role] || 'SP'
+})
+
+const roleTitle = computed(() => {
+  const titles = { siswa: 'SIMPRAKERIN', mentor: 'MENTOR PKL', guru: 'GURU PKL' }
+  return titles[props.role] || 'SIMPRAKERIN'
+})
+
+const displayName = computed(() => {
+  if (props.userName) return props.userName
+  const defaults = { siswa: 'Ryobi Surya A.', mentor: 'Mentor PKL', guru: 'Guru PKL' }
+  return defaults[props.role] || 'User'
+})
+
+const displayRole = computed(() => {
+  const roles = { siswa: 'XII RPL 1', mentor: 'Pembimbing', guru: 'Pembimbing' }
+  return roles[props.role] || ''
+})
+
+const userInitial = computed(() => {
+  if (props.userName) {
+    return props.userName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()
+  }
+  const defaults = { siswa: 'RS', mentor: 'MP', guru: 'GP' }
+  return defaults[props.role] || 'U'
+})
 </script>

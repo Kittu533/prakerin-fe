@@ -332,7 +332,7 @@
         />
         <UButton 
           label="Hapus" 
-          color="red" 
+          color="error" 
           size="lg"
           class="px-6 py-2"
           @click="confirmDelete" 
@@ -512,7 +512,7 @@ const columns: ColumnDef<LogbookEntry>[] = [
     cell: ({ row }: { row: Row<LogbookEntry> }) => {
       const status = row.getValue('status') as LogStatus
       const badgeProps = status === 'Sudah ACC' 
-        ? { color: 'green' as const, class: 'bg-green-500 text-white border-green-500' }
+        ? { color: 'success' as const, class: 'bg-green-500 text-white border-green-500' }
         : { color: 'yellow' as const, class: 'bg-yellow-500 text-white border-yellow-500' }
       
       return h(
@@ -541,7 +541,7 @@ const columns: ColumnDef<LogbookEntry>[] = [
       const isVerified = status === 'Lihat Verifikasi'
       const badgeProps = isVerified
         ? { color: 'blue' as const, class: 'bg-blue-500 text-white border-blue-500' }
-        : { color: 'red' as const, class: 'bg-red-500 text-white border-red-500' }
+        : { color: 'error' as const, class: 'bg-red-500 text-white border-red-500' }
       
       return h(
         UBadge,
@@ -569,7 +569,7 @@ const columns: ColumnDef<LogbookEntry>[] = [
       const isVerified = status === 'Lihat Verifikasi'
       const badgeProps = isVerified
         ? { color: 'blue' as const, class: 'bg-blue-500 text-white border-blue-500' }
-        : { color: 'red' as const, class: 'bg-red-500 text-white border-red-500' }
+        : { color: 'error' as const, class: 'bg-red-500 text-white border-red-500' }
       
       return h(
         UBadge,
@@ -621,7 +621,7 @@ const columns: ColumnDef<LogbookEntry>[] = [
           UButton,
           {
             size: 'sm',
-            color: 'red',
+            color: 'error',
             variant: 'solid',
             class: 'bg-red-500 hover:bg-red-600 text-white border-red-500 px-3 py-1 text-xs',
             onClick: (e: Event) => {
@@ -694,7 +694,7 @@ function openAdd() {
     toast?.add({
       title: 'Absensi diperlukan',
       description: 'Anda harus absen terlebih dahulu sebelum dapat menambahkan logbook.',
-      color: 'amber'
+      color: 'warning'
     })
     return
   }
@@ -813,7 +813,7 @@ function onAttendanceSuccess(attendanceRecord: AttendanceRecord) {
   toast?.add({
     title: 'Absensi berhasil',
     description: 'Menunggu verifikasi pembimbing untuk dapat menambah logbook.',
-    color: 'green'
+    color: 'success'
   })
 }
 </script>

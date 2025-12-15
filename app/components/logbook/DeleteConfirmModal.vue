@@ -54,7 +54,7 @@ function handleConfirm() {
           Batal
         </UButton>
         <UButton
-          color="red"
+          color="error"
           size="sm"
           @click="handleConfirm"
         >

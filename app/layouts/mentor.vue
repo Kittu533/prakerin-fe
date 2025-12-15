@@ -1,133 +1,97 @@
 <template>
-  <div class="bg-[#f5f5f5]">
-    <!-- Header -->
-    <AppHeader 
-      :role="'mentor'"
-      :user-name="userName"
-      :school-name="schoolName"
-      @toggle-sidebar="toggleSidebar"
-    />
-
-    <!-- Main Content Area -->
-    <div class="flex">
-      <!-- Overlay untuk mobile -->
-      <Transition name="fade">
-        <div 
-          v-if="isMobileSidebarOpen && !isDesktop"
-          @click="closeMobileSidebar"
-          class="fixed inset-0 bg-black/50 z-40"
-        >
+  <div class="min-h-screen bg-slate-50 flex">
+    <!-- Sidebar -->
+    <aside class="hidden lg:flex w-64 bg-white border-r border-slate-200 flex-col fixed h-screen">
+      <!-- Logo -->
+      <div class="h-16 flex items-center px-5 border-b border-slate-100">
+        <div class="w-9 h-9 rounded-lg bg-primary-500 flex items-center justify-center mr-3">
+          <Icon name="lucide:briefcase" class="w-5 h-5 text-white" />
         </div>
-      </Transition>
-
-      <!-- Sidebar - Responsive behavior -->
-      <!-- Desktop: Always show sidebar, but can be minimized via AppSidebar toggle -->
-      <div class="hidden lg:block">
-        <AppSidebar :role="'mentor'" />
+        <div>
+          <h1 class="font-bold text-slate-900 text-sm">SIM Prakerin</h1>
+          <p class="text-xs text-slate-500">Mentor Industri</p>
+        </div>
       </div>
 
-      <!-- Mobile Sidebar - Show/hide via hamburger menu -->
-      <Transition name="slide">
-        <div 
-          v-show="isMobileSidebarOpen && !isDesktop"
-          class="fixed left-0 top-0 h-screen z-50 lg:hidden"
-        >
-          <AppSidebar :role="'mentor'" />
+      <!-- Nav -->
+      <nav class="flex-1 overflow-y-auto py-4 px-3">
+        <div class="space-y-1">
+          <NuxtLink v-for="item in menuItems" :key="item.to" :to="item.to" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors" :class="isActive(item.to) ? 'bg-primary-50 text-primary-600' : 'text-slate-600 hover:bg-slate-50'">
+            <Icon :name="item.icon" class="w-5 h-5" />
+            <span>{{ item.label }}</span>
+            <UBadge v-if="item.badge" :color="item.badgeColor || 'primary'" variant="subtle" size="xs" class="ml-auto">{{ item.badge }}</UBadge>
+          </NuxtLink>
         </div>
-      </Transition>
+      </nav>
 
-      <!-- Content -->
-      <main class="flex-1 min-h-screen overflow-x-hidden">
-        <div class="p-3 sm:p-4 md:p-6 lg:p-8">
-          <slot />
+      <!-- User -->
+      <div class="p-3 border-t border-slate-100">
+        <div class="flex items-center gap-3 p-2 rounded-lg bg-slate-50">
+          <div class="w-9 h-9 rounded-lg bg-primary-500 flex items-center justify-center text-white font-semibold text-sm">PJ</div>
+          <div class="flex-1 min-w-0">
+            <p class="text-sm font-medium text-slate-900 truncate">Pak Joko</p>
+            <p class="text-xs text-slate-500">PT. Telkom Indonesia</p>
+          </div>
+          <UButton variant="ghost" color="neutral" size="xs" @click="logout">
+            <Icon name="lucide:log-out" class="w-4 h-4" />
+          </UButton>
         </div>
-      </main>
+      </div>
+    </aside>
+
+    <!-- Mobile Header -->
+    <div class="lg:hidden fixed top-0 left-0 right-0 h-14 bg-white border-b border-slate-200 flex items-center px-4 z-40">
+      <UButton variant="ghost" color="neutral" size="sm" @click="mobileOpen = true">
+        <Icon name="lucide:menu" class="w-5 h-5" />
+      </UButton>
+      <span class="ml-3 font-semibold text-slate-900">Mentor Panel</span>
     </div>
+
+    <!-- Mobile Sidebar -->
+    <USlideover v-model:open="mobileOpen" side="left" class="lg:hidden">
+      <template #content>
+        <div class="p-4">
+          <div class="flex items-center gap-3 mb-6">
+            <div class="w-9 h-9 rounded-lg bg-primary-500 flex items-center justify-center">
+              <Icon name="lucide:briefcase" class="w-5 h-5 text-white" />
+            </div>
+            <span class="font-bold text-slate-900">SIM Prakerin</span>
+          </div>
+          <nav class="space-y-1">
+            <NuxtLink v-for="item in menuItems" :key="item.to" :to="item.to" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm" :class="isActive(item.to) ? 'bg-primary-50 text-primary-600 font-medium' : 'text-slate-600'" @click="mobileOpen = false">
+              <Icon :name="item.icon" class="w-5 h-5" />
+              <span>{{ item.label }}</span>
+            </NuxtLink>
+          </nav>
+        </div>
+      </template>
+    </USlideover>
+
+    <!-- Main -->
+    <main class="flex-1 lg:ml-64 pt-14 lg:pt-0">
+      <div class="p-4 lg:p-6">
+        <slot />
+      </div>
+    </main>
   </div>
 </template>
 
-<script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+<script setup lang="ts">
+const route = useRoute()
+const mobileOpen = ref(false)
 
-// Data mentor bisa diambil dari API/store
-const userName = ref('Mentor PKL')
-const userClass = ref('')
-const schoolName = ref('SMK N 2 Wonogiri')
+const menuItems = [
+  { to: '/mentor', icon: 'lucide:layout-dashboard', label: 'Dashboard' },
+  { to: '/mentor/siswa', icon: 'lucide:users', label: 'Siswa Bimbingan', badge: 5 },
+  { to: '/mentor/absensi', icon: 'lucide:calendar-check', label: 'Verifikasi Absensi', badge: 8, badgeColor: 'warning' },
+  { to: '/mentor/logbook', icon: 'lucide:book-open', label: 'Verifikasi Logbook', badge: 12, badgeColor: 'warning' },
+  { to: '/mentor/penilaian', icon: 'lucide:star', label: 'Penilaian' }
+]
 
-// Use sidebar composable
-const {
-  isMobileSidebarOpen,
-  isDesktopSidebarMinimized,
-  isDesktop,
-  toggleSidebar,
-  closeMobileSidebar,
-  updateScreenSize,
-  initializeDesktopSidebar
-} = useSidebar()
+const isActive = (path: string) => {
+  if (path === '/mentor') return route.path === '/mentor'
+  return route.path.startsWith(path)
+}
 
-onMounted(() => {
-  updateScreenSize()
-  initializeDesktopSidebar()
-  window.addEventListener('resize', updateScreenSize)
-  
-  // Debug scroll issues
-  console.log('Mentor layout mounted, checking scroll behavior...')
-  console.log('Document body height:', document.body.scrollHeight)
-  console.log('Window height:', window.innerHeight)
-  console.log('Document overflow:', getComputedStyle(document.documentElement).overflow)
-  console.log('Body overflow:', getComputedStyle(document.body).overflow)
-  
-  // Check main content area
-  setTimeout(() => {
-    const mainElement = document.querySelector('main')
-    const layoutContainer = document.querySelector('.h-screen')
-    
-    if (mainElement) {
-      console.log('Main element found:')
-      console.log('- ScrollHeight:', mainElement.scrollHeight)
-      console.log('- ClientHeight:', mainElement.clientHeight)
-      console.log('- OverflowY:', getComputedStyle(mainElement).overflowY)
-      console.log('- Position:', getComputedStyle(mainElement).position)
-    } else {
-      console.log('Main element not found!')
-    }
-    
-    if (layoutContainer) {
-      console.log('Layout container found:')
-      console.log('- ScrollHeight:', layoutContainer.scrollHeight)
-      console.log('- ClientHeight:', layoutContainer.clientHeight)
-      console.log('- OverflowY:', getComputedStyle(layoutContainer).overflowY)
-    } else {
-      console.log('Layout container not found!')
-    }
-  }, 100)
-})
-
-onUnmounted(() => {
-  window.removeEventListener('resize', updateScreenSize)
-})
+const logout = () => navigateTo('/login')
 </script>
-
-<style scoped>
-/* Transition untuk overlay */
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.3s ease;
-}
-
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
-}
-
-/* Transition untuk sidebar slide */
-.slide-enter-active,
-.slide-leave-active {
-  transition: transform 0.3s ease;
-}
-
-.slide-enter-from,
-.slide-leave-to {
-  transform: translateX(-100%);
-}
-</style>

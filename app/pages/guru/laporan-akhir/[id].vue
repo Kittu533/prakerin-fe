@@ -1,547 +1,251 @@
-
-
 <template>
-  <div class="bg-white min-h-screen">
-    <section v-if="laporan" class="space-y-6 sm:space-y-8 p-4 sm:p-6">
-      <!-- BREADCRUMB & HEADER -->
-      <div class="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm sm:rounded-3xl sm:p-6">
-        <!-- Breadcrumb -->
-        <nav class="flex items-center gap-2 text-base text-slate-500 mb-6">
-          <NuxtLink to="/guru" class="hover:text-blue-600 transition-colors">
-            Dashboard
-          </NuxtLink>
-          <UIcon name="i-heroicons-chevron-right" class="w-5 h-5" />
-          <NuxtLink to="/guru/laporan-akhir" class="hover:text-blue-600 transition-colors">
-            Laporan Akhir
-          </NuxtLink>
-          <UIcon name="i-heroicons-chevron-right" class="w-5 h-5" />
-          <span class="text-slate-900 font-medium">{{ laporan.laporanId }}</span>
-        </nav>
+  <div class="space-y-6">
+    <!-- Back -->
+    <UButton to="/guru/laporan-akhir" variant="ghost" color="neutral" size="sm">
+      <Icon name="lucide:arrow-left" class="w-4 h-4 mr-2" />
+      Kembali
+    </UButton>
 
-        <!-- Header Section -->
-        <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+    <!-- Header -->
+    <div class="bg-white rounded-xl border border-slate-200 p-6">
+      <div v-if="loading" class="flex flex-col md:flex-row gap-6">
+        <USkeleton class="w-14 h-14 rounded-xl" />
+        <div class="flex-1 space-y-3">
+          <USkeleton class="h-6 w-48" />
+          <USkeleton class="h-4 w-32" />
+          <div class="flex gap-2">
+            <USkeleton class="h-6 w-20 rounded-full" />
+            <USkeleton class="h-6 w-24 rounded-full" />
+          </div>
+        </div>
+      </div>
+      <div v-else class="flex flex-col md:flex-row gap-6">
+        <div class="w-14 h-14 rounded-xl bg-sky-100 text-sky-700 flex items-center justify-center text-xl font-bold shrink-0">
+          {{ laporan.inisial }}
+        </div>
+        <div class="flex-1">
+          <div class="flex items-start justify-between gap-4 mb-2">
+            <div>
+              <h1 class="text-xl font-bold text-slate-900">{{ laporan.nama }}</h1>
+              <p class="text-slate-500">{{ laporan.kelas }} • {{ laporan.nis }}</p>
+            </div>
+            <UBadge :color="getStatusColor(laporan.status)" variant="subtle">{{ laporan.status }}</UBadge>
+          </div>
+          <div class="flex flex-wrap gap-4 text-sm text-slate-600 mt-3">
+            <span class="flex items-center gap-1">
+              <Icon name="lucide:building-2" class="w-4 h-4" />
+              {{ laporan.industri }}
+            </span>
+            <span class="flex items-center gap-1">
+              <Icon name="lucide:calendar" class="w-4 h-4" />
+              Submit: {{ laporan.tanggalSubmit }}
+            </span>
+            <span class="flex items-center gap-1">
+              <Icon name="lucide:file" class="w-4 h-4" />
+              {{ laporan.halaman }} halaman
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div v-if="!loading && laporan.status === 'Review'" class="bg-sky-50 border border-sky-200 rounded-xl p-4">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div class="flex items-center gap-3">
+          <div class="p-2 rounded-lg bg-sky-100 text-sky-600">
+            <Icon name="lucide:clock" class="w-5 h-5" />
+          </div>
+          <div>
+            <p class="font-medium text-sky-800">Menunggu Review</p>
+            <p class="text-sm text-sky-600">Laporan ini membutuhkan verifikasi Anda</p>
+          </div>
+        </div>
+        <div class="flex gap-2">
+          <UButton color="success" @click="approve">
+            <Icon name="lucide:check" class="w-4 h-4 mr-1" />
+            Setujui
+          </UButton>
+          <UButton color="warning" variant="soft" @click="revisionModal = true">
+            <Icon name="lucide:edit" class="w-4 h-4 mr-1" />
+            Minta Revisi
+          </UButton>
+        </div>
+      </div>
+    </div>
+
+    <!-- Content -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <!-- Main -->
+      <div class="lg:col-span-2 space-y-6">
+        <!-- Preview -->
+        <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+          <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+            <h2 class="font-semibold text-slate-900">Preview Laporan</h2>
+            <UButton variant="soft" color="primary" size="sm" @click="downloadPdf">
+              <Icon name="lucide:download" class="w-4 h-4 mr-1" />
+              Download PDF
+            </UButton>
+          </div>
+          <div v-if="loading" class="p-6">
+            <USkeleton class="h-96 w-full rounded-lg" />
+          </div>
+          <div v-else class="p-6">
+            <div class="bg-slate-100 rounded-lg h-96 flex items-center justify-center">
+              <div class="text-center">
+                <Icon name="lucide:file-text" class="w-16 h-16 text-slate-400 mx-auto mb-3" />
+                <p class="text-slate-600 font-medium">{{ laporan.judul }}</p>
+                <p class="text-sm text-slate-500 mt-1">Klik untuk melihat preview</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Chapters -->
+        <div class="bg-white rounded-xl border border-slate-200">
+          <div class="px-6 py-4 border-b border-slate-100">
+            <h2 class="font-semibold text-slate-900">Daftar Bab</h2>
+          </div>
+          <div v-if="loading" class="p-4 space-y-3">
+            <USkeleton v-for="i in 5" :key="i" class="h-12 w-full rounded-lg" />
+          </div>
+          <div v-else class="divide-y divide-slate-100">
+            <div v-for="(bab, idx) in chapters" :key="idx" class="flex items-center gap-4 px-6 py-3 hover:bg-slate-50">
+              <div class="w-8 h-8 rounded-lg bg-sky-100 text-sky-700 flex items-center justify-center text-sm font-semibold">
+                {{ idx + 1 }}
+              </div>
+              <div class="flex-1">
+                <p class="font-medium text-slate-900">{{ bab.judul }}</p>
+                <p class="text-xs text-slate-500">{{ bab.halaman }} halaman</p>
+              </div>
+              <Icon name="lucide:check-circle" class="w-5 h-5 text-green-500" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sidebar -->
+      <div class="space-y-6">
+        <!-- Info -->
+        <div class="bg-white rounded-xl border border-slate-200 p-5">
+          <h3 class="font-semibold text-slate-900 mb-4">Informasi Laporan</h3>
+          <div class="space-y-3 text-sm">
+            <div class="flex justify-between">
+              <span class="text-slate-500">Judul</span>
+              <span class="font-medium text-slate-900 text-right max-w-[60%]">{{ laporan.judul }}</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-slate-500">Total Halaman</span>
+              <span class="font-medium text-slate-900">{{ laporan.halaman }}</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-slate-500">Ukuran File</span>
+              <span class="font-medium text-slate-900">{{ laporan.ukuran }}</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-slate-500">Terakhir Update</span>
+              <span class="font-medium text-slate-900">{{ laporan.lastUpdate }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- History -->
+        <div class="bg-white rounded-xl border border-slate-200 p-5">
+          <h3 class="font-semibold text-slate-900 mb-4">Riwayat</h3>
           <div class="space-y-4">
-            <UBadge 
-              :color="getStatusColor(laporan.statusLaporan)" 
-              variant="subtle" 
-              size="lg"
-            >
-              {{ getStatusLabel(laporan.statusLaporan) }}
-            </UBadge>
-            
-            <div>
-              <h1 class="text-3xl font-bold text-slate-900 sm:text-4xl">
-                Detail Laporan Akhir
-              </h1>
-              <p class="text-lg text-slate-600 mt-2">
-                {{ laporan.namaSiswa }} • {{ laporan.kelas }}
-              </p>
-            </div>
-
-            <div class="flex items-center gap-4 text-base text-slate-600">
-              <div class="flex items-center gap-2">
-                <UIcon name="i-heroicons-building-office" class="w-5 h-5" />
-                <span>{{ laporan.perusahaan }}</span>
-              </div>
-              <div class="flex items-center gap-2">
-                <UIcon name="i-heroicons-calendar" class="w-5 h-5" />
-                <span>ID: {{ laporan.laporanId }}</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Action Buttons -->
-          <div class="flex flex-col sm:flex-row gap-3">
-            <UButton
-              color="neutral"
-              variant="outline"
-              size="lg"
-              @click="navigateTo('/guru/laporan-akhir')"
-            >
-              <UIcon name="i-heroicons-arrow-left" class="w-5 h-5 mr-2" />
-              Kembali
-            </UButton>
-            
-            <UButton
-              color="primary"
-              size="lg"
-              @click="downloadReport"
-              :loading="downloadLoading"
-            >
-              <UIcon name="i-heroicons-document-arrow-down" class="w-5 h-5 mr-2" />
-              {{ downloadLoading ? 'Menyiapkan...' : 'Download PDF' }}
-            </UButton>
-          </div>
-        </div>
-      </div>
-
-      <!-- OVERVIEW CARDS -->
-      <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        <!-- Status Laporan -->
-        <div class="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
-          <div class="flex items-center gap-4">
-            <div class="p-3 rounded-xl bg-blue-50">
-              <UIcon name="i-heroicons-document-text" class="w-6 h-6 text-blue-600" />
-            </div>
-            <div>
-              <h3 class="text-base font-semibold text-slate-900">
-                Status Laporan
-              </h3>
-              <p class="text-2xl font-bold text-slate-900 mt-1">
-                {{ getStatusLabel(laporan.statusLaporan) }}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <!-- Nilai Akhir -->
-        <div class="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
-          <div class="flex items-center gap-4">
-            <div class="p-3 rounded-xl bg-green-50">
-              <UIcon name="i-heroicons-academic-cap" class="w-6 h-6 text-green-600" />
-            </div>
-            <div>
-              <h3 class="text-base font-semibold text-slate-900">
-                Nilai Akhir
-              </h3>
-              <p class="text-2xl font-bold text-slate-900 mt-1">
-                {{ laporan.nilaiAkhir ? `${laporan.nilaiAkhir.toFixed(1)} (${laporan.grade})` : '-' }}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <!-- Kehadiran -->
-        <div class="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
-          <div class="flex items-center gap-4">
-            <div class="p-3 rounded-xl bg-emerald-50">
-              <UIcon name="i-heroicons-user-circle" class="w-6 h-6 text-emerald-600" />
-            </div>
-            <div>
-              <h3 class="text-base font-semibold text-slate-900">
-                Kehadiran
-              </h3>
-              <p class="text-2xl font-bold text-emerald-600 mt-1">
-                {{ laporan.persentaseKehadiran.toFixed(1) }}%
-              </p>
-              <p class="text-sm text-slate-500">
-                {{ laporan.totalKehadiran }}/{{ laporan.totalHariKerja }} hari
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <!-- Progress -->
-        <div class="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
-          <div class="flex items-center gap-4">
-            <div class="p-3 rounded-xl bg-purple-50">
-              <UIcon name="i-heroicons-chart-bar" class="w-6 h-6 text-purple-600" />
-            </div>
-            <div>
-              <h3 class="text-base font-semibold text-slate-900">
-                Progress PKL
-              </h3>
-              <p class="text-2xl font-bold text-purple-600 mt-1">
-                {{ getProgressPercentage(laporan.statusLaporan) }}%
-              </p>
-              <p class="text-sm text-slate-500">
-                Tahap {{ getStatusLabel(laporan.statusLaporan) }}
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- CHARTS & DETAIL SECTION -->
-      <div class="grid gap-6 lg:grid-cols-3">
-        <!-- Attendance Chart -->
-        <div class="lg:col-span-1">
-          <div class="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm h-full">
-            <h3 class="text-lg font-bold text-slate-900 mb-4">
-              Grafik Kehadiran
-            </h3>
-            <div class="relative h-64">
-              <canvas ref="attendanceChart" class="w-full h-full"></canvas>
-            </div>
-            <div class="mt-4 space-y-2">
-              <div class="flex justify-between items-center text-base">
-                <span class="text-slate-600">Hadir</span>
-                <span class="font-semibold text-green-600">{{ laporan.totalKehadiran }} hari</span>
-              </div>
-              <div class="flex justify-between items-center text-base">
-                <span class="text-slate-600">Tidak Hadir</span>
-                <span class="font-semibold text-red-600">{{ laporan.totalHariKerja - laporan.totalKehadiran }} hari</span>
-              </div>
-              <div class="flex justify-between items-center text-base">
-                <span class="text-slate-600">Total Hari</span>
-                <span class="font-semibold text-slate-900">{{ laporan.totalHariKerja }} hari</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Detail Information -->
-        <div class="lg:col-span-2 space-y-6">
-          <!-- Informasi Siswa -->
-          <div class="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
-            <h3 class="text-lg font-bold text-slate-900 mb-4">
-              Informasi Siswa
-            </h3>
-            <div class="grid gap-4 sm:grid-cols-2">
+            <div v-for="(item, idx) in history" :key="idx" class="flex gap-3">
+              <div class="w-2 h-2 rounded-full mt-2 shrink-0" :class="item.color" />
               <div>
-                <label class="text-base font-medium text-slate-700">Nama Lengkap</label>
-                <p class="text-base text-slate-900 mt-1">{{ laporan.namaSiswa }}</p>
-              </div>
-              <div>
-                <label class="text-base font-medium text-slate-700">Kelas</label>
-                <p class="text-base text-slate-900 mt-1">{{ laporan.kelas }}</p>
-              </div>
-              <div>
-                <label class="text-base font-medium text-slate-700">Perusahaan PKL</label>
-                <p class="text-base text-slate-900 mt-1">{{ laporan.perusahaan }}</p>
-              </div>
-              <div>
-                <label class="text-base font-medium text-slate-700">ID Laporan</label>
-                <p class="text-base text-slate-900 mt-1">{{ laporan.laporanId }}</p>
-              </div>
-            </div>
-          </div>
-
-          <!-- Progress Timeline -->
-          <div class="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
-            <h3 class="text-lg font-bold text-slate-900 mb-4">
-              Timeline Progress
-            </h3>
-            <div class="space-y-4">
-              <div class="flex items-center gap-4">
-                <div class="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center">
-                  <UIcon name="i-heroicons-check" class="w-4 h-4 text-green-600" />
-                </div>
-                <div class="flex-1">
-                  <p class="text-base font-medium text-slate-900">Draft Laporan</p>
-                  <p class="text-sm text-slate-500">Laporan telah dibuat</p>
-                </div>
-              </div>
-
-              <div class="flex items-center gap-4">
-                <div :class="[
-                  'w-8 h-8 rounded-full flex items-center justify-center',
-                  getTimelineStatus(laporan.statusLaporan, 'REVIEW')
-                ]">
-                  <UIcon name="i-heroicons-eye" class="w-4 h-4" />
-                </div>
-                <div class="flex-1">
-                  <p class="text-base font-medium text-slate-900">Review Pembimbing</p>
-                  <p class="text-sm text-slate-500">Sedang dalam tahap review</p>
-                </div>
-              </div>
-
-              <div class="flex items-center gap-4">
-                <div :class="[
-                  'w-8 h-8 rounded-full flex items-center justify-center',
-                  getTimelineStatus(laporan.statusLaporan, 'FINAL')
-                ]">
-                  <UIcon name="i-heroicons-document-check" class="w-4 h-4" />
-                </div>
-                <div class="flex-1">
-                  <p class="text-base font-medium text-slate-900">Laporan Final</p>
-                  <p class="text-sm text-slate-500">Laporan telah disetujui</p>
-                </div>
+                <p class="text-sm text-slate-900">{{ item.action }}</p>
+                <p class="text-xs text-slate-500">{{ item.date }}</p>
               </div>
             </div>
           </div>
         </div>
       </div>
+    </div>
 
-      <!-- DOWNLOAD SECTION -->
-      <div class="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
-        <h3 class="text-lg font-bold text-slate-900 mb-4">
-          Download & Export
-        </h3>
-        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <UButton
-            color="error"
-            variant="outline"
-            size="lg"
-            class="justify-center"
-            @click="downloadPDF"
-            :loading="pdfLoading"
-          >
-            <UIcon name="i-heroicons-document" class="w-5 h-5 mr-2" />
-            {{ pdfLoading ? 'Menyiapkan...' : 'Download PDF' }}
-          </UButton>
-          
-          <UButton
-            color="success"
-            variant="outline"
-            size="lg"
-            class="justify-center"
-            @click="downloadExcel"
-            :loading="excelLoading"
-          >
-            <UIcon name="i-heroicons-table-cells" class="w-5 h-5 mr-2" />
-            {{ excelLoading ? 'Menyiapkan...' : 'Download Excel' }}
-          </UButton>
-          
-          <UButton
-            color="primary"
-            variant="outline"
-            size="lg"
-            class="justify-center"
-            @click="printReport"
-          >
-            <UIcon name="i-heroicons-printer" class="w-5 h-5 mr-2" />
-            Print Laporan
-          </UButton>
-          
-          <UButton
-            color="warning"
-            variant="outline"
-            size="lg"
-            class="justify-center"
-            @click="shareReport"
-          >
-            <UIcon name="i-heroicons-share" class="w-5 h-5 mr-2" />
-            Share
-          </UButton>
+    <!-- Revision Modal -->
+    <UModal v-model:open="revisionModal">
+      <template #content>
+        <div class="p-6">
+          <h3 class="text-lg font-semibold text-slate-900 mb-4">Minta Revisi</h3>
+          <UTextarea v-model="revisionNote" placeholder="Tulis catatan revisi..." rows="4" class="mb-4" />
+          <div class="flex justify-end gap-2">
+            <UButton variant="ghost" color="neutral" @click="revisionModal = false">Batal</UButton>
+            <UButton color="warning" @click="submitRevision">Kirim</UButton>
+          </div>
         </div>
-      </div>
-    </section>
-
-    <!-- NOT FOUND STATE -->
-    <section v-else class="p-4 sm:p-6">
-      <div class="rounded-2xl bg-white p-8 text-center shadow-sm border border-slate-100">
-        <div class="mx-auto w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mb-4">
-          <UIcon name="i-heroicons-exclamation-triangle" class="w-8 h-8 text-red-600" />
-        </div>
-        <h2 class="text-xl font-bold text-slate-900 mb-2">
-          Data Laporan Tidak Ditemukan
-        </h2>
-        <p class="text-base text-slate-600 mb-6">
-          Laporan dengan ID tersebut tidak ditemukan dalam sistem.
-        </p>
-        <UButton
-          color="primary"
-          size="lg"
-          @click="navigateTo('/guru/laporan-akhir')"
-        >
-          <UIcon name="i-heroicons-arrow-left" class="w-5 h-5 mr-2" />
-          Kembali ke Daftar Laporan
-        </UButton>
-      </div>
-    </section>
+      </template>
+    </UModal>
   </div>
 </template>
 
-<script setup lang="ts">
-import { ref, computed, onMounted, nextTick } from 'vue'
-import { Chart, registerables } from 'chart.js'
-import laporanData from '~/assets/data/guru_laporan_akhir.json'
-import type { StatusLaporan, LaporanRow } from '~/types/laporan-akhir'
-
-// Register Chart.js components
-Chart.register(...registerables)
-
-definePageMeta({
-  layout: 'guru',
-  title: 'Detail Laporan Akhir PKL'
-})
+<script setup>
+definePageMeta({ layout: 'guru' })
 
 const route = useRoute()
-const id = computed(() => {
-  const paramId = route.params.id as string
-  // Extract numeric ID from LAP-001 format
-  if (paramId.startsWith('LAP-')) {
-    return Number(paramId.replace('LAP-', ''))
-  }
-  return Number(paramId)
-})
+const toast = useToast()
+const loading = ref(true)
+const revisionModal = ref(false)
+const revisionNote = ref('')
 
-const laporan = computed(() => {
-  const item = (laporanData.items as LaporanRow[]).find((l) => l.idLaporan === id.value)
-  if (item) {
-    return {
-      ...item,
-      laporanId: `LAP-${String(item.idLaporan).padStart(3, '0')}`
-    }
-  }
-  return null
-})
+const laporan = ref({})
+const chapters = ref([])
+const history = ref([])
 
-// Chart reference
-const attendanceChart = ref<HTMLCanvasElement>()
-let chartInstance: Chart | null = null
+const getStatusColor = (status) => {
+  const colors = { Draft: 'warning', Review: 'primary', Final: 'success' }
+  return colors[status] || 'neutral'
+}
 
-// Loading states
-const downloadLoading = ref(false)
-const pdfLoading = ref(false)
-const excelLoading = ref(false)
+const approve = () => {
+  laporan.value.status = 'Final'
+  toast.add({ title: 'Laporan disetujui', color: 'success' })
+}
 
-// Helper functions
-const getStatusColor = (status: StatusLaporan) => {
-  switch (status) {
-    case 'DRAFT': return 'neutral'
-    case 'REVIEW': return 'warning'
-    case 'FINAL': return 'success'
-    default: return 'neutral'
+const submitRevision = () => {
+  if (revisionNote.value) {
+    laporan.value.status = 'Draft'
+    revisionModal.value = false
+    toast.add({ title: 'Permintaan revisi dikirim', color: 'warning' })
   }
 }
 
-const getStatusLabel = (status: StatusLaporan) => {
-  switch (status) {
-    case 'DRAFT': return 'Draft'
-    case 'REVIEW': return 'Review'
-    case 'FINAL': return 'Final'
-    default: return status
-  }
+const downloadPdf = () => {
+  toast.add({ title: 'Download dimulai...', color: 'primary' })
 }
 
-const getProgressPercentage = (status: StatusLaporan) => {
-  switch (status) {
-    case 'DRAFT': return 33
-    case 'REVIEW': return 66
-    case 'FINAL': return 100
-    default: return 0
-  }
-}
-
-const getTimelineStatus = (currentStatus: StatusLaporan, targetStatus: StatusLaporan) => {
-  const statusOrder = { 'DRAFT': 1, 'REVIEW': 2, 'FINAL': 3 }
-  const current = statusOrder[currentStatus] || 0
-  const target = statusOrder[targetStatus] || 0
-  
-  if (current >= target) {
-    return 'bg-green-100 text-green-600'
-  } else if (current === target - 1) {
-    return 'bg-yellow-100 text-yellow-600'
-  } else {
-    return 'bg-slate-100 text-slate-400'
-  }
-}
-
-// Chart initialization
-const initAttendanceChart = () => {
-  if (!attendanceChart.value || !laporan.value) return
-
-  const ctx = attendanceChart.value.getContext('2d')
-  if (!ctx) return
-
-  // Destroy existing chart
-  if (chartInstance) {
-    chartInstance.destroy()
-  }
-
-  const hadir = laporan.value.totalKehadiran
-  const tidakHadir = laporan.value.totalHariKerja - laporan.value.totalKehadiran
-
-  chartInstance = new Chart(ctx, {
-    type: 'doughnut',
-    data: {
-      labels: ['Hadir', 'Tidak Hadir'],
-      datasets: [{
-        data: [hadir, tidakHadir],
-        backgroundColor: [
-          '#10b981', // green-500
-          '#ef4444'  // red-500
-        ],
-        borderWidth: 0,
-        hoverOffset: 4
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: {
-          display: false
-        },
-        tooltip: {
-          callbacks: {
-            label: function(context) {
-              const label = context.label || ''
-              const value = context.parsed || 0
-              const percentage = ((value / laporan.value!.totalHariKerja) * 100).toFixed(1)
-              return `${label}: ${value} hari (${percentage}%)`
-            }
-          }
-        }
-      },
-      cutout: '60%'
-    }
-  })
-}
-
-// Download functions
-const downloadReport = async () => {
-  downloadLoading.value = true
-  try {
-    // Simulate download process
-    await new Promise(resolve => setTimeout(resolve, 2000))
-    console.log(`Downloading report for: ${laporan.value?.namaSiswa} - ${laporan.value?.laporanId}`)
-    
-    // Here you would implement actual download logic
-    alert(`Laporan ${laporan.value?.laporanId} - ${laporan.value?.namaSiswa} berhasil diunduh!`)
-  } catch (error) {
-    console.error('Download failed:', error)
-  } finally {
-    downloadLoading.value = false
-  }
-}
-
-const downloadPDF = async () => {
-  pdfLoading.value = true
-  try {
-    await new Promise(resolve => setTimeout(resolve, 1500))
-    alert(`PDF Laporan ${laporan.value?.laporanId} berhasil diunduh!`)
-  } catch (error) {
-    console.error('PDF download failed:', error)
-  } finally {
-    pdfLoading.value = false
-  }
-}
-
-const downloadExcel = async () => {
-  excelLoading.value = true
-  try {
-    await new Promise(resolve => setTimeout(resolve, 1500))
-    alert(`Excel Laporan ${laporan.value?.laporanId} berhasil diunduh!`)
-  } catch (error) {
-    console.error('Excel download failed:', error)
-  } finally {
-    excelLoading.value = false
-  }
-}
-
-const printReport = () => {
-  window.print()
-}
-
-const shareReport = () => {
-  if (navigator.share) {
-    navigator.share({
-      title: `Laporan PKL - ${laporan.value?.namaSiswa}`,
-      text: `Laporan Akhir PKL ${laporan.value?.namaSiswa} - ${laporan.value?.kelas}`,
-      url: window.location.href
-    })
-  } else {
-    // Fallback: copy to clipboard
-    navigator.clipboard.writeText(window.location.href)
-    alert('Link laporan berhasil disalin ke clipboard!')
-  }
-}
-
-// Lifecycle
 onMounted(async () => {
-  await nextTick()
-  if (laporan.value) {
-    initAttendanceChart()
+  await new Promise(r => setTimeout(r, 600))
+  laporan.value = {
+    id: route.params.id,
+    nama: 'Ryobi Surya Atmaja',
+    inisial: 'RS',
+    kelas: 'XII RPL 1',
+    nis: '2023010563',
+    industri: 'PT. Telkom Indonesia',
+    status: 'Review',
+    tanggalSubmit: '14 Des 2024',
+    halaman: 45,
+    judul: 'Laporan PKL di PT. Telkom',
+    ukuran: '2.4 MB',
+    lastUpdate: '14 Des 2024, 10:30'
   }
+  chapters.value = [
+    { judul: 'Pendahuluan', halaman: 5 },
+    { judul: 'Profil Perusahaan', halaman: 8 },
+    { judul: 'Pelaksanaan PKL', halaman: 15 },
+    { judul: 'Hasil dan Pembahasan', halaman: 12 },
+    { judul: 'Penutup', halaman: 5 }
+  ]
+  history.value = [
+    { action: 'Laporan disubmit untuk review', date: '14 Des 2024', color: 'bg-sky-500' },
+    { action: 'Draft laporan dibuat', date: '10 Des 2024', color: 'bg-amber-500' },
+    { action: 'Mulai menulis laporan', date: '1 Des 2024', color: 'bg-slate-400' }
+  ]
+  loading.value = false
 })
 
-// Cleanup
-onBeforeUnmount(() => {
-  if (chartInstance) {
-    chartInstance.destroy()
-  }
-})
+useHead({ title: 'Detail Laporan | Guru PKL' })
 </script>

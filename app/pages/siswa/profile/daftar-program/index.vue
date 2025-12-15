@@ -1,159 +1,130 @@
 <template>
-  <section class="rounded-[32px] bg-white px-4 py-6 shadow-sm sm:px-8">
+  <section class="space-y-4 sm:space-y-6">
     <!-- Breadcrumb -->
-    <nav class="text-xs text-slate-400 md:text-sm">
-      <span class="cursor-pointer hover:text-blue-500">Home</span>
-      <span class="mx-1">›</span>
-      <span class="cursor-pointer hover:text-blue-500">Profile</span>
-      <span class="mx-1">›</span>
-      <span class="font-semibold text-blue-500">Daftar Program</span>
+    <nav class="flex items-center gap-2 text-xs sm:text-sm text-slate-500" aria-label="Breadcrumb">
+      <NuxtLink to="/siswa" class="transition-colors hover:text-blue-600 flex items-center gap-1">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+        </svg>
+        <span>Home</span>
+      </NuxtLink>
+      <span class="text-slate-300">›</span>
+      <span class="text-slate-500">Profile</span>
+      <span class="text-slate-300">›</span>
+      <span class="font-semibold text-blue-600">Daftar Program</span>
     </nav>
 
-    <!-- CARD PROGRAM: full width di dalam section -->
-    <div
-      class="mt-6 rounded-[24px] border border-slate-100 bg-white
-             px-5 py-5 shadow-sm sm:px-8 sm:py-7"
-    >
+    <!-- Main Card -->
+    <div class="bg-white rounded-xl sm:rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
       <!-- Header perusahaan -->
-      <div class="flex flex-col gap-4 md:flex-row md:items-start">
-        <!-- Logo + nama + deskripsi -->
-        <div class="flex flex-1 gap-4">
-          <div
-            class="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-2xl
-                   border border-slate-200 bg-slate-50"
-          >
-            <!-- ganti dengan <img> kalau ada logo -->
-            <span class="text-3xl">🏢</span>
+      <div class="p-4 sm:p-6 border-b border-slate-100">
+        <div class="flex flex-col sm:flex-row gap-4 sm:items-start">
+          <div class="flex items-start gap-3 sm:gap-4 flex-1 min-w-0">
+            <div class="flex h-12 w-12 sm:h-14 sm:w-14 flex-shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-slate-50">
+              <span class="text-2xl sm:text-3xl">🏢</span>
+            </div>
+            <div class="min-w-0 flex-1">
+              <h2 class="text-base sm:text-lg font-semibold text-slate-900 line-clamp-2">
+                PT. Gama Integra Informatika (GAMA INFORMATIKA)
+              </h2>
+              <p class="text-xs sm:text-sm text-slate-500 mt-1 line-clamp-3 sm:line-clamp-none">
+                Gama Informatika merupakan satu-satunya tempat kursus dan pelatihan yang memiliki keunggulan dalam mencetak lulusan kursus yang berkompeten.
+              </p>
+            </div>
           </div>
-
-          <div class="space-y-2">
-            <!-- Heading utama -->
-            <h2 class="text-base font-semibold text-slate-900 md:text-lg">
-              PT. Gama Integra Informatika (GAMA INFORMATIKA)
-            </h2>
-            <!-- Deskripsi -->
-            <p class="text-xs leading-relaxed text-slate-500 md:text-sm">
-              Gama Informatika merupakan satu-satunya tempat kursus dan pelatihan
-              yang memiliki keunggulan dalam mencetak lulusan kursus yang berkompeten.
-              Kami telah berdiri sejak tahun 1988 dan terus eksis mengembangkan kurikulum
-              terkini dan paling up to date. Kurikulum yang kami terapkan sangat berbeda
-              dengan yang lainnya. Kami memiliki keunggulan berupa jaminan kerja bagi
-              lulusan Gama Informatika.
-            </p>
-          </div>
-        </div>
-
-        <!-- Tombol DETAIL -->
-        <div class="flex justify-end">
-          <button
-            class="rounded-[999px] bg-[#4C6FFF] px-4 py-1.5 text-xs font-semibold
-                   tracking-wide text-white shadow-sm md:text-sm"
-          >
+          <button class="rounded-full bg-blue-600 px-4 py-2 text-xs sm:text-sm font-semibold text-white hover:bg-blue-700 transition-colors shrink-0 self-start">
             DETAIL
           </button>
         </div>
       </div>
 
-      <hr class="my-5 border-slate-100" />
-
-      <!-- Info Posisi / Jenis / Deskripsi -->
-      <div
-        class="grid gap-4 text-xs text-slate-500 sm:grid-cols-3 sm:gap-6 md:text-sm"
-      >
-        <div>
-          <div class="flex items-center gap-2 text-sm font-medium md:text-base">
-            <span class="text-lg">🏷️</span>
-            <span>Posisi</span>
+      <div class="p-4 sm:p-6 space-y-6">
+        <!-- Info Posisi / Jenis / Deskripsi -->
+        <div class="grid gap-4 grid-cols-1 sm:grid-cols-3">
+          <div class="rounded-xl border border-slate-100 bg-slate-50 p-3 sm:p-4">
+            <div class="flex items-center gap-2 text-sm font-medium text-slate-700">
+              <span>🏷️</span>
+              <span>Posisi</span>
+            </div>
+            <p class="mt-1 text-sm text-slate-500">-</p>
           </div>
-          <p class="mt-1 text-xs text-slate-400 md:text-sm">-</p>
-        </div>
 
-        <div>
-          <div class="flex items-center gap-2 text-sm font-medium md:text-base">
-            <span class="text-lg">🧑‍💻</span>
-            <span>Jenis Kegiatan</span>
+          <div class="rounded-xl border border-slate-100 bg-slate-50 p-3 sm:p-4">
+            <div class="flex items-center gap-2 text-sm font-medium text-slate-700">
+              <span>🧑‍💻</span>
+              <span>Jenis Kegiatan</span>
+            </div>
+            <p class="mt-1 text-sm font-semibold text-slate-800">Magang/Kerja Praktik</p>
           </div>
-          <p class="mt-1 text-sm font-semibold text-slate-700 md:text-base">
-            Magang/Kerja Praktik
-          </p>
-        </div>
 
-        <div>
-          <div class="flex items-center gap-2 text-sm font-medium md:text-base">
-            <span class="text-lg">📄</span>
-            <span>Deskripsi Pekerjaan</span>
+          <div class="rounded-xl border border-slate-100 bg-slate-50 p-3 sm:p-4">
+            <div class="flex items-center gap-2 text-sm font-medium text-slate-700">
+              <span>📄</span>
+              <span>Deskripsi Pekerjaan</span>
+            </div>
+            <p class="mt-1 text-sm text-slate-500">-</p>
           </div>
-          <p class="mt-1 text-xs text-slate-400 md:text-sm">-</p>
         </div>
-      </div>
 
-      <!-- Tahun ajaran + semester -->
-      <div
-        class="mt-6 grid gap-4 text-xs text-slate-500 sm:grid-cols-2 sm:gap-8 md:text-sm"
-      >
+        <!-- Tahun ajaran + semester -->
+        <div class="grid gap-4 grid-cols-2">
+          <div class="rounded-xl border border-slate-100 bg-slate-50 p-3 sm:p-4">
+            <p class="text-xs sm:text-sm text-slate-500">Tahun Ajaran</p>
+            <p class="mt-1 text-sm sm:text-base font-semibold text-slate-800">2024/2025</p>
+          </div>
+          <div class="rounded-xl border border-slate-100 bg-slate-50 p-3 sm:p-4">
+            <p class="text-xs sm:text-sm text-slate-500">Semester</p>
+            <p class="mt-1 text-sm sm:text-base font-semibold text-slate-800">Genap</p>
+          </div>
+        </div>
+
+        <!-- Keterangan status -->
         <div>
-          <p class="text-sm font-medium md:text-base">Tahun Ajaran</p>
-          <p class="mt-1 text-sm font-semibold text-slate-800 md:text-base">
-            2024/2025
-          </p>
-        </div>
-        <div>
-          <p class="text-sm font-medium md:text-base">Semester</p>
-          <p class="mt-1 text-sm font-semibold text-slate-800 md:text-base">
-            Genap
-          </p>
-        </div>
-      </div>
-
-      <hr class="mt-6 border-slate-100" />
-
-      <!-- Keterangan status -->
-      <div class="mt-6">
-        <h3 class="mb-3 text-sm font-semibold text-slate-700 md:text-base">
-          Keterangan Status
-        </h3>
-
-        <div class="grid gap-3 sm:grid-cols-3 sm:gap-4">
-          <div
-            v-for="status in statuses"
-            :key="status.label"
-            class="flex items-center rounded-xl bg-[#D5F5E8] px-4 py-3"
-          >
+          <h3 class="text-sm sm:text-base font-semibold text-slate-700 mb-3">
+            Keterangan Status
+          </h3>
+          <div class="grid gap-3 grid-cols-1 sm:grid-cols-3">
             <div
-              class="flex h-7 w-7 items-center justify-center rounded-full bg-[#2F9E69]"
+              v-for="status in statuses"
+              :key="status.label"
+              class="flex items-center rounded-xl px-4 py-3"
+              :class="status.approved ? 'bg-green-50' : 'bg-amber-50'"
             >
-              <span class="text-sm text-white">✓</span>
-            </div>
-            <div class="ml-3">
-              <p class="text-sm font-semibold text-[#16654A] md:text-base">
-                {{ status.label }}
-              </p>
-              <p class="text-xs text-[#3C8264] md:text-sm">
-                {{ status.note }}
-              </p>
+              <div
+                class="flex h-7 w-7 items-center justify-center rounded-full shrink-0"
+                :class="status.approved ? 'bg-green-500' : 'bg-amber-500'"
+              >
+                <svg v-if="status.approved" class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                </svg>
+                <svg v-else class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01" />
+                </svg>
+              </div>
+              <div class="ml-3 min-w-0">
+                <p class="text-sm font-semibold" :class="status.approved ? 'text-green-800' : 'text-amber-800'">
+                  {{ status.label }}
+                </p>
+                <p class="text-xs" :class="status.approved ? 'text-green-600' : 'text-amber-600'">
+                  {{ status.note }}
+                </p>
+              </div>
             </div>
           </div>
         </div>
       </div>
-    </div> <!-- end card -->
+    </div>
   </section>
 </template>
 
 <script setup>
-import { onMounted } from 'vue'
-
 definePageMeta({
   layout: 'siswa',
 })
 
-const statuses = [
-  { label: 'DPA', note: 'Sudah ACC' },
-  { label: 'Prodi', note: 'Sudah ACC' },
-  { label: 'Mitra', note: 'Sudah ACC' },
-]
-
-onMounted(() => {
-  console.log('✅ Halaman Daftar Program berhasil dimuat!')
-  console.log('📍 Current Route:', useRoute().path)
-})
+const statuses = ref([
+  { label: 'DPA', note: 'Sudah ACC', approved: true },
+  { label: 'Prodi', note: 'Sudah ACC', approved: true },
+  { label: 'Mitra', note: 'Sudah ACC', approved: true },
+])
 </script>
