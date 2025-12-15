@@ -1,0 +1,48 @@
+{
+  "items": [
+    {
+      "idPenempatan": 101,
+      "namaSiswa": "Ahmad Fajar",
+      "kelas": "XII TM A",
+      "perusahaan": "PT Maju Jaya Teknik",
+      "mentor": "Andi Pratama",
+      "periodeMulai": "2026-02-15",
+      "periodeSelesai": "2026-05-15",
+      "statusPenempatan": "AKTIF",
+      "persenKehadiran": 94.5
+    },
+    {
+      "idPenempatan": 102,
+      "namaSiswa": "Siti Aminah",
+      "kelas": "XII TM B",
+      "perusahaan": "Bengkel Sejahtera Motor",
+      "mentor": "Budi Hartono",
+      "periodeMulai": "2026-02-20",
+      "periodeSelesai": "2026-05-20",
+      "statusPenempatan": "AKTIF",
+      "persenKehadiran": 91.2
+    },
+    {
+      "idPenempatan": 103,
+      "namaSiswa": "Budi Santoso",
+      "kelas": "XII TM A",
+      "perusahaan": "PT Nusantara Motor",
+      "mentor": "Rina Dewi",
+      "periodeMulai": "2025-11-01",
+      "periodeSelesai": "2026-01-31",
+      "statusPenempatan": "SELESAI",
+      "persenKehadiran": 96.8
+    },
+    {
+      "idPenempatan": 104,
+      "namaSiswa": "Rina Kartika",
+      "kelas": "XII TM C",
+      "perusahaan": "CV Prima Motor",
+      "mentor": "Dian Saputra",
+      "periodeMulai": "2025-10-10",
+      "periodeSelesai": "2025-12-31",
+      "statusPenempatan": "DIBATALKAN",
+      "persenKehadiran": 40.0
+    }
+  ]
+}

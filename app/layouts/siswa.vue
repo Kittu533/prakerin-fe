@@ -1,92 +1,175 @@
-<!-- layouts/siswa.vue -->
 <template>
-  <div class="min-h-screen bg-white">
-    <!-- Header -->
-    <AppHeader 
-      :user-name="userName"
-      :school-name="schoolName"
-      @toggle-sidebar="isSidebarOpen = !isSidebarOpen"
-    />
-
-    <!-- Main Content Area -->
-    <div class="flex flex-col lg:flex-row relative">
+  <div class="min-h-screen bg-slate-50">
+    <div class="flex">
       <!-- Overlay untuk mobile -->
       <Transition name="fade">
         <div 
-          v-if="isSidebarOpen"
-          @click="isSidebarOpen = false"
+          v-if="isMobileSidebarOpen && !isDesktop"
+          @click="closeMobileSidebar"
           class="fixed inset-0 bg-black/50 z-40 lg:hidden"
-        >
-        </div>
+        />
       </Transition>
 
-      <!-- Sidebar -->
+      <!-- Sidebar - Desktop (sticky) -->
+      <div class="hidden lg:block sticky top-0 h-screen shrink-0">
+        <SiswaSidebar />
+      </div>
+
+      <!-- Mobile Sidebar -->
       <Transition name="slide">
         <div 
-          v-show="isSidebarOpen || isDesktop"
-          class="fixed left-0 top-0 h-full z-50 lg:relative lg:z-0"
+          v-show="isMobileSidebarOpen && !isDesktop"
+          class="fixed left-0 top-0 h-screen z-50 lg:hidden"
         >
-          <AppSidebar 
-            :user-name="userName"
-            :user-class="userClass"
-          />
+          <SiswaSidebar />
         </div>
       </Transition>
 
-      <!-- Content -->
-      <main class="flex-1 p-3 sm:p-4 md:p-6">
-        <slot />
-      </main>
+      <!-- Main Area -->
+      <div class="flex-1 min-w-0 flex flex-col min-h-screen">
+        <!-- Header -->
+        <header class="sticky top-0 z-30 bg-white border-b border-slate-200 h-14 lg:h-16 flex items-center px-4 lg:px-6 shrink-0">
+          <div class="flex items-center justify-between w-full">
+            <!-- Left -->
+            <div class="flex items-center gap-3">
+              <button
+                @click="toggleSidebar"
+                class="lg:hidden flex items-center justify-center w-10 h-10 rounded-lg hover:bg-slate-100 transition-colors"
+              >
+                <Icon name="lucide:menu" class="w-5 h-5 text-slate-700" />
+              </button>
+              
+              <!-- Mobile Logo -->
+              <div class="flex items-center gap-2 lg:hidden">
+                <div class="w-8 h-8 rounded-lg bg-sky-500 flex items-center justify-center">
+                  <Icon name="lucide:graduation-cap" class="w-4 h-4 text-white" />
+                </div>
+                <span class="font-semibold text-slate-900 text-sm">Prakerin</span>
+              </div>
+
+              <!-- Page Title (Desktop) -->
+              <div class="hidden lg:block">
+                <h1 class="text-lg font-semibold text-slate-900">{{ pageTitle }}</h1>
+              </div>
+            </div>
+
+            <!-- Right -->
+            <div class="flex items-center gap-2">
+              <!-- Notifications -->
+              <button class="relative flex items-center justify-center w-10 h-10 rounded-lg hover:bg-slate-100 transition-colors">
+                <Icon name="lucide:bell" class="w-5 h-5 text-slate-600" />
+                <span v-if="hasNotification" class="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full" />
+              </button>
+
+              <!-- User (Desktop) -->
+              <NuxtLink to="/siswa/profil" class="hidden sm:flex items-center gap-2 p-1.5 rounded-lg hover:bg-slate-100 transition-colors">
+                <div class="w-8 h-8 rounded-lg bg-sky-500 flex items-center justify-center text-white font-semibold text-sm">
+                  RS
+                </div>
+                <div class="text-left">
+                  <p class="text-sm font-medium text-slate-900">Ryobi</p>
+                </div>
+              </NuxtLink>
+            </div>
+          </div>
+        </header>
+
+        <!-- Content -->
+        <main class="flex-1 p-4 lg:p-6 pb-20 lg:pb-6">
+          <slot />
+        </main>
+
+        <!-- Bottom Navigation (Mobile Only) -->
+        <nav class="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 z-30 safe-area-bottom">
+          <div class="flex items-center justify-around h-16">
+            <NuxtLink 
+              v-for="item in bottomNavItems" 
+              :key="item.to"
+              :to="item.to"
+              class="flex flex-col items-center justify-center gap-1 w-full h-full transition-colors"
+              :class="isActiveRoute(item.to) ? 'text-sky-600' : 'text-slate-500'"
+            >
+              <div class="relative">
+                <Icon :name="item.icon" class="w-5 h-5" />
+                <span v-if="item.badge" class="absolute -top-1 -right-2 w-4 h-4 text-[10px] bg-red-500 text-white rounded-full flex items-center justify-center">
+                  {{ item.badge > 9 ? '9+' : item.badge }}
+                </span>
+                <span v-if="item.dot" class="absolute -top-0.5 -right-0.5 w-2 h-2 bg-red-500 rounded-full" />
+              </div>
+              <span class="text-[10px] font-medium">{{ item.label }}</span>
+            </NuxtLink>
+          </div>
+        </nav>
+      </div>
     </div>
   </div>
 </template>
 
-<script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+<script setup lang="ts">
+const route = useRoute()
 
-// Data siswa bisa diambil dari API/store
-const userName = ref('Ryobi Surya Atmaja')
-const userClass = ref('XII TM A')
-const schoolName = ref('SMK N 2 Wonogiri')
+const {
+  isMobileSidebarOpen,
+  isDesktop,
+  toggleSidebar,
+  closeMobileSidebar,
+  updateScreenSize,
+  initializeDesktopSidebar
+} = useSidebar()
 
-// Sidebar state
-const isSidebarOpen = ref(false)
-const isDesktop = ref(false)
+const hasNotification = ref(true)
 
-const checkScreenSize = () => {
-  isDesktop.value = window.innerWidth >= 1024 // lg breakpoint
+const pageTitle = computed(() => {
+  const titles: Record<string, string> = {
+    '/siswa': 'Dashboard',
+    '/siswa/logbook': 'Logbook Harian',
+    '/siswa/absensi': 'Absensi',
+    '/siswa/dokumen': 'Dokumen PKL',
+    '/siswa/laporan': 'Laporan Akhir',
+    '/siswa/nilai': 'Nilai PKL',
+    '/siswa/profil': 'Profil Saya'
+  }
+  
+  if (titles[route.path]) return titles[route.path]
+  
+  for (const [path, title] of Object.entries(titles)) {
+    if (route.path.startsWith(path) && path !== '/siswa') return title
+  }
+  
+  return 'Dashboard'
+})
+
+const bottomNavItems = [
+  { to: '/siswa', icon: 'lucide:home', label: 'Home' },
+  { to: '/siswa/logbook', icon: 'lucide:book-open', label: 'Logbook', badge: 2 },
+  { to: '/siswa/absensi', icon: 'lucide:map-pin', label: 'Absensi', dot: true },
+  { to: '/siswa/dokumen', icon: 'lucide:folder', label: 'Dokumen' },
+  { to: '/siswa/profil', icon: 'lucide:user', label: 'Profil' }
+]
+
+const isActiveRoute = (path: string) => {
+  if (path === '/siswa') return route.path === '/siswa'
+  return route.path.startsWith(path)
 }
 
 onMounted(() => {
-  checkScreenSize()
-  window.addEventListener('resize', checkScreenSize)
+  updateScreenSize()
+  initializeDesktopSidebar()
+  window.addEventListener('resize', updateScreenSize)
 })
 
 onUnmounted(() => {
-  window.removeEventListener('resize', checkScreenSize)
+  window.removeEventListener('resize', updateScreenSize)
 })
 </script>
 
 <style scoped>
-/* Transition untuk overlay */
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.3s ease;
-}
+.fade-enter-active, .fade-leave-active { transition: opacity 0.3s ease; }
+.fade-enter-from, .fade-leave-to { opacity: 0; }
+.slide-enter-active, .slide-leave-active { transition: transform 0.3s ease; }
+.slide-enter-from, .slide-leave-to { transform: translateX(-100%); }
 
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
-}
-
-/* Transition untuk sidebar slide */
-.slide-enter-active,
-.slide-leave-active {
-  transition: transform 0.3s ease;
-}
-
-.slide-enter-from,
-.slide-leave-to {
-  transform: translateX(-100%);
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
 }
 </style>

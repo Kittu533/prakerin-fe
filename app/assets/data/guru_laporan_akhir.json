@@ -1,0 +1,43 @@
+{
+  "items": [
+    {
+      "idLaporan": 1001,
+      "idPenempatan": 101,
+      "namaSiswa": "Ahmad Fajar",
+      "kelas": "XII TM A",
+      "perusahaan": "PT Maju Jaya Teknik",
+      "statusLaporan": "DRAFT",
+      "nilaiAkhir": null,
+      "grade": null,
+      "persentaseKehadiran": 94.5,
+      "totalHariKerja": 60,
+      "totalKehadiran": 57
+    },
+    {
+      "idLaporan": 1002,
+      "idPenempatan": 103,
+      "namaSiswa": "Budi Santoso",
+      "kelas": "XII TM A",
+      "perusahaan": "PT Nusantara Motor",
+      "statusLaporan": "FINAL",
+      "nilaiAkhir": 90.0,
+      "grade": "A",
+      "persentaseKehadiran": 96.8,
+      "totalHariKerja": 55,
+      "totalKehadiran": 53
+    },
+    {
+      "idLaporan": 1003,
+      "idPenempatan": 102,
+      "namaSiswa": "Siti Aminah",
+      "kelas": "XII TM B",
+      "perusahaan": "Bengkel Sejahtera Motor",
+      "statusLaporan": "REVIEW",
+      "nilaiAkhir": 84.5,
+      "grade": "B+",
+      "persentaseKehadiran": 91.2,
+      "totalHariKerja": 50,
+      "totalKehadiran": 46
+    }
+  ]
+}

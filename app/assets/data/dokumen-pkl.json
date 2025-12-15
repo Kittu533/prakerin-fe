@@ -1,0 +1,29 @@
+[
+  {
+    "id": 1,
+    "id_penempatan": 1,
+    "penempatan_label": "PT Maju Jaya - Web Developer",
+    "jenis_file": "SURAT_PENGANTAR",
+    "nama_file": "Surat_Pengantar_PKL_Ryobi.pdf",
+    "file_url": "#",
+    "uploaded_at": "2025-11-10T09:15:00Z"
+  },
+  {
+    "id": 2,
+    "id_penempatan": 1,
+    "penempatan_label": "PT Maju Jaya - Web Developer",
+    "jenis_file": "LAPORAN_AKHIR",
+    "nama_file": "Laporan_Akhir_PKL_Ryobi.pdf",
+    "file_url": "#",
+    "uploaded_at": "2025-11-21T14:30:00Z"
+  },
+  {
+    "id": 3,
+    "id_penempatan": 2,
+    "penempatan_label": "CV Kreatif Media - UI Designer",
+    "jenis_file": "DOKUMENTASI",
+    "nama_file": "Dokumentasi_Presentasi_Tim.png",
+    "file_url": "#",
+    "uploaded_at": "2025-11-19T08:30:00Z"
+  }
+]

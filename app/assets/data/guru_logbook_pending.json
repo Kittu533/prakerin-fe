@@ -1,0 +1,47 @@
+[
+  {
+    "idLogbook": 201,
+    "namaSiswa": "Ahmad Fajar",
+    "kelas": "XII TM A",
+    "perusahaan": "PT Maju Jaya Teknik",
+    "tanggal": "18-03-2026",
+    "judul": "Pendampingan servis berkala motor matic",
+    "status": "MENUNGGU"
+  },
+  {
+    "idLogbook": 202,
+    "namaSiswa": "Siti Aminah",
+    "kelas": "XII TM B",
+    "perusahaan": "Bengkel Sejahtera Motor",
+    "tanggal": "17-03-2026",
+    "judul": "Pemeriksaan sistem rem & oli",
+    "status": "MENUNGGU"
+  },
+  {
+    "idLogbook": 203,
+    "namaSiswa": "Budi Santoso",
+    "kelas": "XII TM A",
+    "perusahaan": "PT Nusantara Motor",
+    "tanggal": "17-03-2026",
+    "judul": "Briefing keselamatan kerja & housekeeping",
+    "status": "MENUNGGU"
+  },
+  {
+    "idLogbook": 204,
+    "namaSiswa": "Rina Kartika",
+    "kelas": "XII TM C",
+    "perusahaan": "CV Prima Motor",
+    "tanggal": "16-03-2026",
+    "judul": "Pencatatan sparepart masuk",
+    "status": "MENUNGGU"
+  },
+  {
+    "idLogbook": 205,
+    "namaSiswa": "Doni Saputra",
+    "kelas": "XII TM B",
+    "perusahaan": "Bengkel Sejahtera Motor",
+    "tanggal": "16-03-2026",
+    "judul": "Pengecekan motor sebelum serah terima ke pelanggan",
+    "status": "MENUNGGU"
+  }
+]

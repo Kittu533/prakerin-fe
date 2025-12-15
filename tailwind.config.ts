@@ -5,6 +5,10 @@ export default <Partial<Config>>{
   darkMode: 'class',
   theme: {
     extend: {
+      screens: {
+        'xs': '475px',
+        '3xl': '1600px',
+      },
       colors: {
         primary: {
           DEFAULT: '#039855',

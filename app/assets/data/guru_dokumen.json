@@ -1,0 +1,54 @@
+{
+  "items": [
+    {
+      "idFile": 1,
+      "namaSiswa": "Ahmad Fajar",
+      "kelas": "XII TM A",
+      "perusahaan": "PT Maju Jaya Teknik",
+      "jenis": "SURAT_PENGANTAR",
+      "namaFile": "surat_pengantar_pkl_ahmad_fajar.pdf",
+      "tanggalUpload": "01-12-2025",
+      "keterangan": "Surat pengantar dari sekolah"
+    },
+    {
+      "idFile": 2,
+      "namaSiswa": "Ahmad Fajar",
+      "kelas": "XII TM A",
+      "perusahaan": "PT Maju Jaya Teknik",
+      "jenis": "SURAT_BALASAN",
+      "namaFile": "surat_balasan_pt_maju_jaya.pdf",
+      "tanggalUpload": "10-12-2025",
+      "keterangan": "Balasan penerimaan siswa PKL"
+    },
+    {
+      "idFile": 3,
+      "namaSiswa": "Siti Aminah",
+      "kelas": "XII TM B",
+      "perusahaan": "Bengkel Sejahtera Motor",
+      "jenis": "DOKUMENTASI",
+      "namaFile": "foto_kegiatan_servis_17032026.jpg",
+      "tanggalUpload": "17-03-2026",
+      "keterangan": "Dokumentasi kegiatan servis"
+    },
+    {
+      "idFile": 4,
+      "namaSiswa": "Budi Santoso",
+      "kelas": "XII TM A",
+      "perusahaan": "PT Nusantara Motor",
+      "jenis": "SERTIFIKAT",
+      "namaFile": "sertifikat_pkl_budi_santoso.pdf",
+      "tanggalUpload": "25-04-2026",
+      "keterangan": "Sertifikat PKL (final)"
+    },
+    {
+      "idFile": 5,
+      "namaSiswa": "Rina Kartika",
+      "kelas": "XII TM C",
+      "perusahaan": "CV Prima Motor",
+      "jenis": "LAPORAN_AKHIR",
+      "namaFile": "laporan_akhir_pkl_rina_kartika_draft.pdf",
+      "tanggalUpload": "20-04-2026",
+      "keterangan": "Draft laporan akhir (belum final)"
+    }
+  ]
+}

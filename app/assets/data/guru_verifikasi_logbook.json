@@ -1,0 +1,40 @@
+{
+  "items": [
+    {
+      "id": 1,
+      "namaSiswa": "Ahmad Fajar",
+      "kelas": "XII TM A",
+      "perusahaan": "PT Maju Jaya Teknik",
+      "tanggal": "2026-03-18",
+      "judul": "Pendampingan servis berkala motor matic",
+      "ringkas": "Mendampingi teknisi melakukan servis rutin motor matic.",
+      "status": "MENUNGGU",
+      "ratingMentor": 5,
+      "ratingGuru": null
+    },
+    {
+      "id": 2,
+      "namaSiswa": "Siti Aminah",
+      "kelas": "XII TM B",
+      "perusahaan": "Bengkel Sejahtera Motor",
+      "tanggal": "2026-03-17",
+      "judul": "Pemeriksaan sistem rem & oli",
+      "ringkas": "Belajar cek ketebalan kampas rem dan kualitas oli.",
+      "status": "MENUNGGU",
+      "ratingMentor": 4,
+      "ratingGuru": null
+    },
+    {
+      "id": 3,
+      "namaSiswa": "Budi Santoso",
+      "kelas": "XII TM A",
+      "perusahaan": "PT Nusantara Motor",
+      "tanggal": "2026-03-16",
+      "judul": "Pembersihan area kerja & housekeeping",
+      "ringkas": "Membersihkan area kerja dan menata peralatan.",
+      "status": "MENUNGGU",
+      "ratingMentor": 3,
+      "ratingGuru": null
+    }
+  ]
+}

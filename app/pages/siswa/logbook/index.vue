@@ -1,493 +1,342 @@
-<script setup lang="ts">
-import { h, reactive, ref, resolveComponent } from 'vue'
-import type { TableColumn, FormError, FormSubmitEvent } from '@nuxt/ui'
-import AppDataTable from '~/components/common/AppDataTable.vue'
-
-definePageMeta({
-  layout: 'siswa',
-  title: 'Logbook'
-})
-
-type LogStatus = 'Sudah ACC' | 'Menunggu ACC'
-
-interface LogbookEntry {
-  id: number
-  tanggal: string
-  jamMulai: string
-  jamSelesai: string
-  aktivitas: string
-  status: LogStatus
-}
-
-const profile = {
-  nama: 'RYOBI SURYA ATMAJA',
-  nim: '5220311063',
-  fakultas: 'Sains & Teknologi',
-  prodi: 'Sistem Informasi Sarjana'
-}
-
-const logbook = ref<LogbookEntry[]>([
-  {
-    id: 1,
-    tanggal: '16/11/2025',
-    jamMulai: '09:00',
-    jamSelesai: '12:00',
-    aktivitas:
-      'Briefing awal bersama pembimbing dan penjelasan aturan kerja di perusahaan.',
-    status: 'Sudah ACC'
-  },
-  {
-    id: 2,
-    tanggal: '17/11/2025',
-    jamMulai: '08:30',
-    jamSelesai: '12:00',
-    aktivitas:
-      'Setup environment pengembangan (Git, VS Code, akses repository) dan testing koneksi.',
-    status: 'Sudah ACC'
-  },
-  {
-    id: 3,
-    tanggal: '18/11/2025',
-    jamMulai: '09:00',
-    jamSelesai: '15:00',
-    aktivitas:
-      'Menganalisis modul logbook lama dan membuat draft perbaikan alur input aktivitas.',
-    status: 'Menunggu ACC'
-  },
-  {
-    id: 4,
-    tanggal: '19/11/2025',
-    jamMulai: '09:00',
-    jamSelesai: '14:30',
-    aktivitas:
-      'Implementasi halaman daftar logbook dan ujicoba pagination pada sisi front-end.',
-    status: 'Menunggu ACC'
-  }
-])
-
-/* ---------- Kolom tabel (TanStack) ---------- */
-
-const UBadge = resolveComponent('UBadge')
-const UButton = resolveComponent('UButton')
-
-const columns: TableColumn<LogbookEntry>[] = [
-  {
-    accessorKey: 'id',
-    header: '#',
-    cell: ({ row }) => row.index + 1,
-    meta: {
-      class: {
-        th: 'text-center w-10',
-        td: 'text-center'
-      }
-    }
-  },
-  {
-    accessorKey: 'tanggal',
-    header: 'Tanggal'
-  },
-  {
-    accessorKey: 'jamMulai',
-    header: 'Jam',
-    cell: ({ row }) =>
-      `${row.original.jamMulai} - ${row.original.jamSelesai} WIB`
-  },
-  {
-    accessorKey: 'aktivitas',
-    header: 'Aktivitas',
-    meta: {
-      class: {
-        td: 'leading-relaxed'
-      }
-    }
-  },
-  {
-    accessorKey: 'status',
-    header: 'Status',
-    cell: ({ row }) => {
-      const status = row.original.status
-      const color = status === 'Sudah ACC' ? 'success' : 'warning'
-      return h(
-        UBadge,
-        {
-          color,
-          variant: 'subtle',
-          size: 'xs',
-          class: 'text-[11px] font-medium'
-        },
-        () => status
-      )
-    },
-    meta: {
-      class: {
-        th: 'text-center',
-        td: 'text-center'
-      }
-    }
-  },
-  {
-    id: 'actions', // <- kolom aksi, otomatis di-freeze/ sticky di AppDataTable
-    header: 'Aksi',
-    meta: {
-      class: {
-        th: 'text-right w-32',
-        td: 'text-right'
-      }
-    },
-    cell: ({ row }) => {
-      const entry = row.original
-      return h(
-        'div',
-        { class: 'flex justify-end gap-2' },
-        [
-          h(
-            UButton,
-            {
-              size: 'xs',
-              color: 'primary',
-              variant: 'soft',
-              onClick: () => openEdit(entry)
-            },
-            { default: () => 'Edit' }
-          ),
-          h(
-            UButton,
-            {
-              size: 'xs',
-              color: 'error',
-              variant: 'soft',
-              onClick: () => openDelete(entry)
-            },
-            { default: () => 'Hapus' }
-          )
-        ]
-      )
-    }
-  }
-]
-
-/* ---------- Form & Modal Add / Edit / Delete ---------- */
-
-interface LogbookFormState {
-  tanggal?: string
-  jamMulai?: string
-  jamSelesai?: string
-  aktivitas?: string
-}
-
-const addState = reactive<LogbookFormState>({
-  tanggal: '',
-  jamMulai: '',
-  jamSelesai: '',
-  aktivitas: ''
-})
-
-const editState = reactive<LogbookFormState>({
-  tanggal: '',
-  jamMulai: '',
-  jamSelesai: '',
-  aktivitas: ''
-})
-
-const isAddOpen = ref(false)
-const isEditOpen = ref(false)
-const isDeleteOpen = ref(false)
-const selectedEntry = ref<LogbookEntry | null>(null)
-
-function validateLogbook(state: Partial<LogbookFormState>): FormError[] {
-  const errors: FormError[] = []
-  if (!state.tanggal) errors.push({ name: 'tanggal', message: 'Tanggal wajib diisi' })
-  if (!state.jamMulai) errors.push({ name: 'jamMulai', message: 'Jam mulai wajib diisi' })
-  if (!state.jamSelesai) errors.push({ name: 'jamSelesai', message: 'Jam selesai wajib diisi' })
-  if (!state.aktivitas) errors.push({ name: 'aktivitas', message: 'Aktivitas wajib diisi' })
-  return errors
-}
-
-const openAdd = () => {
-  addState.tanggal = ''
-  addState.jamMulai = ''
-  addState.jamSelesai = ''
-  addState.aktivitas = ''
-  isAddOpen.value = true
-}
-
-const onAddSubmit = (event: FormSubmitEvent<LogbookFormState>) => {
-  const data = event.data
-  const nextId = (logbook.value.at(-1)?.id ?? 0) + 1
-  logbook.value = [
-    {
-      id: nextId,
-      tanggal: data.tanggal ?? '',
-      jamMulai: data.jamMulai ?? '',
-      jamSelesai: data.jamSelesai ?? '',
-      aktivitas: data.aktivitas ?? '',
-      status: 'Menunggu ACC'
-    },
-    ...logbook.value
-  ]
-  isAddOpen.value = false
-}
-
-const openEdit = (entry: LogbookEntry) => {
-  selectedEntry.value = entry
-  editState.tanggal = entry.tanggal
-  editState.jamMulai = entry.jamMulai
-  editState.jamSelesai = entry.jamSelesai
-  editState.aktivitas = entry.aktivitas
-  isEditOpen.value = true
-}
-
-const onEditSubmit = (event: FormSubmitEvent<LogbookFormState>) => {
-  if (!selectedEntry.value) return
-  const id = selectedEntry.value.id
-  const data = event.data
-
-  logbook.value = logbook.value.map((row) =>
-    row.id === id
-      ? {
-          ...row,
-          tanggal: data.tanggal ?? row.tanggal,
-          jamMulai: data.jamMulai ?? row.jamMulai,
-          jamSelesai: data.jamSelesai ?? row.jamSelesai,
-          aktivitas: data.aktivitas ?? row.aktivitas
-        }
-      : row
-  )
-
-  isEditOpen.value = false
-}
-
-const openDelete = (entry: LogbookEntry) => {
-  selectedEntry.value = entry
-  isDeleteOpen.value = true
-}
-
-const confirmDelete = () => {
-  if (!selectedEntry.value) return
-  logbook.value = logbook.value.filter(
-    (row) => row.id !== selectedEntry.value!.id
-  )
-  isDeleteOpen.value = false
-}
-</script>
-
 <template>
-  <section
-    class="space-y-4 sm:space-y-6 rounded-2xl sm:rounded-[32px] bg-white px-3 py-4 sm:px-6 md:px-8 sm:py-6 shadow-sm"
-  >
-    <!-- Breadcrumb -->
-    <div class="text-xs text-slate-500">
-      <NuxtLink to="/" class="hover:text-primary-600">Home</NuxtLink>
-      <span class="mx-1">›</span>
-      <span class="font-medium text-slate-700">Logbook</span>
+  <div class="space-y-6">
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div>
+        <h1 class="text-xl lg:text-2xl font-bold text-slate-900">Logbook Harian</h1>
+        <p class="text-sm text-slate-500 mt-1">Catat kegiatan PKL harianmu</p>
+      </div>
+      <UButton color="primary" @click="openModal()">
+        <Icon name="lucide:plus" class="w-4 h-4 mr-2" />
+        Tambah Kegiatan
+      </UButton>
     </div>
 
-    <!-- Informasi diri -->
-    <div class="space-y-4">
-      <header>
-        <h1 class="text-lg font-semibold text-slate-800">
-          Logbook Mahasiswa
-        </h1>
-        <p class="mt-1 text-xs text-slate-500">
-          Catat aktivitas harian prakerin / PKL Anda dengan rapi dan terstruktur.
-        </p>
-      </header>
-
-      <div
-        class="overflow-hidden rounded-xl sm:rounded-2xl border border-slate-100 bg-slate-50/60"
-      >
-        <div class="overflow-x-auto">
-          <table class="w-full text-[11px] sm:text-[12px]">
-            <tbody>
-              <tr class="bg-slate-50">
-                <td class="w-32 sm:w-52 px-3 sm:px-4 py-2 sm:py-2.5 font-medium text-slate-600">
-                  Nama Lengkap
-                </td>
-                <td class="w-4 sm:w-6 text-center text-slate-400">:</td>
-                <td
-                  class="px-3 sm:px-4 py-2 sm:py-2.5 font-semibold uppercase tracking-wide text-slate-800"
-                >
-                  {{ profile.nama }}
-                </td>
-              </tr>
-              <tr>
-                <td class="px-3 sm:px-4 py-2 sm:py-2.5 font-medium text-slate-600">NIM</td>
-                <td class="text-center text-slate-400">:</td>
-                <td class="px-3 sm:px-4 py-2 sm:py-2.5 text-slate-700">
-                  {{ profile.nim }}
-                </td>
-              </tr>
-              <tr class="bg-slate-50">
-                <td class="px-3 sm:px-4 py-2 sm:py-2.5 font-medium text-slate-600">
-                  Fakultas
-                </td>
-                <td class="text-center text-slate-400">:</td>
-                <td class="px-3 sm:px-4 py-2 sm:py-2.5 text-slate-700">
-                  {{ profile.fakultas }}
-                </td>
-              </tr>
-              <tr>
-                <td class="px-3 sm:px-4 py-2 sm:py-2.5 font-medium text-slate-600">
-                  Program Studi
-                </td>
-                <td class="text-center text-slate-400">:</td>
-                <td class="px-3 sm:px-4 py-2 sm:py-2.5 text-slate-700">
-                  {{ profile.prodi }}
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+    <!-- Stats -->
+    <div class="grid grid-cols-3 gap-3">
+      <div class="bg-white rounded-xl p-4 border border-slate-200 text-center">
+        <p class="text-2xl font-bold text-slate-900">{{ stats.total }}</p>
+        <p class="text-xs text-slate-500">Total</p>
+      </div>
+      <div class="bg-white rounded-xl p-4 border border-slate-200 text-center">
+        <p class="text-2xl font-bold text-green-600">{{ stats.approved }}</p>
+        <p class="text-xs text-slate-500">Disetujui</p>
+      </div>
+      <div class="bg-white rounded-xl p-4 border border-slate-200 text-center">
+        <p class="text-2xl font-bold text-amber-600">{{ stats.pending }}</p>
+        <p class="text-xs text-slate-500">Pending</p>
       </div>
     </div>
 
-    <!-- TABEL UMUM -->
-    <AppDataTable
-      :items="logbook"
-      :columns="columns"
-      title="Riwayat Logbook"
-      description="Data aktivitas harian selama pelaksanaan prakerin."
-      :page-size="5"
-      :searchable="true"
-      search-placeholder="Cari tanggal / aktivitas..."
-      :search-keys="['tanggal', 'jamMulai', 'jamSelesai', 'aktivitas', 'status']"
-    >
-      <template #toolbar-right>
-        <UButton
-          icon="i-lucide-plus"
-          size="sm"
-          color="primary"
-          @click="openAdd"
-        >
-          Tambah Logbook
-        </UButton>
-      </template>
-    </AppDataTable>
+    <!-- Filter -->
+    <div class="bg-white rounded-xl border border-slate-200 p-4">
+      <div class="flex flex-col sm:flex-row gap-3">
+        <UInput v-model="search" placeholder="Cari kegiatan..." class="flex-1">
+          <template #leading>
+            <Icon name="lucide:search" class="w-4 h-4 text-slate-400" />
+          </template>
+        </UInput>
+        <USelectMenu v-model="filterStatus" :items="statusOptions" placeholder="Filter Status" class="w-full sm:w-36" />
+      </div>
+    </div>
 
-    <!-- MODAL TAMBAH -->
-    <UModal v-model:open="isAddOpen" title="Tambah Logbook">
-      <template #body>
-        <UForm
-          :state="addState"
-          :validate="validateLogbook"
-          class="space-y-4"
-          @submit="onAddSubmit"
-        >
-          <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <UFormField label="Tanggal" name="tanggal">
-              <UInput v-model="addState.tanggal" type="date" />
-            </UFormField>
-
-            <div class="grid grid-cols-2 gap-4">
-              <UFormField label="Jam Mulai" name="jamMulai">
-                <UInput v-model="addState.jamMulai" placeholder="08:00" />
-              </UFormField>
-              <UFormField label="Jam Selesai" name="jamSelesai">
-                <UInput v-model="addState.jamSelesai" placeholder="16:00" />
-              </UFormField>
-            </div>
-          </div>
-
-          <UFormField label="Aktivitas" name="aktivitas">
-            <UTextarea
-              v-model="addState.aktivitas"
-              :rows="4"
-              placeholder="Tuliskan ringkasan aktivitas yang Anda kerjakan..."
-            />
-          </UFormField>
-
-          <div class="flex justify-end gap-2 pt-2">
-            <UButton
-              type="button"
-              color="neutral"
-              variant="outline"
-              @click="isAddOpen = false"
-            >
-              Batal
+    <!-- Table (Desktop) -->
+    <div class="hidden lg:block bg-white rounded-xl border border-slate-200 overflow-hidden">
+      <UTable :data="filteredLogbooks" :columns="columns" :loading="loading">
+        <template #tanggal-cell="{ row }">
+          <span class="text-sm">{{ row.original.tanggal }}</span>
+        </template>
+        <template #waktu-cell="{ row }">
+          <span class="text-sm text-slate-500">{{ row.original.jamMulai }} - {{ row.original.jamSelesai }}</span>
+        </template>
+        <template #judul-cell="{ row }">
+          <span class="text-sm font-medium truncate max-w-[200px] block">{{ row.original.judul }}</span>
+        </template>
+        <template #preview-cell="{ row }">
+          <img v-if="row.original.foto" :src="row.original.foto" class="w-10 h-10 rounded object-cover" />
+          <span v-else class="text-slate-400">-</span>
+        </template>
+        <template #status-cell="{ row }">
+          <UBadge :color="getStatusColor(row.original.status)" variant="subtle" size="xs">{{ row.original.status }}</UBadge>
+        </template>
+        <template #aksi-cell="{ row }">
+          <div class="flex gap-1">
+            <UButton size="xs" variant="ghost" color="neutral" @click="openModal(row.original)">
+              <Icon name="lucide:edit" class="w-4 h-4" />
             </UButton>
-            <UButton type="submit" color="primary">
-              Simpan
+            <UButton size="xs" variant="ghost" color="error" @click="deleteLogbook(row.original.id)">
+              <Icon name="lucide:trash-2" class="w-4 h-4" />
             </UButton>
           </div>
-        </UForm>
-      </template>
-    </UModal>
+        </template>
+      </UTable>
+    </div>
 
-    <!-- MODAL EDIT -->
-    <UModal v-model:open="isEditOpen" title="Edit Logbook">
-      <template #body>
-        <UForm
-          :state="editState"
-          :validate="validateLogbook"
-          class="space-y-4"
-          @submit="onEditSubmit"
-        >
-          <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <UFormField label="Tanggal" name="tanggal">
-              <UInput v-model="editState.tanggal" type="date" />
-            </UFormField>
-
-            <div class="grid grid-cols-2 gap-4">
-              <UFormField label="Jam Mulai" name="jamMulai">
-                <UInput v-model="editState.jamMulai" />
-              </UFormField>
-              <UFormField label="Jam Selesai" name="jamSelesai">
-                <UInput v-model="editState.jamSelesai" />
-              </UFormField>
-            </div>
-          </div>
-
-          <UFormField label="Aktivitas" name="aktivitas">
-            <UTextarea v-model="editState.aktivitas" :rows="4" />
-          </UFormField>
-
-          <div class="flex justify-end gap-2 pt-2">
-            <UButton
-              type="button"
-              color="neutral"
-              variant="outline"
-              @click="isEditOpen = false"
-            >
-              Batal
-            </UButton>
-            <UButton type="submit" color="primary">
-              Simpan Perubahan
-            </UButton>
-          </div>
-        </UForm>
-      </template>
-    </UModal>
-
-    <!-- MODAL HAPUS -->
-    <UModal v-model:open="isDeleteOpen" title="Hapus Logbook">
-      <template #body>
-        <p class="text-sm text-slate-600">
-          Apakah Anda yakin ingin menghapus logbook tanggal
-          <span class="font-semibold text-slate-800">
-            {{ selectedEntry?.tanggal }}
-          </span>
-          ?
-        </p>
-      </template>
-      <template #footer="{ close }">
-        <div class="flex w-full justify-end gap-2">
-          <UButton
-            color="neutral"
-            variant="outline"
-            size="sm"
-            @click="close"
-          >
-            Batal
-          </UButton>
-          <UButton
-            color="error"
-            size="sm"
-            @click="confirmDelete"
-          >
-            Hapus
-          </UButton>
+    <!-- Card List (Mobile) -->
+    <div class="lg:hidden space-y-3">
+      <template v-if="loading">
+        <div v-for="i in 4" :key="i" class="bg-white rounded-xl border border-slate-200 p-4">
+          <USkeleton class="h-4 w-3/4 mb-2" />
+          <USkeleton class="h-3 w-1/2" />
         </div>
       </template>
+      <template v-else>
+        <div v-for="log in filteredLogbooks" :key="log.id" class="bg-white rounded-xl border border-slate-200 p-4" @click="openModal(log)">
+          <div class="flex items-start justify-between gap-2 mb-2">
+            <div>
+              <p class="font-medium text-slate-900 text-sm">{{ log.judul }}</p>
+              <p class="text-xs text-slate-500">{{ log.tanggal }}</p>
+            </div>
+            <UBadge :color="getStatusColor(log.status)" variant="subtle" size="xs">{{ log.status }}</UBadge>
+          </div>
+          <div v-if="log.status === 'Ditolak' && log.catatan" class="mt-2 p-2 bg-red-50 rounded-lg">
+            <p class="text-xs text-red-600">{{ log.catatan }}</p>
+          </div>
+        </div>
+        <div v-if="!filteredLogbooks.length" class="bg-white rounded-xl border border-slate-200 py-12 text-center">
+          <Icon name="lucide:book-open" class="w-12 h-12 text-slate-300 mx-auto mb-3" />
+          <p class="text-slate-500">Belum ada logbook</p>
+        </div>
+      </template>
+    </div>
+
+    <!-- Pagination -->
+    <div v-if="totalPages > 1" class="flex justify-center">
+      <UPagination v-model:page="currentPage" :total="totalItems" :items-per-page="itemsPerPage" />
+    </div>
+
+    <!-- Modal Form -->
+    <UModal v-model:open="modalOpen">
+      <template #content>
+        <UCard>
+          <template #header>
+            <div class="flex items-center justify-between">
+              <h3 class="font-semibold text-slate-900">{{ editingLog ? 'Edit Logbook' : 'Tambah Logbook' }}</h3>
+              <UButton variant="ghost" color="neutral" size="xs" @click="modalOpen = false">
+                <Icon name="lucide:x" class="w-4 h-4" />
+              </UButton>
+            </div>
+          </template>
+
+          <!-- Revision Alert -->
+          <UAlert v-if="editingLog?.status === 'Ditolak'" color="error" icon="lucide:alert-circle" class="mb-4">
+            <template #title>Catatan Pembimbing</template>
+            <template #description>{{ editingLog.catatan }}</template>
+          </UAlert>
+
+          <form @submit.prevent="submitForm" class="space-y-4">
+            <UFormField label="Tanggal" required>
+              <UInput v-model="form.tanggal" type="date" :max="today" />
+            </UFormField>
+
+            <div class="grid grid-cols-2 gap-3">
+              <UFormField label="Jam Mulai" required>
+                <UInput v-model="form.jamMulai" type="time" />
+              </UFormField>
+              <UFormField label="Jam Selesai" required>
+                <UInput v-model="form.jamSelesai" type="time" />
+              </UFormField>
+            </div>
+
+            <UFormField label="Judul Kegiatan" required>
+              <UInput v-model="form.judul" placeholder="Min. 5 karakter" />
+            </UFormField>
+
+            <UFormField label="Deskripsi" required>
+              <UTextarea v-model="form.deskripsi" placeholder="Min. 20 karakter" :rows="4" autoresize />
+            </UFormField>
+
+            <UFormField label="Foto Kegiatan">
+              <div 
+                class="border-2 border-dashed border-slate-200 rounded-lg p-4 text-center cursor-pointer hover:border-sky-400 transition-colors"
+                @click="$refs.fileInput.click()"
+                @dragover.prevent
+                @drop.prevent="handleDrop"
+              >
+                <input ref="fileInput" type="file" accept="image/*" class="hidden" @change="handleFileChange" />
+                <div v-if="form.fotoPreview">
+                  <img :src="form.fotoPreview" class="w-20 h-20 mx-auto rounded-lg object-cover mb-2" />
+                  <p class="text-xs text-slate-500">Klik untuk ganti</p>
+                </div>
+                <div v-else>
+                  <Icon name="lucide:upload" class="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                  <p class="text-sm text-slate-500">Drag & drop atau klik untuk upload</p>
+                  <p class="text-xs text-slate-400">Max 2MB, format gambar</p>
+                </div>
+              </div>
+            </UFormField>
+
+            <div class="flex gap-3 pt-2">
+              <UButton type="button" variant="outline" color="neutral" class="flex-1" @click="modalOpen = false">Batal</UButton>
+              <UButton type="submit" color="primary" class="flex-1" :loading="submitting">
+                {{ editingLog ? 'Simpan Perubahan' : 'Simpan' }}
+              </UButton>
+            </div>
+          </form>
+        </UCard>
+      </template>
     </UModal>
-  </section>
+  </div>
 </template>
+
+<script setup lang="ts">
+definePageMeta({ layout: 'siswa' })
+
+const toast = useToast()
+
+// State
+const loading = ref(true)
+const submitting = ref(false)
+const modalOpen = ref(false)
+const search = ref('')
+const filterStatus = ref<string | null>(null)
+const currentPage = ref(1)
+const itemsPerPage = 10
+
+const statusOptions = ['Disetujui', 'Pending', 'Ditolak']
+const stats = reactive({ total: 0, approved: 0, pending: 0 })
+const logbooks = ref<any[]>([])
+const editingLog = ref<any>(null)
+
+const form = reactive({
+  tanggal: '',
+  jamMulai: '',
+  jamSelesai: '',
+  judul: '',
+  deskripsi: '',
+  foto: null as File | null,
+  fotoPreview: ''
+})
+
+const today = computed(() => new Date().toISOString().split('T')[0])
+
+const columns = [
+  { accessorKey: 'tanggal', header: 'Tanggal' },
+  { accessorKey: 'waktu', header: 'Waktu' },
+  { accessorKey: 'judul', header: 'Judul' },
+  { accessorKey: 'preview', header: 'Preview' },
+  { accessorKey: 'status', header: 'Status' },
+  { accessorKey: 'aksi', header: 'Aksi' }
+]
+
+const filteredLogbooks = computed(() => {
+  let result = logbooks.value.filter(log => {
+    const matchSearch = !search.value || log.judul.toLowerCase().includes(search.value.toLowerCase())
+    const matchStatus = !filterStatus.value || log.status === filterStatus.value
+    return matchSearch && matchStatus
+  })
+  const start = (currentPage.value - 1) * itemsPerPage
+  return result.slice(start, start + itemsPerPage)
+})
+
+const totalItems = computed(() => logbooks.value.length)
+const totalPages = computed(() => Math.ceil(totalItems.value / itemsPerPage))
+
+const getStatusColor = (status: string) => ({ Disetujui: 'success', Pending: 'warning', Ditolak: 'error' })[status] || 'neutral'
+
+function openModal(log?: any) {
+  editingLog.value = log || null
+  if (log) {
+    form.tanggal = log.tanggalRaw || ''
+    form.jamMulai = log.jamMulai || ''
+    form.jamSelesai = log.jamSelesai || ''
+    form.judul = log.judul || ''
+    form.deskripsi = log.deskripsi || ''
+    form.fotoPreview = log.foto || ''
+  } else {
+    Object.assign(form, { tanggal: '', jamMulai: '', jamSelesai: '', judul: '', deskripsi: '', foto: null, fotoPreview: '' })
+  }
+  modalOpen.value = true
+}
+
+function handleFileChange(e: Event) {
+  const file = (e.target as HTMLInputElement).files?.[0]
+  if (file) processFile(file)
+}
+
+function handleDrop(e: DragEvent) {
+  const file = e.dataTransfer?.files?.[0]
+  if (file) processFile(file)
+}
+
+function processFile(file: File) {
+  if (file.size > 2 * 1024 * 1024) {
+    toast.add({ title: 'File terlalu besar (max 2MB)', color: 'error' })
+    return
+  }
+  if (!file.type.startsWith('image/')) {
+    toast.add({ title: 'Format file harus gambar', color: 'error' })
+    return
+  }
+  form.foto = file
+  form.fotoPreview = URL.createObjectURL(file)
+}
+
+async function submitForm() {
+  // Validation
+  if (!form.tanggal || !form.jamMulai || !form.jamSelesai || !form.judul || !form.deskripsi) {
+    toast.add({ title: 'Lengkapi semua field', color: 'error' })
+    return
+  }
+  if (form.judul.length < 5) {
+    toast.add({ title: 'Judul minimal 5 karakter', color: 'error' })
+    return
+  }
+  if (form.deskripsi.length < 20) {
+    toast.add({ title: 'Deskripsi minimal 20 karakter', color: 'error' })
+    return
+  }
+  if (form.jamMulai >= form.jamSelesai) {
+    toast.add({ title: 'Jam mulai harus sebelum jam selesai', color: 'error' })
+    return
+  }
+
+  submitting.value = true
+  await new Promise(r => setTimeout(r, 1000))
+
+  if (editingLog.value) {
+    const idx = logbooks.value.findIndex(l => l.id === editingLog.value.id)
+    if (idx !== -1) {
+      logbooks.value[idx] = { ...logbooks.value[idx], ...form, status: 'Pending' }
+    }
+    toast.add({ title: 'Logbook berhasil diperbarui', color: 'success' })
+  } else {
+    logbooks.value.unshift({
+      id: Date.now(),
+      tanggal: new Date(form.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }),
+      tanggalRaw: form.tanggal,
+      jamMulai: form.jamMulai,
+      jamSelesai: form.jamSelesai,
+      judul: form.judul,
+      deskripsi: form.deskripsi,
+      foto: form.fotoPreview,
+      status: 'Pending'
+    })
+    stats.total++
+    stats.pending++
+    toast.add({ title: 'Logbook berhasil ditambahkan', color: 'success' })
+  }
+
+  submitting.value = false
+  modalOpen.value = false
+}
+
+function deleteLogbook(id: number) {
+  logbooks.value = logbooks.value.filter(l => l.id !== id)
+  toast.add({ title: 'Logbook dihapus', color: 'neutral' })
+}
+
+onMounted(async () => {
+  await new Promise(r => setTimeout(r, 600))
+  Object.assign(stats, { total: 48, approved: 42, pending: 4 })
+  logbooks.value = [
+    { id: 1, tanggal: '15 Des 2024', tanggalRaw: '2024-12-15', jamMulai: '08:00', jamSelesai: '16:00', judul: 'Membuat UI Dashboard Admin', deskripsi: 'Mengerjakan tampilan dashboard admin menggunakan Vue.js dan Tailwind CSS untuk project internal perusahaan.', foto: '', status: 'Pending' },
+    { id: 2, tanggal: '14 Des 2024', tanggalRaw: '2024-12-14', jamMulai: '09:00', jamSelesai: '12:00', judul: 'Meeting dengan Tim Development', deskripsi: 'Diskusi progress project dan pembagian tugas untuk sprint berikutnya.', foto: '', status: 'Disetujui' },
+    { id: 3, tanggal: '13 Des 2024', tanggalRaw: '2024-12-13', jamMulai: '08:00', jamSelesai: '17:00', judul: 'Implementasi REST API', deskripsi: 'Membuat endpoint API untuk fitur authentication dan user management.', foto: '', status: 'Ditolak', catatan: 'Tolong tambahkan detail teknis yang lebih spesifik tentang endpoint yang dibuat.' },
+    { id: 4, tanggal: '12 Des 2024', tanggalRaw: '2024-12-12', jamMulai: '10:00', jamSelesai: '15:00', judul: 'Code Review', deskripsi: 'Review kode dari tim dan memberikan feedback untuk improvement.', foto: '', status: 'Disetujui' }
+  ]
+  loading.value = false
+})
+
+useHead({ title: 'Logbook | Siswa PKL' })
+</script>

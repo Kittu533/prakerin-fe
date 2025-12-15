@@ -64,24 +64,26 @@ const enhancedColumns = computed<TableColumn<any>[]>(() =>
     const meta = { ...(col.meta ?? {}) }
     const cls = { ...(meta.class ?? {}) }
 
-    const isActionCol =
-      col.id === 'actions' || col.accessorKey === 'actions'
+    const isActionCol = 
+      col.id === 'actions' || 
+      col.id === 'aksi' || 
+      (col as any).accessorKey === 'actions' || 
+      (col as any).accessorKey === 'aksi' ||
+      (col.header && typeof col.header === 'string' && (col.header.toLowerCase() === 'aksi' || col.header.toLowerCase() === 'actions'))
 
     if (isActionCol) {
       meta.class = {
-        th:
-          'whitespace-nowrap text-xs font-semibold text-gray-600 uppercase tracking-wide ' +
-          'sticky right-0 z-20 bg-white/95 backdrop-blur-sm shadow-[-2px_0_8px_rgba(0,0,0,0.04)] ' +
-          'md:static md:right-auto md:z-0 md:shadow-none',
-        td:
-          'text-sm text-gray-700 align-middle ' +
-          'sticky right-0 z-10 bg-white/95 backdrop-blur-sm shadow-[-2px_0_8px_rgba(0,0,0,0.04)] ' +
-          'md:static md:right-auto md:z-0 md:shadow-none'
+        th: cls.th
+          ? `${cls.th} sticky right-0 z-30 bg-gray-50 backdrop-blur-sm shadow-[-4px_0_12px_rgba(0,0,0,0.08)] border-l border-gray-200 sm:static sm:right-auto sm:z-0 sm:shadow-none sm:border-l-0`
+          : 'whitespace-nowrap text-xs font-semibold text-gray-700 uppercase tracking-wider sticky right-0 z-30 bg-gray-50 backdrop-blur-sm shadow-[-4px_0_12px_rgba(0,0,0,0.08)] border-l border-gray-200 sm:static sm:right-auto sm:z-0 sm:shadow-none sm:border-l-0',
+        td: cls.td
+          ? `${cls.td} sticky right-0 z-20 bg-white backdrop-blur-sm shadow-[-4px_0_12px_rgba(0,0,0,0.08)] border-l border-gray-100 sm:static sm:right-auto sm:z-0 sm:shadow-none sm:border-l-0`
+          : 'text-sm text-gray-700 align-middle sticky right-0 z-20 bg-white backdrop-blur-sm shadow-[-4px_0_12px_rgba(0,0,0,0.08)] border-l border-gray-100 sm:static sm:right-auto sm:z-0 sm:shadow-none sm:border-l-0'
       }
     } else {
       meta.class = {
-        th: 'whitespace-nowrap text-xs font-semibold text-gray-600 uppercase tracking-wide',
-        td: 'text-sm text-gray-700 align-middle'
+        th: cls.th || 'whitespace-nowrap text-xs font-semibold text-gray-700 uppercase tracking-wider',
+        td: cls.td || 'text-sm text-gray-700 align-middle'
       }
     }
 
@@ -122,32 +124,22 @@ const enhancedColumns = computed<TableColumn<any>[]>(() =>
 
     <!-- Table Wrapper -->
     <div class="overflow-hidden rounded-lg sm:rounded-xl border border-gray-200 bg-white shadow-sm">
-      <div class="overflow-x-auto">
+      <div class="overflow-x-auto relative">
         <UTable
           :data="paginatedItems"
           :columns="enhancedColumns"
           :ui="{
             wrapper: 'min-w-full',
-            base: 'min-w-[640px] sm:min-w-full',
-            thead: 'bg-gray-50/80',
+            table: 'min-w-[640px] sm:min-w-full',
+            thead: 'bg-gray-50 border-b border-gray-200',
             tr: {
-              base: 'border-b border-gray-100 transition-colors hover:bg-gray-50/50',
-              selected: '',
-              active: ''
+              base: 'border-b border-gray-100 transition-colors hover:bg-gray-50/50'
             },
             th: {
-              base: 'px-2 sm:px-3 md:px-4 py-2.5 sm:py-3.5 text-left bg-gray-50/80',
-              padding: '',
-              color: '',
-              font: '',
-              size: ''
+              base: 'px-4 py-3 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider bg-gray-50'
             },
             td: {
-              base: 'px-2 sm:px-3 md:px-4 py-3 sm:py-4 bg-white',
-              padding: '',
-              color: '',
-              font: '',
-              size: ''
+              base: 'px-4 py-3 bg-white border-b border-gray-100'
             },
             tbody: 'divide-y divide-gray-100 bg-white'
           }"
@@ -182,3 +174,33 @@ const enhancedColumns = computed<TableColumn<any>[]>(() =>
     </div>
   </section>
 </template>
+
+<style scoped>
+/* Enhanced sticky column support */
+@media (max-width: 639px) {
+  :deep(.sticky) {
+    position: sticky !important;
+    right: 0 !important;
+  }
+  
+  /* Ensure sticky columns stay on top during scroll */
+  :deep(thead th.sticky) {
+    z-index: 30 !important;
+  }
+  
+  :deep(tbody td.sticky) {
+    z-index: 20 !important;
+  }
+  
+  /* Prevent content overlap with sticky column */
+  :deep(table) {
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+}
+
+/* Smooth transitions for responsive breakpoints */
+:deep(th), :deep(td) {
+  transition: box-shadow 0.2s ease-in-out, background-color 0.2s ease-in-out;
+}
+</style>

@@ -1,188 +1,262 @@
 <template>
-  <aside class="w-64">
-    <div
-      class="mt-6 flex h-[calc(100vh-6.5rem)] flex-col justify-between rounded-[32px] bg-white px-4 py-6 shadow-sm"
-    >
-      <!-- MENU ATAS -->
-      <nav class="space-y-3">
-        <!-- Program -->
-        <NuxtLink
-          to="/siswa/program"
-          class="flex w-full items-center gap-2 rounded-[999px] border px-4 py-2 text-sm font-semibold transition"
-          :class="activeMain === 'program'
-            ? 'border-blue-500 bg-blue-500 text-white'
-            : 'border-blue-400 bg-white text-blue-500 hover:bg-blue-50'"
+  <aside 
+    class="h-screen bg-white border-r border-slate-200 transition-all duration-300 flex flex-col"
+    :class="isMinimized ? 'w-[72px]' : 'w-72'"
+  >
+    <!-- Logo Section -->
+    <div class="p-4 border-b border-slate-100">
+      <div class="flex items-center gap-3" :class="isMinimized ? 'justify-center' : ''">
+        <div 
+          class="flex items-center justify-center rounded-xl shrink-0 transition-all duration-300"
+          :class="[
+            isMinimized ? 'w-10 h-10' : 'w-11 h-11',
+            role === 'mentor' ? 'bg-gradient-to-br from-blue-500 to-indigo-600' : 'bg-gradient-to-br from-blue-500 to-blue-600'
+          ]"
         >
-          <span class="text-lg">🏢</span>
-          <span>Program</span>
-        </NuxtLink>
+          <span class="text-white font-bold" :class="isMinimized ? 'text-sm' : 'text-lg'">
+            {{ role === 'mentor' ? 'M' : 'SP' }}
+          </span>
+        </div>
+        <div v-show="!isMinimized" class="min-w-0">
+          <h2 class="font-bold text-slate-900 text-sm truncate">
+            {{ role === 'mentor' ? 'MENTOR PKL' : 'SIMPRAKERIN' }}
+          </h2>
+          <p class="text-xs text-slate-500 truncate">SMK N 2 Wonogiri</p>
+        </div>
+      </div>
+    </div>
 
-        <!-- Profile + dropdown -->
-        <div class="space-y-2">
+    <!-- Navigation -->
+    <nav class="flex-1 overflow-y-auto p-3 space-y-1">
+      <!-- Siswa Navigation -->
+      <template v-if="role === 'siswa'">
+        <!-- Dashboard -->
+        <SidebarItem
+          to="/siswa"
+          icon="i-heroicons-squares-2x2"
+          label="Dashboard"
+          :active="$route.path === '/siswa'"
+          :minimized="isMinimized"
+        />
+
+        <!-- Program -->
+        <SidebarItem
+          to="/siswa/program"
+          icon="i-heroicons-briefcase"
+          label="Program"
+          :active="activeMain === 'program'"
+          :minimized="isMinimized"
+        />
+
+        <!-- Profile with submenu -->
+        <div class="relative">
           <button
-            type="button"
             @click="toggleProfile"
-            class="flex w-full items-center justify-between rounded-[999px] border px-4 py-2 text-sm font-semibold transition"
-            :class="activeMain === 'profile'
-              ? 'border-blue-500 bg-blue-500 text-white'
-              : 'border-blue-400 bg-white text-blue-500 hover:bg-blue-50'"
+            class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors"
+            :class="[
+              activeMain === 'profile' ? 'bg-blue-50 text-blue-700' : 'text-slate-700 hover:bg-slate-50',
+              isMinimized ? 'justify-center' : ''
+            ]"
+            :title="isMinimized ? 'Profile' : ''"
           >
-            <div class="flex items-center gap-2">
-              <span class="text-lg">👤</span>
-              <span>Profile</span>
-            </div>
-            <span class="text-xs">
-              {{ isProfileOpen ? '▲' : '▼' }}
-            </span>
+            <UIcon name="i-heroicons-user-circle" class="w-5 h-5 shrink-0" />
+            <span v-show="!isMinimized" class="flex-1 text-left">Profile</span>
+            <UIcon
+              v-show="!isMinimized"
+              :name="isProfileOpen ? 'i-heroicons-chevron-up' : 'i-heroicons-chevron-down'"
+              class="w-4 h-4 transition-transform"
+            />
           </button>
 
-          <!-- submenu Profile -->
-          <div v-show="isProfileOpen" class="space-y-2">
-            <!-- Data Diri -->
-            <button
-              type="button"
-              @click="navigateToDataDiri"
-              class="block w-full rounded-[999px] border pr-4 py-2 text-sm font-medium transition text-left"
-              :class="[
-                'pl-7',               // indent kiri, tapi tinggi sama
-                activeProfileSub === 'data-diri'
-                  ? 'border-blue-500 bg-blue-500 text-white'
-                  : 'border-blue-300 bg-white text-blue-600 hover:bg-blue-50'
-              ]"
-            >
-              Data Diri
-            </button>
+          <!-- Submenu -->
+          <Transition
+            enter-active-class="transition duration-150 ease-out"
+            enter-from-class="opacity-0 -translate-y-1"
+            enter-to-class="opacity-100 translate-y-0"
+            leave-active-class="transition duration-100 ease-in"
+            leave-from-class="opacity-100 translate-y-0"
+            leave-to-class="opacity-0 -translate-y-1"
+          >
+            <div v-show="isProfileOpen && !isMinimized" class="mt-1 ml-4 pl-4 border-l-2 border-slate-200 space-y-1">
+              <NuxtLink
+                to="/siswa/profile/data-diri"
+                class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors"
+                :class="activeProfileSub === 'data-diri' ? 'bg-blue-50 text-blue-700 font-medium' : 'text-slate-600 hover:bg-slate-50'"
+              >
+                <UIcon name="i-heroicons-identification" class="w-4 h-4" />
+                <span>Data Diri</span>
+              </NuxtLink>
+              <NuxtLink
+                to="/siswa/profile/daftar-program"
+                class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors"
+                :class="activeProfileSub === 'daftar-program' ? 'bg-blue-50 text-blue-700 font-medium' : 'text-slate-600 hover:bg-slate-50'"
+              >
+                <UIcon name="i-heroicons-clipboard-document-list" class="w-4 h-4" />
+                <span>Daftar Program</span>
+              </NuxtLink>
+              <NuxtLink
+                to="/siswa/profile/document"
+                class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors"
+                :class="activeProfileSub === 'document' ? 'bg-blue-50 text-blue-700 font-medium' : 'text-slate-600 hover:bg-slate-50'"
+              >
+                <UIcon name="i-heroicons-document-text" class="w-4 h-4" />
+                <span>Dokumen PKL</span>
+              </NuxtLink>
+            </div>
+          </Transition>
 
-            <!-- Daftar Program Anda -->
-            <button
-              type="button"
-              @click="navigateToDaftarProgram"
-              class="block w-full rounded-[999px] border pr-4 py-2 text-sm font-medium transition text-left"
-              :class="[
-                'pl-7',
-                activeProfileSub === 'daftar-program'
-                  ? 'border-blue-500 bg-blue-500 text-white'
-                  : 'border-blue-300 bg-white text-blue-600 hover:bg-blue-50'
-              ]"
+          <!-- Minimized Popup -->
+          <Transition
+            enter-active-class="transition duration-150 ease-out"
+            enter-from-class="opacity-0 scale-95"
+            enter-to-class="opacity-100 scale-100"
+            leave-active-class="transition duration-100 ease-in"
+            leave-from-class="opacity-100 scale-100"
+            leave-to-class="opacity-0 scale-95"
+          >
+            <div 
+              v-if="isMinimized && isProfileOpen" 
+              class="absolute left-full top-0 ml-2 w-48 bg-white shadow-lg rounded-xl border border-slate-200 py-2 z-50"
             >
-              Daftar Program Anda
-            </button>
-          </div>
+              <p class="px-3 py-1.5 text-xs font-semibold text-slate-400 uppercase">Profile</p>
+              <NuxtLink
+                to="/siswa/profile/data-diri"
+                @click="isProfileOpen = false"
+                class="flex items-center gap-2 px-3 py-2 text-sm transition-colors"
+                :class="activeProfileSub === 'data-diri' ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-50'"
+              >
+                Data Diri
+              </NuxtLink>
+              <NuxtLink
+                to="/siswa/profile/daftar-program"
+                @click="isProfileOpen = false"
+                class="flex items-center gap-2 px-3 py-2 text-sm transition-colors"
+                :class="activeProfileSub === 'daftar-program' ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-50'"
+              >
+                Daftar Program
+              </NuxtLink>
+              <NuxtLink
+                to="/siswa/profile/document"
+                @click="isProfileOpen = false"
+                class="flex items-center gap-2 px-3 py-2 text-sm transition-colors"
+                :class="activeProfileSub === 'document' ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-50'"
+              >
+                Dokumen PKL
+              </NuxtLink>
+            </div>
+          </Transition>
         </div>
 
         <!-- Logbook -->
-        <NuxtLink
+        <SidebarItem
           to="/siswa/logbook"
-          class="flex w-full items-center gap-2 rounded-[999px] border px-4 py-2 text-sm font-semibold transition"
-          :class="activeMain === 'logbook'
-            ? 'border-blue-500 bg-blue-500 text-white'
-            : 'border-blue-400 bg-white text-blue-500 hover:bg-blue-50'"
-        >
-          <span class="text-lg">📒</span>
-          <span>Logbook</span>
-        </NuxtLink>
-      </nav>
+          icon="i-heroicons-book-open"
+          label="Logbook"
+          :active="activeMain === 'logbook'"
+          :minimized="isMinimized"
+        />
+      </template>
 
-      <!-- PROFIL BAWAH -->
-      <div class="flex items-center justify-between rounded-full px-3 py-2">
-        <div class="flex items-center gap-3">
-          <div
-            class="flex h-10 w-10 items-center justify-center rounded-full bg-blue-500 text-sm font-semibold text-white"
-          >
-            RS
-          </div>
-          <div class="leading-tight">
-            <p class="text-xs font-semibold text-slate-700">
-              Ryobi Surya Atmaja
-            </p>
-            <p class="text-[11px] text-slate-500">
-              XII TM A
-            </p>
-          </div>
+      <!-- Mentor Navigation -->
+      <template v-else-if="role === 'mentor'">
+        <SidebarItem to="/mentor" icon="i-heroicons-squares-2x2" label="Dashboard" :active="$route.path === '/mentor'" :minimized="isMinimized" />
+        
+        <div v-show="!isMinimized" class="pt-4 pb-2">
+          <p class="px-3 text-xs font-semibold text-slate-400 uppercase tracking-wider">Monitoring</p>
         </div>
+        
+        <SidebarItem to="/mentor/penempatan" icon="i-heroicons-map-pin" label="Penempatan Siswa" :active="$route.path.startsWith('/mentor/penempatan')" :minimized="isMinimized" />
+        
+        <div v-show="!isMinimized" class="pt-4 pb-2">
+          <p class="px-3 text-xs font-semibold text-slate-400 uppercase tracking-wider">Verifikasi</p>
+        </div>
+        
+        <SidebarItem to="/mentor/verifikasi/absensi" icon="i-heroicons-calendar-days" label="Verifikasi Absensi" :active="$route.path.startsWith('/mentor/verifikasi/absensi')" :minimized="isMinimized" />
+        <SidebarItem to="/mentor/verifikasi/logbook" icon="i-heroicons-document-text" label="Verifikasi Logbook" :active="$route.path.startsWith('/mentor/verifikasi/logbook')" :minimized="isMinimized" />
+        <SidebarItem to="/mentor/penilaian" icon="i-heroicons-star" label="Penilaian" :active="$route.path.startsWith('/mentor/penilaian')" :minimized="isMinimized" />
+      </template>
+    </nav>
 
-        <button class="text-xs text-slate-400">
-          ▼
-        </button>
+    <!-- Footer -->
+    <div class="border-t border-slate-100 p-3 space-y-2">
+      <!-- Toggle Button -->
+      <button
+        @click="toggleSidebar"
+        class="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-slate-600 hover:bg-slate-50 transition-colors"
+        :class="isMinimized ? 'justify-center' : ''"
+        :title="isMinimized ? 'Expand' : 'Collapse'"
+      >
+        <UIcon :name="isMinimized ? 'i-heroicons-chevron-double-right' : 'i-heroicons-chevron-double-left'" class="w-5 h-5" />
+        <span v-show="!isMinimized">Collapse</span>
+      </button>
+
+      <!-- User Info -->
+      <div 
+        class="flex items-center gap-3 p-2 rounded-lg bg-slate-50"
+        :class="isMinimized ? 'justify-center' : ''"
+      >
+        <img
+          src="https://ui-avatars.com/api/?name=RS&background=3b82f6&color=fff&size=40"
+          alt="Profile"
+          class="w-9 h-9 rounded-lg shrink-0"
+        />
+        <div v-show="!isMinimized" class="flex-1 min-w-0">
+          <p class="text-sm font-medium text-slate-900 truncate">Ryobi Surya A.</p>
+          <p class="text-xs text-slate-500 truncate">XII RPL 1</p>
+        </div>
       </div>
+
+      <!-- Logout -->
+      <button
+        @click="logout"
+        class="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-red-600 hover:bg-red-50 transition-colors"
+        :class="isMinimized ? 'justify-center' : ''"
+        :title="isMinimized ? 'Keluar' : ''"
+      >
+        <UIcon name="i-heroicons-arrow-right-on-rectangle" class="w-5 h-5" />
+        <span v-show="!isMinimized">Keluar</span>
+      </button>
     </div>
   </aside>
 </template>
 
-<script setup>
-import { computed, ref, watch } from 'vue'
+<script setup lang="ts">
+const props = withDefaults(defineProps<{
+  role?: string
+}>(), {
+  role: 'siswa'
+})
 
 const route = useRoute()
+const { isDesktopSidebarMinimized, toggleDesktopSidebar } = useSidebar()
 
-// menu utama aktif
+const isMinimized = isDesktopSidebarMinimized
+const isProfileOpen = ref(false)
+
+const toggleSidebar = () => toggleDesktopSidebar()
+const toggleProfile = () => { isProfileOpen.value = !isProfileOpen.value }
+
 const activeMain = computed(() => {
   const path = route.path
   if (path.startsWith('/siswa/profile')) return 'profile'
   if (path.startsWith('/siswa/program')) return 'program'
   if (path.startsWith('/siswa/logbook')) return 'logbook'
-  // home atau path lain: tidak ada yang aktif
   return ''
 })
 
-// sub menu profile aktif
 const activeProfileSub = computed(() => {
   const path = route.path
-  if (path === '/siswa/profile/daftar-program') return 'daftar-program'
-  if (path === '/siswa/profile/data-diri') return 'data-diri'
-  // kalau di /siswa/profile saja, anggap Data Diri
-  if (path.startsWith('/siswa/profile')) return 'data-diri'
+  if (path.includes('/document')) return 'document'
+  if (path.includes('/daftar-program')) return 'daftar-program'
+  if (path.includes('/data-diri')) return 'data-diri'
   return ''
 })
 
-const isProfileOpen = ref(false)
+watch(activeMain, (val) => {
+  if (val === 'profile' && !isMinimized.value) isProfileOpen.value = true
+}, { immediate: true })
 
-// otomatis buka dropdown kalau lagi di halaman profile
-watch(
-  activeMain,
-  (val) => {
-    if (val === 'profile') {
-      isProfileOpen.value = true
-    } else {
-      isProfileOpen.value = false
-    }
-  },
-  { immediate: true }
-)
+watch(isMinimized, (val) => { if (val) isProfileOpen.value = false })
 
-const toggleProfile = () => {
-  isProfileOpen.value = !isProfileOpen.value
-}
-
-const navigateToDataDiri = async () => {
-  const targetPath = '/siswa/profile/data-diri'
-  console.log('🔍 Navigation Debug (Data Diri):')
-  console.log('  Target Path:', targetPath)
-  console.log('  Current Path:', route.path)
-  console.log('  Active Main:', activeMain.value)
-  console.log('  Active Profile Sub:', activeProfileSub.value)
-  console.log('  Profile Open:', isProfileOpen.value)
-  
-  try {
-    console.log('🚀 Attempting navigation...')
-    await navigateTo(targetPath)
-    console.log('✅ Navigation successful!')
-  } catch (error) {
-    console.error('❌ Navigation failed:', error)
-  }
-}
-
-const navigateToDaftarProgram = async () => {
-  const targetPath = '/siswa/profile/daftar-program'
-  console.log('🔍 Navigation Debug (Daftar Program):')
-  console.log('  Target Path:', targetPath)
-  console.log('  Current Path:', route.path)
-  
-  try {
-    console.log('🚀 Attempting navigation...')
-    await navigateTo(targetPath)
-    console.log('✅ Navigation successful!')
-  } catch (error) {
-    console.error('❌ Navigation failed:', error)
-  }
-}
+const logout = () => navigateTo('/login')
 </script>

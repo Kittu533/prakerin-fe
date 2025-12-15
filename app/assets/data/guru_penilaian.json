@@ -1,0 +1,34 @@
+{
+  "items": [
+    {
+      "idPenempatan": 101,
+      "namaSiswa": "Ahmad Fajar",
+      "kelas": "XII TM A",
+      "perusahaan": "PT Maju Jaya Teknik",
+      "statusPenilaianTengah": "SUDAH",
+      "statusPenilaianAkhir": "BELUM",
+      "nilaiTengah": 88.0,
+      "nilaiAkhir": null
+    },
+    {
+      "idPenempatan": 102,
+      "namaSiswa": "Siti Aminah",
+      "kelas": "XII TM B",
+      "perusahaan": "Bengkel Sejahtera Motor",
+      "statusPenilaianTengah": "BELUM",
+      "statusPenilaianAkhir": "BELUM",
+      "nilaiTengah": null,
+      "nilaiAkhir": null
+    },
+    {
+      "idPenempatan": 103,
+      "namaSiswa": "Budi Santoso",
+      "kelas": "XII TM A",
+      "perusahaan": "PT Nusantara Motor",
+      "statusPenilaianTengah": "SUDAH",
+      "statusPenilaianAkhir": "SUDAH",
+      "nilaiTengah": 85.0,
+      "nilaiAkhir": 90.0
+    }
+  ]
+}

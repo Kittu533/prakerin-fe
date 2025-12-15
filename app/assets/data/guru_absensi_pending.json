@@ -1,0 +1,38 @@
+[
+  {
+    "idAbsensi": 501,
+    "namaSiswa": "Ahmad Fajar",
+    "kelas": "XII TM A",
+    "perusahaan": "PT Maju Jaya Teknik",
+    "tanggal": "18-03-2026",
+    "jamMasuk": "08:35",
+    "jamKeluar": "16:00",
+    "statusAbsensi": "HADIR",
+    "statusGuru": "MENUNGGU",
+    "isBermasalah": true
+  },
+  {
+    "idAbsensi": 502,
+    "namaSiswa": "Budi Santoso",
+    "kelas": "XII TM A",
+    "perusahaan": "PT Nusantara Motor",
+    "tanggal": "17-03-2026",
+    "jamMasuk": "08:05",
+    "jamKeluar": "-",
+    "statusAbsensi": "HADIR",
+    "statusGuru": "MENUNGGU",
+    "isBermasalah": true
+  },
+  {
+    "idAbsensi": 503,
+    "namaSiswa": "Rina Kartika",
+    "kelas": "XII TM C",
+    "perusahaan": "CV Prima Motor",
+    "tanggal": "17-03-2026",
+    "jamMasuk": "-",
+    "jamKeluar": "-",
+    "statusAbsensi": "IZIN",
+    "statusGuru": "MENUNGGU",
+    "isBermasalah": false
+  }
+]

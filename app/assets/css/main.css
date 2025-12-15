@@ -1,12 +1,24 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+
 @import "tailwindcss";
 @import "@nuxt/ui";
 
+/* ========================================
+   DESIGN SYSTEM - PRAKERIN FE
+   ======================================== */
+
+/* Base Styles */
 body {
-  @apply bg-white;
+  @apply bg-white font-normal;
+  font-family: 'Plus Jakarta Sans', sans-serif;
 }
 
 html {
   @apply bg-white;
+}
+
+* {
+  font-family: 'Plus Jakarta Sans', sans-serif;
 }
 
 /* Override Nuxt UI dark mode */
@@ -14,4 +26,75 @@ html {
   @apply !bg-white;
 }
 
+/* ========================================
+   TYPOGRAPHY SYSTEM
+   ======================================== */
 
+/* Display - Hero Sections */
+.text-display-lg {
+  @apply text-4xl font-bold text-slate-900;
+}
+
+.text-display-md {
+  @apply text-3xl font-bold text-slate-900;
+}
+
+.text-display-sm {
+  @apply text-2xl font-bold text-slate-900;
+}
+
+/* Heading - Section Titles */
+.text-heading-1 {
+  @apply text-2xl font-semibold text-slate-900;
+}
+
+.text-heading-2 {
+  @apply text-xl font-semibold text-slate-900;
+}
+
+.text-heading-3 {
+  @apply text-lg font-semibold text-slate-900;
+}
+
+.text-heading-4 {
+  @apply text-base font-semibold text-slate-900;
+}
+
+/* Body - Content Text */
+.text-body-lg {
+  @apply text-base font-normal text-slate-900;
+}
+
+.text-body-md {
+  @apply text-sm font-normal text-slate-900;
+}
+
+.text-body-sm {
+  @apply text-xs font-normal text-slate-900;
+}
+
+/* Label - Form Labels & Badges */
+.text-label-lg {
+  @apply text-sm font-medium text-slate-700;
+}
+
+.text-label-md {
+  @apply text-xs font-medium text-slate-700;
+}
+
+.text-label-sm {
+  @apply text-xs font-medium text-slate-600;
+}
+
+/* Caption - Helper Text */
+.text-caption-lg {
+  @apply text-sm font-normal text-slate-600;
+}
+
+.text-caption-md {
+  @apply text-xs font-normal text-slate-500;
+}
+
+.text-caption-sm {
+  @apply text-xs font-light text-slate-500;
+}
