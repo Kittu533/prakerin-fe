@@ -85,6 +85,31 @@
       </template>
     </div>
 
+    <!-- Charts Section -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <!-- Logbook Status Chart -->
+      <div class="bg-white rounded-xl border border-slate-200 p-5">
+        <h2 class="font-semibold text-slate-900 mb-4">Status Logbook</h2>
+        <div v-if="loading">
+          <USkeleton class="h-48 rounded-lg" />
+        </div>
+        <ClientOnly v-else>
+          <apexchart type="donut" height="200" :options="logbookChartOptions" :series="logbookChartSeries" />
+        </ClientOnly>
+      </div>
+
+      <!-- Kehadiran Mingguan Chart -->
+      <div class="bg-white rounded-xl border border-slate-200 p-5">
+        <h2 class="font-semibold text-slate-900 mb-4">Kehadiran Mingguan</h2>
+        <div v-if="loading">
+          <USkeleton class="h-48 rounded-lg" />
+        </div>
+        <ClientOnly v-else>
+          <apexchart type="area" height="200" :options="attendanceChartOptions" :series="attendanceChartSeries" />
+        </ClientOnly>
+      </div>
+    </div>
+
     <!-- Progress PKL -->
     <div class="bg-white rounded-xl border border-slate-200 p-5">
       <div class="flex items-center justify-between mb-3">
@@ -250,6 +275,42 @@ const currentDate = computed(() => {
 })
 
 const progress = computed(() => Math.round((stats.days / 180) * 100))
+
+// Chart Options
+const logbookChartOptions = {
+  chart: { type: 'donut' },
+  labels: ['Disetujui', 'Pending', 'Revisi'],
+  colors: ['#22c55e', '#f59e0b', '#ef4444'],
+  legend: { position: 'bottom' },
+  dataLabels: { enabled: false },
+  plotOptions: {
+    pie: {
+      donut: {
+        size: '70%',
+        labels: {
+          show: true,
+          total: { show: true, label: 'Total', fontSize: '14px' }
+        }
+      }
+    }
+  }
+}
+
+const logbookChartSeries = computed(() => [stats.approved, stats.pending, 2])
+
+const attendanceChartOptions = {
+  chart: { type: 'area', toolbar: { show: false }, sparkline: { enabled: false } },
+  stroke: { curve: 'smooth', width: 2 },
+  fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.4, opacityTo: 0.1 } },
+  colors: ['#0ea5e9'],
+  xaxis: { categories: ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'], labels: { style: { fontSize: '11px' } } },
+  yaxis: { show: false },
+  grid: { show: false },
+  dataLabels: { enabled: false },
+  tooltip: { y: { formatter: (val) => `${val} jam` } }
+}
+
+const attendanceChartSeries = [{ name: 'Jam Kerja', data: [8, 8, 7, 8, 8, 4] }]
 
 const getLogStatusColor = (status) => {
   const colors = { Disetujui: 'success', Pending: 'warning', Revisi: 'error' }

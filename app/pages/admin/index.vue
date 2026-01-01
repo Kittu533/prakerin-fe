@@ -31,23 +31,39 @@
     </div>
 
     <div class="grid lg:grid-cols-2 gap-6">
-      <!-- Chart Placeholder -->
+      <!-- Penempatan per Jurusan Chart -->
       <div class="bg-white rounded-xl border border-slate-200 p-5">
         <h3 class="font-semibold text-slate-900 mb-4">Penempatan per Jurusan</h3>
         <div v-if="loading">
-          <USkeleton class="h-48 rounded-lg" />
+          <USkeleton class="h-64 rounded-lg" />
         </div>
-        <div v-else class="space-y-3">
-          <div v-for="item in placementByDept" :key="item.name">
-            <div class="flex justify-between text-sm mb-1">
-              <span class="text-slate-600">{{ item.name }}</span>
-              <span class="font-medium text-slate-900">{{ item.value }}%</span>
-            </div>
-            <div class="h-2 bg-slate-100 rounded-full">
-              <div class="h-full bg-sky-500 rounded-full" :style="{ width: `${item.value}%` }" />
-            </div>
-          </div>
+        <ClientOnly v-else>
+          <apexchart type="bar" height="250" :options="placementChartOptions" :series="placementChartSeries" />
+        </ClientOnly>
+      </div>
+
+      <!-- Trend Pengajuan Chart -->
+      <div class="bg-white rounded-xl border border-slate-200 p-5">
+        <h3 class="font-semibold text-slate-900 mb-4">Trend Pengajuan PKL</h3>
+        <div v-if="loading">
+          <USkeleton class="h-64 rounded-lg" />
         </div>
+        <ClientOnly v-else>
+          <apexchart type="line" height="250" :options="trendChartOptions" :series="trendChartSeries" />
+        </ClientOnly>
+      </div>
+    </div>
+
+    <div class="grid lg:grid-cols-2 gap-6">
+      <!-- Status Siswa Chart -->
+      <div class="bg-white rounded-xl border border-slate-200 p-5">
+        <h3 class="font-semibold text-slate-900 mb-4">Status Siswa PKL</h3>
+        <div v-if="loading">
+          <USkeleton class="h-64 rounded-lg" />
+        </div>
+        <ClientOnly v-else>
+          <apexchart type="donut" height="250" :options="statusChartOptions" :series="statusChartSeries" />
+        </ClientOnly>
       </div>
 
       <!-- Recent Alerts -->
@@ -102,18 +118,61 @@ const stats = ref([
   { label: 'Masalah Absensi', value: 12, icon: 'lucide:alert-triangle', bg: 'bg-red-100', color: 'text-red-600' }
 ])
 
-const placementByDept = ref([
-  { name: 'RPL', value: 85 },
-  { name: 'TKJ', value: 72 },
-  { name: 'MM', value: 68 },
-  { name: 'AKL', value: 55 }
-])
-
 const alerts = ref([
   { id: 1, color: 'warning' as const, icon: 'lucide:clock', title: '5 pengajuan baru', desc: 'Menunggu verifikasi' },
   { id: 2, color: 'error' as const, icon: 'lucide:alert-circle', title: '3 siswa absensi rendah', desc: 'Kehadiran < 80%' },
   { id: 3, color: 'primary' as const, icon: 'lucide:info', title: 'Kuota PT Telkom hampir penuh', desc: 'Sisa 1 slot' }
 ])
+
+// Chart Options
+const placementChartOptions = {
+  chart: { type: 'bar', toolbar: { show: false } },
+  plotOptions: { bar: { borderRadius: 4, horizontal: true } },
+  colors: ['#0ea5e9'],
+  xaxis: { categories: ['RPL', 'TKJ', 'MM', 'AKL'] },
+  yaxis: { labels: { style: { fontSize: '12px' } } },
+  dataLabels: { enabled: true, formatter: (val) => `${val}%` },
+  grid: { borderColor: '#f1f5f9' }
+}
+
+const placementChartSeries = [{ name: 'Penempatan', data: [85, 72, 68, 55] }]
+
+const trendChartOptions = {
+  chart: { type: 'line', toolbar: { show: false } },
+  stroke: { curve: 'smooth', width: 3 },
+  colors: ['#0ea5e9', '#22c55e'],
+  xaxis: { categories: ['Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'] },
+  yaxis: { labels: { formatter: (val) => Math.round(val).toString() } },
+  legend: { position: 'top' },
+  dataLabels: { enabled: false },
+  grid: { borderColor: '#f1f5f9' }
+}
+
+const trendChartSeries = [
+  { name: 'Pengajuan', data: [45, 52, 38, 65, 48, 42] },
+  { name: 'Diterima', data: [40, 48, 35, 58, 45, 38] }
+]
+
+const statusChartOptions = {
+  chart: { type: 'donut' },
+  labels: ['Aktif PKL', 'Menunggu', 'Selesai', 'Bermasalah'],
+  colors: ['#0ea5e9', '#f59e0b', '#22c55e', '#ef4444'],
+  legend: { position: 'bottom' },
+  dataLabels: { enabled: false },
+  plotOptions: {
+    pie: {
+      donut: {
+        size: '70%',
+        labels: {
+          show: true,
+          total: { show: true, label: 'Total Siswa', fontSize: '12px' }
+        }
+      }
+    }
+  }
+}
+
+const statusChartSeries = [198, 18, 17, 12]
 
 const columns = [
   { accessorKey: 'siswa', header: 'Siswa' },

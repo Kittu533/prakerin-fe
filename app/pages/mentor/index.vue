@@ -21,6 +21,31 @@
       </div>
     </div>
 
+    <!-- Charts Section -->
+    <div class="grid lg:grid-cols-2 gap-6">
+      <!-- Kehadiran Siswa Chart -->
+      <div class="bg-white rounded-xl border border-slate-200 p-5">
+        <h3 class="font-semibold text-slate-900 mb-4">Kehadiran Siswa Bimbingan</h3>
+        <div v-if="loading">
+          <USkeleton class="h-64 rounded-lg" />
+        </div>
+        <ClientOnly v-else>
+          <apexchart type="radialBar" height="250" :options="attendanceChartOptions" :series="attendanceChartSeries" />
+        </ClientOnly>
+      </div>
+
+      <!-- Verifikasi Progress Chart -->
+      <div class="bg-white rounded-xl border border-slate-200 p-5">
+        <h3 class="font-semibold text-slate-900 mb-4">Progress Verifikasi</h3>
+        <div v-if="loading">
+          <USkeleton class="h-64 rounded-lg" />
+        </div>
+        <ClientOnly v-else>
+          <apexchart type="bar" height="250" :options="verificationChartOptions" :series="verificationChartSeries" />
+        </ClientOnly>
+      </div>
+    </div>
+
     <div class="grid lg:grid-cols-2 gap-6">
       <!-- Pending Verifications -->
       <div class="bg-white rounded-xl border border-slate-200 p-5">
@@ -129,6 +154,41 @@ const siswaList = ref([
   { id: 3, nama: 'Deni Pratama', kelas: 'XII RPL 2', absensi: 72 },
   { id: 4, nama: 'Siti Aminah', kelas: 'XII TKJ 1', absensi: 90 }
 ])
+
+// Chart Options
+const attendanceChartOptions = {
+  chart: { type: 'radialBar' },
+  plotOptions: {
+    radialBar: {
+      hollow: { size: '60%' },
+      dataLabels: {
+        name: { fontSize: '14px', offsetY: -10 },
+        value: { fontSize: '24px', fontWeight: 'bold' }
+      }
+    }
+  },
+  labels: ['Rata-rata Kehadiran'],
+  colors: ['#0ea5e9']
+}
+
+const attendanceChartSeries = [86]
+
+const verificationChartOptions = {
+  chart: { type: 'bar', toolbar: { show: false }, stacked: true },
+  plotOptions: { bar: { borderRadius: 4, horizontal: true } },
+  colors: ['#22c55e', '#f59e0b', '#ef4444'],
+  xaxis: { categories: ['Absensi', 'Logbook'] },
+  yaxis: { labels: { style: { fontSize: '12px' } } },
+  legend: { position: 'top' },
+  dataLabels: { enabled: false },
+  grid: { borderColor: '#f1f5f9' }
+}
+
+const verificationChartSeries = [
+  { name: 'Disetujui', data: [45, 38] },
+  { name: 'Pending', data: [8, 12] },
+  { name: 'Ditolak', data: [2, 3] }
+]
 
 onMounted(async () => {
   await new Promise(r => setTimeout(r, 600))

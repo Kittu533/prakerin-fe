@@ -80,6 +80,31 @@
       </template>
     </div>
 
+    <!-- Charts Section -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <!-- Kehadiran Siswa Chart -->
+      <div class="bg-white rounded-xl border border-slate-200 p-5">
+        <h2 class="font-semibold text-slate-900 mb-4">Kehadiran Siswa Mingguan</h2>
+        <div v-if="loading">
+          <USkeleton class="h-64 rounded-lg" />
+        </div>
+        <ClientOnly v-else>
+          <apexchart type="bar" height="250" :options="attendanceChartOptions" :series="attendanceChartSeries" />
+        </ClientOnly>
+      </div>
+
+      <!-- Logbook Status Chart -->
+      <div class="bg-white rounded-xl border border-slate-200 p-5">
+        <h2 class="font-semibold text-slate-900 mb-4">Status Logbook Siswa</h2>
+        <div v-if="loading">
+          <USkeleton class="h-64 rounded-lg" />
+        </div>
+        <ClientOnly v-else>
+          <apexchart type="donut" height="250" :options="logbookChartOptions" :series="logbookChartSeries" />
+        </ClientOnly>
+      </div>
+    </div>
+
     <!-- Content Grid -->
     <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
       <!-- Left -->
@@ -282,6 +307,44 @@ const notifStyle = {
   success: 'bg-green-100 text-green-600',
   info: 'bg-sky-100 text-sky-600'
 }
+
+// Chart Options
+const attendanceChartOptions = {
+  chart: { type: 'bar', toolbar: { show: false } },
+  plotOptions: { bar: { borderRadius: 4, columnWidth: '60%' } },
+  colors: ['#0ea5e9', '#22c55e'],
+  xaxis: { categories: ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'] },
+  yaxis: { max: 30, labels: { formatter: (val) => Math.round(val).toString() } },
+  legend: { position: 'top' },
+  dataLabels: { enabled: false },
+  grid: { borderColor: '#f1f5f9' }
+}
+
+const attendanceChartSeries = [
+  { name: 'Hadir', data: [22, 24, 23, 24, 22, 20] },
+  { name: 'Tidak Hadir', data: [2, 0, 1, 0, 2, 4] }
+]
+
+const logbookChartOptions = {
+  chart: { type: 'donut' },
+  labels: ['Disetujui', 'Pending', 'Revisi'],
+  colors: ['#22c55e', '#f59e0b', '#ef4444'],
+  legend: { position: 'bottom' },
+  dataLabels: { enabled: false },
+  plotOptions: {
+    pie: {
+      donut: {
+        size: '70%',
+        labels: {
+          show: true,
+          total: { show: true, label: 'Total', fontSize: '14px' }
+        }
+      }
+    }
+  }
+}
+
+const logbookChartSeries = [156, 12, 8]
 
 onMounted(async () => {
   await new Promise(r => setTimeout(r, 800))

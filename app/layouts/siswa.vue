@@ -1,29 +1,10 @@
 <template>
   <div class="min-h-screen bg-slate-50">
     <div class="flex">
-      <!-- Overlay untuk mobile -->
-      <Transition name="fade">
-        <div 
-          v-if="isMobileSidebarOpen && !isDesktop"
-          @click="closeMobileSidebar"
-          class="fixed inset-0 bg-black/50 z-40 lg:hidden"
-        />
-      </Transition>
-
       <!-- Sidebar - Desktop (sticky) -->
       <div class="hidden lg:block sticky top-0 h-screen shrink-0">
         <SiswaSidebar />
       </div>
-
-      <!-- Mobile Sidebar -->
-      <Transition name="slide">
-        <div 
-          v-show="isMobileSidebarOpen && !isDesktop"
-          class="fixed left-0 top-0 h-screen z-50 lg:hidden"
-        >
-          <SiswaSidebar />
-        </div>
-      </Transition>
 
       <!-- Main Area -->
       <div class="flex-1 min-w-0 flex flex-col min-h-screen">
@@ -32,18 +13,9 @@
           <div class="flex items-center justify-between w-full">
             <!-- Left -->
             <div class="flex items-center gap-3">
-              <button
-                @click="toggleSidebar"
-                class="lg:hidden flex items-center justify-center w-10 h-10 rounded-lg hover:bg-slate-100 transition-colors"
-              >
-                <Icon name="lucide:menu" class="w-5 h-5 text-slate-700" />
-              </button>
-              
               <!-- Mobile Logo -->
               <div class="flex items-center gap-2 lg:hidden">
-                <div class="w-8 h-8 rounded-lg bg-sky-500 flex items-center justify-center">
-                  <Icon name="lucide:graduation-cap" class="w-4 h-4 text-white" />
-                </div>
+                <img src="~/assets/img/logo-skanda.png" alt="Logo" class="w-8 h-8 object-contain" />
                 <span class="font-semibold text-slate-900 text-sm">Prakerin</span>
               </div>
 
@@ -79,7 +51,7 @@
           <slot />
         </main>
 
-        <!-- Bottom Navigation (Mobile Only) -->
+        <!-- Bottom Navigation (Mobile/Tablet Only) -->
         <nav class="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 z-30 safe-area-bottom">
           <div class="flex items-center justify-around h-16">
             <NuxtLink 
@@ -107,15 +79,6 @@
 
 <script setup lang="ts">
 const route = useRoute()
-
-const {
-  isMobileSidebarOpen,
-  isDesktop,
-  toggleSidebar,
-  closeMobileSidebar,
-  updateScreenSize,
-  initializeDesktopSidebar
-} = useSidebar()
 
 const hasNotification = ref(true)
 
@@ -151,24 +114,9 @@ const isActiveRoute = (path: string) => {
   if (path === '/siswa') return route.path === '/siswa'
   return route.path.startsWith(path)
 }
-
-onMounted(() => {
-  updateScreenSize()
-  initializeDesktopSidebar()
-  window.addEventListener('resize', updateScreenSize)
-})
-
-onUnmounted(() => {
-  window.removeEventListener('resize', updateScreenSize)
-})
 </script>
 
 <style scoped>
-.fade-enter-active, .fade-leave-active { transition: opacity 0.3s ease; }
-.fade-enter-from, .fade-leave-to { opacity: 0; }
-.slide-enter-active, .slide-leave-active { transition: transform 0.3s ease; }
-.slide-enter-from, .slide-leave-to { transform: translateX(-100%); }
-
 .safe-area-bottom {
   padding-bottom: env(safe-area-inset-bottom);
 }
