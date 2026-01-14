@@ -54,7 +54,7 @@
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-100">
-            <tr v-for="siswa in filteredStudents" :key="siswa.id" class="hover:bg-slate-50 transition-colors">
+            <tr v-for="siswa in paginatedStudents" :key="siswa.id" class="hover:bg-slate-50 transition-colors">
               <td class="px-6 py-4">
                 <div class="flex items-center gap-3">
                   <div class="w-10 h-10 rounded-xl bg-sky-100 text-sky-700 flex items-center justify-center font-semibold text-sm">
@@ -86,11 +86,16 @@
           </tbody>
         </table>
 
-        <div v-if="!filteredStudents.length" class="py-12 text-center">
+        <div v-if="!paginatedStudents.length" class="py-12 text-center">
           <Icon name="lucide:users" class="w-12 h-12 text-slate-300 mx-auto mb-3" />
           <p class="text-slate-500">Tidak ada data siswa</p>
         </div>
       </div>
+    </div>
+
+    <!-- Pagination -->
+    <div v-if="totalPages > 1" class="flex justify-center">
+      <UPagination v-model:page="currentPage" :total="totalItems" :items-per-page="itemsPerPage" />
     </div>
   </div>
 </template>
@@ -102,6 +107,8 @@ const loading = ref(true)
 const search = ref('')
 const filterKelas = ref(null)
 const filterStatus = ref(null)
+const currentPage = ref(1)
+const itemsPerPage = 10
 
 const kelasOptions = ['XII RPL 1', 'XII RPL 2', 'XII TKJ 1', 'XII MM 1']
 const statusOptions = ['Aktif', 'Selesai', 'Dibatalkan']
@@ -116,6 +123,16 @@ const filteredStudents = computed(() => {
     return matchSearch && matchKelas && matchStatus
   })
 })
+
+const totalItems = computed(() => filteredStudents.value.length)
+const totalPages = computed(() => Math.ceil(totalItems.value / itemsPerPage))
+
+const paginatedStudents = computed(() => {
+  const start = (currentPage.value - 1) * itemsPerPage
+  return filteredStudents.value.slice(start, start + itemsPerPage)
+})
+
+watch([search, filterKelas, filterStatus], () => { currentPage.value = 1 })
 
 const getStatusColor = (status) => {
   const colors = { Aktif: 'success', Selesai: 'primary', Dibatalkan: 'error' }

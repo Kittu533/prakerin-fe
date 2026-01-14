@@ -47,6 +47,11 @@
         </template>
       </UTable>
     </div>
+
+    <!-- Pagination -->
+    <div v-if="totalPages > 1" class="flex justify-center">
+      <UPagination v-model:page="currentPage" :total="totalItems" :items-per-page="itemsPerPage" />
+    </div>
   </div>
 </template>
 
@@ -55,6 +60,8 @@ definePageMeta({ layout: 'mentor' })
 
 const loading = ref(true)
 const search = ref('')
+const currentPage = ref(1)
+const itemsPerPage = 10
 
 const data = ref([
   { id: 1, nama: 'Budi Santoso', nisn: '0012345678', kelas: 'XII RPL 1', absensi: 95, logbook: 45, status: 'Aktif' },
@@ -73,9 +80,19 @@ const columns = [
   { accessorKey: 'aksi', header: '' }
 ]
 
-const filteredData = computed(() => data.value.filter(d => 
+const allFilteredData = computed(() => data.value.filter(d => 
   !search.value || d.nama.toLowerCase().includes(search.value.toLowerCase())
 ))
+
+const totalItems = computed(() => allFilteredData.value.length)
+const totalPages = computed(() => Math.ceil(totalItems.value / itemsPerPage))
+
+const filteredData = computed(() => {
+  const start = (currentPage.value - 1) * itemsPerPage
+  return allFilteredData.value.slice(start, start + itemsPerPage)
+})
+
+watch(search, () => { currentPage.value = 1 })
 
 onMounted(async () => {
   await new Promise(r => setTimeout(r, 500))

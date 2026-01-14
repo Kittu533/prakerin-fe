@@ -57,6 +57,11 @@
       </UTable>
     </div>
 
+    <!-- Pagination -->
+    <div v-if="totalPages > 1" class="flex justify-center">
+      <UPagination v-model:page="currentPage" :total="totalItems" :items-per-page="itemsPerPage" />
+    </div>
+
     <!-- Form Modal -->
     <UModal v-model:open="modalOpen">
       <template #content>
@@ -150,6 +155,8 @@ const importing = ref(false)
 const importPreview = ref<any[]>([])
 
 const form = reactive({ id: null as number | null, nisn: '', nama: '', kelas: null as string | null, email: '', hp: '' })
+const currentPage = ref(1)
+const itemsPerPage = 10
 
 const kelasOptions = ['Semua', 'XII RPL 1', 'XII RPL 2', 'XII TKJ 1', 'XII MM 1', 'XII AKL 1']
 
@@ -169,12 +176,22 @@ const columns = [
   { accessorKey: 'aksi', header: '' }
 ]
 
-const filteredData = computed(() => data.value.filter(d => {
+const allFilteredData = computed(() => data.value.filter(d => {
   const matchSearch = !search.value || d.nama.toLowerCase().includes(search.value.toLowerCase()) || d.nisn.includes(search.value)
   const matchJurusan = filterJurusan.value === 'Semua' || d.kelas.includes(filterJurusan.value)
   const matchKelas = filterKelas.value === 'Semua' || d.kelas === filterKelas.value
   return matchSearch && matchJurusan && matchKelas
 }))
+
+const totalItems = computed(() => allFilteredData.value.length)
+const totalPages = computed(() => Math.ceil(totalItems.value / itemsPerPage))
+
+const filteredData = computed(() => {
+  const start = (currentPage.value - 1) * itemsPerPage
+  return allFilteredData.value.slice(start, start + itemsPerPage)
+})
+
+watch([search, filterJurusan, filterKelas], () => { currentPage.value = 1 })
 
 const openModal = (item?: any) => {
   editing.value = !!item

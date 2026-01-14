@@ -58,36 +58,94 @@
       </UTable>
     </div>
 
+    <!-- Pagination -->
+    <div v-if="totalPages > 1" class="flex justify-center">
+      <UPagination v-model:page="currentPage" :total="totalItems" :items-per-page="itemsPerPage" />
+    </div>
+
     <!-- Form Modal -->
     <UModal v-model:open="modalOpen">
       <template #content>
-        <UCard>
+        <UCard class="w-full max-w-md">
           <template #header>
-            <div class="flex items-center justify-between">
-              <h3 class="font-semibold text-slate-900">{{ editing ? 'Edit Akun' : 'Tambah Akun' }}</h3>
-              <UButton variant="ghost" color="neutral" size="xs" @click="modalOpen = false">
-                <Icon name="lucide:x" class="w-4 h-4" />
-              </UButton>
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl flex items-center justify-center" :class="editing ? 'bg-amber-100' : 'bg-sky-100'">
+                <Icon :name="editing ? 'lucide:user-cog' : 'lucide:user-plus'" class="w-5 h-5" :class="editing ? 'text-amber-600' : 'text-sky-600'" />
+              </div>
+              <div>
+                <h3 class="font-semibold text-slate-900">{{ editing ? 'Edit Akun' : 'Tambah Akun Baru' }}</h3>
+                <p class="text-xs text-slate-500">{{ editing ? 'Perbarui informasi akun pengguna' : 'Buat akun baru untuk pengguna' }}</p>
+              </div>
             </div>
           </template>
-          <div class="space-y-4">
-            <UFormField label="Nama Lengkap" required>
-              <UInput v-model="form.nama" placeholder="Nama lengkap" />
-            </UFormField>
-            <UFormField label="Email" required>
-              <UInput v-model="form.email" type="email" placeholder="email@example.com" />
-            </UFormField>
-            <UFormField label="Role" required>
-              <USelectMenu v-model="form.role" :items="['Admin', 'Guru', 'Mentor', 'Siswa']" />
-            </UFormField>
-            <UFormField label="Status">
-              <USwitch v-model="form.active" label="Aktif" />
-            </UFormField>
+
+          <div class="space-y-5">
+            <!-- Informasi Akun -->
+            <div class="space-y-4">
+              <p class="text-xs font-semibold text-slate-400 uppercase tracking-wide">Informasi Akun</p>
+              
+              <UFormField label="Nama Lengkap" required>
+                <UInput v-model="form.nama" placeholder="Masukkan nama lengkap" class="w-full">
+                  <template #leading>
+                    <Icon name="lucide:user" class="w-4 h-4 text-slate-400" />
+                  </template>
+                </UInput>
+              </UFormField>
+
+              <UFormField label="Email" required>
+                <UInput v-model="form.email" type="email" placeholder="contoh@email.com" class="w-full">
+                  <template #leading>
+                    <Icon name="lucide:mail" class="w-4 h-4 text-slate-400" />
+                  </template>
+                </UInput>
+              </UFormField>
+            </div>
+
+            <!-- Hak Akses -->
+            <div class="space-y-4 pt-2 border-t border-slate-100">
+              <p class="text-xs font-semibold text-slate-400 uppercase tracking-wide">Hak Akses</p>
+              
+              <UFormField label="Role Pengguna" required>
+                <USelectMenu v-model="form.role" :items="roleItems" placeholder="Pilih role" class="w-full">
+                  <template #leading>
+                    <Icon name="lucide:shield" class="w-4 h-4 text-slate-400" />
+                  </template>
+                </USelectMenu>
+              </UFormField>
+
+              <div class="flex items-center justify-between p-3 bg-slate-50 rounded-xl">
+                <div class="flex items-center gap-3">
+                  <div class="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center">
+                    <Icon name="lucide:power" class="w-4 h-4 text-green-600" />
+                  </div>
+                  <div>
+                    <p class="text-sm font-medium text-slate-900">Status Akun</p>
+                    <p class="text-xs text-slate-500">{{ form.active ? 'Akun aktif dan dapat login' : 'Akun dinonaktifkan' }}</p>
+                  </div>
+                </div>
+                <USwitch v-model="form.active" />
+              </div>
+            </div>
+
+            <!-- Password info for new account -->
+            <div v-if="!editing" class="p-3 bg-amber-50 border border-amber-100 rounded-xl">
+              <div class="flex items-start gap-2">
+                <Icon name="lucide:info" class="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
+                <p class="text-xs text-amber-700">Password default akan digenerate otomatis dan dapat direset setelah akun dibuat.</p>
+              </div>
+            </div>
           </div>
+
           <template #footer>
-            <div class="flex gap-3">
-              <UButton variant="outline" color="neutral" class="flex-1" @click="modalOpen = false">Batal</UButton>
-              <UButton color="primary" class="flex-1" :loading="processing" @click="saveUser">Simpan</UButton>
+            <div class="flex flex-col-reverse sm:flex-row gap-3 sm:justify-end">
+              <UButton variant="outline" color="neutral" @click="modalOpen = false" class="sm:w-auto w-full">
+                <Icon name="lucide:x" class="w-4 h-4 mr-2" />
+                Batal
+              </UButton>
+              <UButton color="primary" :loading="processing" @click="saveUser" class="sm:w-auto w-full">
+                <Icon :name="editing ? 'lucide:save' : 'lucide:user-plus'" class="w-4 h-4 mr-2" />
+                {{ editing ? 'Simpan Perubahan' : 'Buat Akun' }}
+              </UButton>
             </div>
           </template>
         </UCard>
@@ -125,6 +183,8 @@ definePageMeta({ layout: 'admin' })
 const toast = useToast()
 const loading = ref(true)
 const search = ref('')
+const currentPage = ref(1)
+const itemsPerPage = 10
 const filterRole = ref('Semua')
 const modalOpen = ref(false)
 const resetModalOpen = ref(false)
@@ -134,6 +194,8 @@ const resetUser = ref<any>(null)
 const newPassword = ref('')
 
 const form = reactive({ id: null as number | null, nama: '', email: '', role: null as string | null, active: true })
+
+const roleItems = ['Admin', 'Guru', 'Mentor', 'Siswa']
 
 const data = ref([
   { id: 1, nama: 'Administrator', email: 'admin@sekolah.id', role: 'Admin', active: true },
@@ -151,11 +213,21 @@ const columns = [
   { accessorKey: 'aksi', header: '' }
 ]
 
-const filteredData = computed(() => data.value.filter(d => {
+const allFilteredData = computed(() => data.value.filter(d => {
   const matchSearch = !search.value || d.nama.toLowerCase().includes(search.value.toLowerCase()) || d.email.toLowerCase().includes(search.value.toLowerCase())
   const matchRole = filterRole.value === 'Semua' || d.role === filterRole.value
   return matchSearch && matchRole
 }))
+
+const totalItems = computed(() => allFilteredData.value.length)
+const totalPages = computed(() => Math.ceil(totalItems.value / itemsPerPage))
+
+const filteredData = computed(() => {
+  const start = (currentPage.value - 1) * itemsPerPage
+  return allFilteredData.value.slice(start, start + itemsPerPage)
+})
+
+watch([search, filterRole], () => { currentPage.value = 1 })
 
 const roleColor = (role: string) => ({
   Admin: { color: 'error', bg: 'bg-red-100 text-red-600' },

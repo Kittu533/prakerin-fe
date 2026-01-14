@@ -47,6 +47,11 @@
       </UTable>
     </div>
 
+    <!-- Pagination -->
+    <div v-if="totalPages > 1" class="flex justify-center">
+      <UPagination v-model:page="currentPage" :total="totalItems" :items-per-page="itemsPerPage" />
+    </div>
+
     <!-- Detail Modal -->
     <UModal v-model:open="modalOpen">
       <template #content>
@@ -129,6 +134,8 @@ const filterJurusan = ref('Semua Jurusan')
 const modalOpen = ref(false)
 const selected = ref<any>(null)
 const rejectReason = ref('')
+const currentPage = ref(1)
+const itemsPerPage = 10
 const processing = ref(false)
 
 const data = ref([
@@ -148,12 +155,22 @@ const columns = [
   { accessorKey: 'aksi', header: '' }
 ]
 
-const filteredData = computed(() => data.value.filter(d => {
+const allFilteredData = computed(() => data.value.filter(d => {
   const matchSearch = !search.value || d.siswa.toLowerCase().includes(search.value.toLowerCase())
   const matchStatus = filterStatus.value === 'Semua' || d.status === filterStatus.value
   const matchJurusan = filterJurusan.value === 'Semua Jurusan' || d.jurusan === filterJurusan.value
   return matchSearch && matchStatus && matchJurusan
 }))
+
+const totalItems = computed(() => allFilteredData.value.length)
+const totalPages = computed(() => Math.ceil(totalItems.value / itemsPerPage))
+
+const filteredData = computed(() => {
+  const start = (currentPage.value - 1) * itemsPerPage
+  return allFilteredData.value.slice(start, start + itemsPerPage)
+})
+
+watch([search, filterStatus, filterJurusan], () => { currentPage.value = 1 })
 
 const statusColor = (s: string) => ({ Menunggu: 'warning', Disetujui: 'success', Ditolak: 'error' })[s] || 'neutral'
 

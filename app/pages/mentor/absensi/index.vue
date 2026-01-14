@@ -63,6 +63,11 @@
       </UTable>
     </div>
 
+    <!-- Pagination -->
+    <div v-if="totalPages > 1" class="flex justify-center">
+      <UPagination v-model:page="currentPage" :total="totalItems" :items-per-page="itemsPerPage" />
+    </div>
+
     <!-- Reject Modal -->
     <UModal v-model:open="rejectModal">
       <template #content>
@@ -94,6 +99,8 @@ const filterDate = ref('')
 const rejectModal = ref(false)
 const rejectReason = ref('')
 const selectedItem = ref<any>(null)
+const currentPage = ref(1)
+const itemsPerPage = 10
 
 const stats = reactive({ pending: 8, approved: 45, rejected: 2 })
 
@@ -115,11 +122,21 @@ const columns = [
   { accessorKey: 'aksi', header: '' }
 ]
 
-const filteredData = computed(() => data.value.filter(d => {
+const allFilteredData = computed(() => data.value.filter(d => {
   const matchSearch = !search.value || d.siswa.toLowerCase().includes(search.value.toLowerCase())
   const matchStatus = filterStatus.value === 'Semua' || d.status === filterStatus.value
   return matchSearch && matchStatus
 }))
+
+const totalItems = computed(() => allFilteredData.value.length)
+const totalPages = computed(() => Math.ceil(totalItems.value / itemsPerPage))
+
+const filteredData = computed(() => {
+  const start = (currentPage.value - 1) * itemsPerPage
+  return allFilteredData.value.slice(start, start + itemsPerPage)
+})
+
+watch([search, filterStatus], () => { currentPage.value = 1 })
 
 const statusColor = (s: string) => ({ Pending: 'warning', Disetujui: 'success', Ditolak: 'error' })[s] || 'neutral'
 

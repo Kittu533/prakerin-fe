@@ -91,7 +91,7 @@
           </tr>
         </thead>
         <tbody class="divide-y divide-slate-100">
-          <tr v-for="item in filteredData" :key="item.id" class="hover:bg-slate-50">
+          <tr v-for="item in paginatedData" :key="item.id" class="hover:bg-slate-50">
             <td class="px-6 py-4">
               <div class="flex items-center gap-3">
                 <div class="w-10 h-10 rounded-xl bg-sky-100 text-sky-700 flex items-center justify-center font-semibold text-sm">
@@ -124,10 +124,15 @@
         </tbody>
       </table>
 
-      <div v-if="!loading && !filteredData.length" class="py-12 text-center">
+      <div v-if="!loading && !paginatedData.length" class="py-12 text-center">
         <Icon name="lucide:award" class="w-12 h-12 text-slate-300 mx-auto mb-3" />
         <p class="text-slate-500">Tidak ada data</p>
       </div>
+    </div>
+
+    <!-- Pagination -->
+    <div v-if="totalPages > 1" class="flex justify-center">
+      <UPagination v-model:page="currentPage" :total="totalItems" :items-per-page="itemsPerPage" />
     </div>
 
     <!-- Grade Modal -->
@@ -178,6 +183,8 @@ const filterStatus = ref(null)
 const gradeModal = ref(false)
 const selectedItem = ref(null)
 const gradeForm = reactive({ sikap: null, keterampilan: null, pengetahuan: null })
+const currentPage = ref(1)
+const itemsPerPage = 10
 
 const kelasOptions = ['XII RPL 1', 'XII RPL 2', 'XII TKJ 1', 'XII MM 1']
 const statusOptions = ['Sudah Dinilai', 'Belum Dinilai']
@@ -193,6 +200,16 @@ const filteredData = computed(() => {
     return matchSearch && matchKelas && matchStatus
   })
 })
+
+const totalItems = computed(() => filteredData.value.length)
+const totalPages = computed(() => Math.ceil(totalItems.value / itemsPerPage))
+
+const paginatedData = computed(() => {
+  const start = (currentPage.value - 1) * itemsPerPage
+  return filteredData.value.slice(start, start + itemsPerPage)
+})
+
+watch([search, filterKelas, filterStatus], () => { currentPage.value = 1 })
 
 const calculatedGrade = computed(() => {
   const { sikap, keterampilan, pengetahuan } = gradeForm

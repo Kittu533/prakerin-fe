@@ -51,6 +51,11 @@
       </UTable>
     </div>
 
+    <!-- Pagination -->
+    <div v-if="totalPages > 1" class="flex justify-center">
+      <UPagination v-model:page="currentPage" :total="totalItems" :items-per-page="itemsPerPage" />
+    </div>
+
     <UModal v-model:open="modalOpen">
       <template #content>
         <UCard>
@@ -96,6 +101,8 @@ const editing = ref(false)
 const processing = ref(false)
 
 const form = reactive({ id: null as number | null, nama: '', perusahaan: null as string | null, jabatan: '', email: '', hp: '' })
+const currentPage = ref(1)
+const itemsPerPage = 10
 
 const companyOptions = ['Semua', 'PT. Telkom Indonesia', 'PT. Biznet Networks', 'CV. Digital Kreatif', 'PT. Astra International', 'PT. Bank BCA']
 
@@ -116,11 +123,21 @@ const columns = [
   { accessorKey: 'aksi', header: '' }
 ]
 
-const filteredData = computed(() => data.value.filter(d => {
+const allFilteredData = computed(() => data.value.filter(d => {
   const matchSearch = !search.value || d.nama.toLowerCase().includes(search.value.toLowerCase())
   const matchCompany = filterCompany.value === 'Semua' || d.perusahaan === filterCompany.value
   return matchSearch && matchCompany
 }))
+
+const totalItems = computed(() => allFilteredData.value.length)
+const totalPages = computed(() => Math.ceil(totalItems.value / itemsPerPage))
+
+const filteredData = computed(() => {
+  const start = (currentPage.value - 1) * itemsPerPage
+  return allFilteredData.value.slice(start, start + itemsPerPage)
+})
+
+watch([search, filterCompany], () => { currentPage.value = 1 })
 
 const openModal = (item?: any) => {
   editing.value = !!item

@@ -58,34 +58,88 @@
 
     <UModal v-model:open="modalOpen">
       <template #content>
-        <UCard>
-          <template #header><h3 class="font-semibold text-slate-900">{{ editing ? 'Edit' : 'Tambah' }} Perusahaan</h3></template>
-          <div class="space-y-4">
-            <UFormField label="Nama Perusahaan" required>
-              <UInput v-model="form.nama" placeholder="PT. Contoh" />
-            </UFormField>
-            <UFormField label="Alamat" required>
-              <UTextarea v-model="form.alamat" placeholder="Alamat lengkap" :rows="2" />
-            </UFormField>
-            <div class="grid grid-cols-2 gap-3">
-              <UFormField label="Bidang Usaha" required>
-                <USelectMenu v-model="form.bidang" :items="['IT & Software', 'Jaringan', 'Multimedia', 'Otomotif', 'Keuangan']" />
-              </UFormField>
-              <UFormField label="Kuota" required>
-                <UInput v-model.number="form.kuota" type="number" min="1" />
-              </UFormField>
+        <UCard class="w-full max-w-lg">
+          <template #header>
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl bg-sky-100 flex items-center justify-center">
+                <Icon :name="editing ? 'lucide:edit' : 'lucide:building-2'" class="w-5 h-5 text-sky-600" />
+              </div>
+              <div>
+                <h3 class="font-semibold text-slate-900">{{ editing ? 'Edit' : 'Tambah' }} Perusahaan</h3>
+                <p class="text-xs text-slate-500">Lengkapi informasi perusahaan mitra</p>
+              </div>
             </div>
-            <UFormField label="Contact Person">
-              <UInput v-model="form.cp" placeholder="Nama CP" />
-            </UFormField>
-            <UFormField label="No HP">
-              <UInput v-model="form.hp" type="tel" placeholder="08xxx" />
-            </UFormField>
+          </template>
+
+          <div class="space-y-5">
+            <!-- Informasi Perusahaan -->
+            <div class="space-y-4">
+              <p class="text-xs font-semibold text-slate-400 uppercase tracking-wide">Informasi Perusahaan</p>
+              
+              <UFormField label="Nama Perusahaan" required>
+                <UInput v-model="form.nama" placeholder="PT. Contoh Indonesia" class="w-full">
+                  <template #leading>
+                    <Icon name="lucide:building" class="w-4 h-4 text-slate-400" />
+                  </template>
+                </UInput>
+              </UFormField>
+
+              <UFormField label="Alamat Lengkap" required>
+                <UTextarea v-model="form.alamat" placeholder="Jl. Contoh No. 123, Kota" :rows="2" class="w-full" />
+              </UFormField>
+
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <UFormField label="Bidang Usaha" required>
+                  <USelectMenu 
+                    v-model="form.bidang" 
+                    :items="['IT & Software', 'Jaringan', 'Multimedia', 'Otomotif', 'Keuangan']" 
+                    placeholder="Pilih bidang"
+                    class="w-full"
+                  />
+                </UFormField>
+                <UFormField label="Kuota Siswa" required>
+                  <UInput v-model.number="form.kuota" type="number" min="1" placeholder="5" class="w-full">
+                    <template #leading>
+                      <Icon name="lucide:users" class="w-4 h-4 text-slate-400" />
+                    </template>
+                  </UInput>
+                </UFormField>
+              </div>
+            </div>
+
+            <!-- Kontak -->
+            <div class="space-y-4 pt-2 border-t border-slate-100">
+              <p class="text-xs font-semibold text-slate-400 uppercase tracking-wide">Informasi Kontak</p>
+              
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <UFormField label="Contact Person">
+                  <UInput v-model="form.cp" placeholder="Nama lengkap" class="w-full">
+                    <template #leading>
+                      <Icon name="lucide:user" class="w-4 h-4 text-slate-400" />
+                    </template>
+                  </UInput>
+                </UFormField>
+                <UFormField label="No. Telepon">
+                  <UInput v-model="form.hp" type="tel" placeholder="08xxxxxxxxxx" class="w-full">
+                    <template #leading>
+                      <Icon name="lucide:phone" class="w-4 h-4 text-slate-400" />
+                    </template>
+                  </UInput>
+                </UFormField>
+              </div>
+            </div>
           </div>
+
           <template #footer>
-            <div class="flex gap-3">
-              <UButton variant="outline" color="neutral" class="flex-1" @click="modalOpen = false">Batal</UButton>
-              <UButton color="primary" class="flex-1" :loading="processing" @click="save">Simpan</UButton>
+            <div class="flex flex-col-reverse sm:flex-row gap-3 sm:justify-end">
+              <UButton variant="outline" color="neutral" @click="modalOpen = false" class="sm:w-auto w-full">
+                <Icon name="lucide:x" class="w-4 h-4 mr-2" />
+                Batal
+              </UButton>
+              <UButton color="primary" :loading="processing" @click="save" class="sm:w-auto w-full">
+                <Icon name="lucide:check" class="w-4 h-4 mr-2" />
+                {{ editing ? 'Simpan Perubahan' : 'Tambah Perusahaan' }}
+              </UButton>
             </div>
           </template>
         </UCard>

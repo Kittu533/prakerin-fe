@@ -76,6 +76,11 @@
         </template>
       </UTable>
     </div>
+
+    <!-- Pagination -->
+    <div v-if="totalPages > 1" class="flex justify-center">
+      <UPagination v-model:page="currentPage" :total="totalItems" :items-per-page="itemsPerPage" />
+    </div>
   </div>
 </template>
 
@@ -87,6 +92,8 @@ const search = ref('')
 const filterYear = ref('2024/2025')
 const filterJurusan = ref('Semua')
 const filterKelas = ref('Semua')
+const currentPage = ref(1)
+const itemsPerPage = 10
 
 const stats = reactive({ total: 0, good: 0, warning: 0, critical: 0 })
 
@@ -108,12 +115,22 @@ const columns = [
   { accessorKey: 'aksi', header: '' }
 ]
 
-const filteredData = computed(() => data.value.filter(d => {
+const allFilteredData = computed(() => data.value.filter(d => {
   const matchSearch = !search.value || d.siswa.toLowerCase().includes(search.value.toLowerCase())
   const matchJurusan = filterJurusan.value === 'Semua' || d.kelas.includes(filterJurusan.value)
   const matchKelas = filterKelas.value === 'Semua' || d.kelas === filterKelas.value
   return matchSearch && matchJurusan && matchKelas
 }))
+
+const totalItems = computed(() => allFilteredData.value.length)
+const totalPages = computed(() => Math.ceil(totalItems.value / itemsPerPage))
+
+const filteredData = computed(() => {
+  const start = (currentPage.value - 1) * itemsPerPage
+  return allFilteredData.value.slice(start, start + itemsPerPage)
+})
+
+watch([search, filterYear, filterJurusan, filterKelas], () => { currentPage.value = 1 })
 
 const viewDetail = (item: any) => {
   navigateTo(`/admin/monitoring/${item.id}`)

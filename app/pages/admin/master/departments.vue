@@ -14,7 +14,7 @@
       <div v-if="loading" class="p-4 space-y-3">
         <USkeleton v-for="i in 4" :key="i" class="h-14 rounded-lg" />
       </div>
-      <UTable v-else :data="data" :columns="columns">
+      <UTable v-else :data="paginatedData" :columns="columns">
         <template #status-cell="{ row }">
           <UBadge :color="row.original.aktif ? 'success' : 'neutral'" variant="subtle" size="xs">
             {{ row.original.aktif ? 'Aktif' : 'Nonaktif' }}
@@ -31,6 +31,11 @@
           </div>
         </template>
       </UTable>
+    </div>
+
+    <!-- Pagination -->
+    <div v-if="totalPages > 1" class="flex justify-center">
+      <UPagination v-model:page="currentPage" :total="totalItems" :items-per-page="itemsPerPage" />
     </div>
 
     <UModal v-model:open="modalOpen">
@@ -70,6 +75,8 @@ const editing = ref(false)
 const processing = ref(false)
 
 const form = reactive({ id: null as number | null, kode: '', nama: '', aktif: true })
+const currentPage = ref(1)
+const itemsPerPage = 10
 
 const data = ref([
   { id: 1, kode: 'RPL', nama: 'Rekayasa Perangkat Lunak', aktif: true },
@@ -84,6 +91,14 @@ const columns = [
   { accessorKey: 'status', header: 'Status' },
   { accessorKey: 'aksi', header: '' }
 ]
+
+const totalItems = computed(() => data.value.length)
+const totalPages = computed(() => Math.ceil(totalItems.value / itemsPerPage))
+
+const paginatedData = computed(() => {
+  const start = (currentPage.value - 1) * itemsPerPage
+  return data.value.slice(start, start + itemsPerPage)
+})
 
 const openModal = (item?: any) => {
   editing.value = !!item

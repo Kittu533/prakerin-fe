@@ -51,6 +51,11 @@
       </UTable>
     </div>
 
+    <!-- Pagination -->
+    <div v-if="totalPages > 1" class="flex justify-center">
+      <UPagination v-model:page="currentPage" :total="totalItems" :items-per-page="itemsPerPage" />
+    </div>
+
     <!-- Penilaian Modal -->
     <UModal v-model:open="modalOpen">
       <template #content>
@@ -117,6 +122,8 @@ const search = ref('')
 const modalOpen = ref(false)
 const processing = ref(false)
 const selected = ref<any>(null)
+const currentPage = ref(1)
+const itemsPerPage = 10
 
 const form = reactive({ sikap: 0, keterampilan: 0, kerjasama: 0, inisiatif: 0, catatan: '' })
 
@@ -135,9 +142,19 @@ const columns = [
   { accessorKey: 'aksi', header: '' }
 ]
 
-const filteredData = computed(() => data.value.filter(d => 
+const allFilteredData = computed(() => data.value.filter(d => 
   !search.value || d.siswa.toLowerCase().includes(search.value.toLowerCase())
 ))
+
+const totalItems = computed(() => allFilteredData.value.length)
+const totalPages = computed(() => Math.ceil(totalItems.value / itemsPerPage))
+
+const filteredData = computed(() => {
+  const start = (currentPage.value - 1) * itemsPerPage
+  return allFilteredData.value.slice(start, start + itemsPerPage)
+})
+
+watch(search, () => { currentPage.value = 1 })
 
 const averageScore = computed(() => {
   const total = form.sikap + form.keterampilan + form.kerjasama + form.inisiatif

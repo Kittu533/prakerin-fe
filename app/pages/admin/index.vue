@@ -1,14 +1,18 @@
 <template>
   <div class="space-y-6">
-    <div class="flex items-center justify-between">
-      <div>
-        <h1 class="text-xl lg:text-2xl font-bold text-slate-900">Dashboard</h1>
-        <p class="text-sm text-slate-500">Selamat datang, Administrator</p>
+    <!-- Welcome Card -->
+    <div class="bg-sky-500 rounded-2xl p-5 lg:p-6 text-white">
+      <div class="flex items-start justify-between gap-4">
+        <div>
+          <p class="text-sky-100 text-sm">Selamat datang,</p>
+          <h1 class="text-xl lg:text-2xl font-bold mt-1">Administrator 👋</h1>
+          <p class="text-sky-100 text-sm mt-1">Panel Admin SIM Prakerin</p>
+        </div>
+        <UButton color="white" variant="solid" size="sm" class="shrink-0">
+          <Icon name="lucide:download" class="w-4 h-4 mr-1" />
+          Export
+        </UButton>
       </div>
-      <UButton color="primary" variant="outline">
-        <Icon name="lucide:download" class="w-4 h-4 mr-2" />
-        Export Laporan
-      </UButton>
     </div>
 
     <!-- Stats -->
@@ -30,27 +34,31 @@
       </div>
     </div>
 
-    <div class="grid lg:grid-cols-2 gap-6">
+    <div class="grid lg:grid-cols-2 gap-4 lg:gap-6">
       <!-- Penempatan per Jurusan Chart -->
-      <div class="bg-white rounded-xl border border-slate-200 p-5">
+      <div class="bg-white rounded-xl border border-slate-200 p-4 lg:p-5 min-w-0 overflow-hidden">
         <h3 class="font-semibold text-slate-900 mb-4">Penempatan per Jurusan</h3>
         <div v-if="loading">
-          <USkeleton class="h-64 rounded-lg" />
+          <USkeleton class="h-48 lg:h-64 rounded-lg" />
         </div>
-        <ClientOnly v-else>
-          <apexchart type="bar" height="250" :options="placementChartOptions" :series="placementChartSeries" />
-        </ClientOnly>
+        <div v-else class="w-full overflow-x-auto">
+          <ClientOnly>
+            <apexchart type="bar" height="200" :options="placementChartOptions" :series="placementChartSeries" />
+          </ClientOnly>
+        </div>
       </div>
 
       <!-- Trend Pengajuan Chart -->
-      <div class="bg-white rounded-xl border border-slate-200 p-5">
+      <div class="bg-white rounded-xl border border-slate-200 p-4 lg:p-5 min-w-0 overflow-hidden">
         <h3 class="font-semibold text-slate-900 mb-4">Trend Pengajuan PKL</h3>
         <div v-if="loading">
-          <USkeleton class="h-64 rounded-lg" />
+          <USkeleton class="h-48 lg:h-64 rounded-lg" />
         </div>
-        <ClientOnly v-else>
-          <apexchart type="line" height="250" :options="trendChartOptions" :series="trendChartSeries" />
-        </ClientOnly>
+        <div v-else class="w-full overflow-x-auto">
+          <ClientOnly>
+            <apexchart type="line" height="200" :options="trendChartOptions" :series="trendChartSeries" />
+          </ClientOnly>
+        </div>
       </div>
     </div>
 
@@ -126,26 +134,57 @@ const alerts = ref([
 
 // Chart Options
 const placementChartOptions = {
-  chart: { type: 'bar', toolbar: { show: false } },
+  chart: { 
+    type: 'bar', 
+    toolbar: { show: false },
+    redrawOnParentResize: true,
+    redrawOnWindowResize: true
+  },
   plotOptions: { bar: { borderRadius: 4, horizontal: true } },
   colors: ['#0ea5e9'],
-  xaxis: { categories: ['RPL', 'TKJ', 'MM', 'AKL'] },
-  yaxis: { labels: { style: { fontSize: '12px' } } },
-  dataLabels: { enabled: true, formatter: (val) => `${val}%` },
-  grid: { borderColor: '#f1f5f9' }
+  xaxis: { 
+    categories: ['RPL', 'TKJ', 'MM', 'AKL'],
+    labels: { style: { fontSize: '11px' } }
+  },
+  yaxis: { labels: { style: { fontSize: '11px' } } },
+  dataLabels: { enabled: true, formatter: (val: number) => `${val}%`, style: { fontSize: '11px' } },
+  grid: { borderColor: '#f1f5f9', padding: { left: 0, right: 0 } },
+  responsive: [{
+    breakpoint: 480,
+    options: {
+      chart: { height: 180 },
+      dataLabels: { style: { fontSize: '10px' } }
+    }
+  }]
 }
 
 const placementChartSeries = [{ name: 'Penempatan', data: [85, 72, 68, 55] }]
 
 const trendChartOptions = {
-  chart: { type: 'line', toolbar: { show: false } },
-  stroke: { curve: 'smooth', width: 3 },
+  chart: { 
+    type: 'line', 
+    toolbar: { show: false },
+    redrawOnParentResize: true,
+    redrawOnWindowResize: true
+  },
+  stroke: { curve: 'smooth', width: 2 },
   colors: ['#0ea5e9', '#22c55e'],
-  xaxis: { categories: ['Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'] },
-  yaxis: { labels: { formatter: (val) => Math.round(val).toString() } },
-  legend: { position: 'top' },
+  xaxis: { 
+    categories: ['Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'],
+    labels: { style: { fontSize: '10px' } }
+  },
+  yaxis: { labels: { formatter: (val: number) => Math.round(val).toString(), style: { fontSize: '10px' } } },
+  legend: { position: 'top', fontSize: '11px' },
   dataLabels: { enabled: false },
-  grid: { borderColor: '#f1f5f9' }
+  grid: { borderColor: '#f1f5f9', padding: { left: 0, right: 0 } },
+  responsive: [{
+    breakpoint: 480,
+    options: {
+      chart: { height: 180 },
+      stroke: { width: 2 },
+      legend: { fontSize: '10px' }
+    }
+  }]
 }
 
 const trendChartSeries = [
