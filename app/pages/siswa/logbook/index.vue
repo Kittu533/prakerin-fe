@@ -126,24 +126,24 @@
 
           <form @submit.prevent="submitForm" class="space-y-4">
             <UFormField label="Tanggal" required>
-              <UInput v-model="form.tanggal" type="date" :max="today" />
+              <UInput v-model="form.tanggal" type="date" :max="today" class="w-full" />
             </UFormField>
 
             <div class="grid grid-cols-2 gap-3">
               <UFormField label="Jam Mulai" required>
-                <UInput v-model="form.jamMulai" type="time" />
+                <UInput v-model="form.jamMulai" type="time" class="w-full" />
               </UFormField>
               <UFormField label="Jam Selesai" required>
-                <UInput v-model="form.jamSelesai" type="time" />
+                <UInput v-model="form.jamSelesai" type="time" class="w-full" />
               </UFormField>
             </div>
 
             <UFormField label="Judul Kegiatan" required>
-              <UInput v-model="form.judul" placeholder="Min. 5 karakter" />
+              <UInput v-model="form.judul" placeholder="Min. 5 karakter" class="w-full" />
             </UFormField>
 
             <UFormField label="Deskripsi" required>
-              <UTextarea v-model="form.deskripsi" placeholder="Min. 20 karakter" :rows="4" autoresize />
+              <UTextarea v-model="form.deskripsi" placeholder="Min. 20 karakter" :rows="4" autoresize class="w-full" />
             </UFormField>
 
             <UFormField label="Foto Kegiatan">

@@ -14,10 +14,13 @@
       <!-- Nav -->
       <nav class="flex-1 overflow-y-auto py-4 px-3">
         <div class="space-y-1">
-          <NuxtLink v-for="item in menuItems" :key="item.to" :to="item.to" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors" :class="isActive(item.to) ? 'bg-primary-50 text-primary-600' : 'text-slate-600 hover:bg-slate-50'">
+          <NuxtLink v-for="item in menuItems" :key="item.to" :to="item.to"
+            class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors"
+            :class="isActive(item.to) ? 'bg-primary-50 text-primary-600' : 'text-slate-600 hover:bg-slate-50'">
             <Icon :name="item.icon" class="w-5 h-5" />
             <span>{{ item.label }}</span>
-            <UBadge v-if="item.badge" :color="item.badgeColor || 'primary'" variant="subtle" size="xs" class="ml-auto">{{ item.badge }}</UBadge>
+            <UBadge v-if="item.badge" :color="item.badgeColor || 'primary'" variant="subtle" size="xs" class="ml-auto">
+              {{ item.badge }}</UBadge>
           </NuxtLink>
         </div>
       </nav>
@@ -25,7 +28,9 @@
       <!-- User -->
       <div class="p-3 border-t border-slate-100">
         <div class="flex items-center gap-3 p-2 rounded-lg bg-slate-50">
-          <div class="w-9 h-9 rounded-lg bg-primary-500 flex items-center justify-center text-white font-semibold text-sm">PJ</div>
+          <div
+            class="w-9 h-9 rounded-lg bg-primary-500 flex items-center justify-center text-white font-semibold text-sm">
+            PJ</div>
           <div class="flex-1 min-w-0">
             <p class="text-sm font-medium text-slate-900 truncate">Pak Joko</p>
             <p class="text-xs text-slate-500">PT. Telkom Indonesia</p>
@@ -38,15 +43,28 @@
     </aside>
 
     <!-- Mobile Header -->
-    <div class="lg:hidden fixed top-0 left-0 right-0 h-14 bg-white border-b border-slate-200 flex items-center justify-between px-4 z-40">
+    <div
+      class="lg:hidden fixed top-0 left-0 right-0 h-14 bg-white border-b border-slate-200 flex items-center justify-between px-4 z-40">
       <div class="flex items-center gap-2">
         <img src="~/assets/img/logo-skanda.png" alt="Logo" class="w-8 h-8 object-contain" />
         <span class="font-semibold text-slate-900 text-sm">Mentor Panel</span>
       </div>
-      <button class="relative flex items-center justify-center w-10 h-10 rounded-lg hover:bg-slate-100 transition-colors">
-        <Icon name="lucide:bell" class="w-5 h-5 text-slate-600" />
-        <span class="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full" />
-      </button>
+      <div class="flex items-center gap-2">
+        <button
+          class="relative flex items-center justify-center w-10 h-10 rounded-lg hover:bg-slate-100 transition-colors">
+          <Icon name="lucide:bell" class="w-5 h-5 text-slate-600" />
+          <span class="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full" />
+        </button>
+        <!-- Profile Menu -->
+        <UDropdown :items="userMenuItems" :popper="{ placement: 'bottom-end' }">
+          <button class="flex items-center justify-center w-10 h-10 rounded-lg hover:bg-slate-100 transition-colors">
+            <div
+              class="w-8 h-8 rounded-lg bg-primary-500 flex items-center justify-center text-white font-semibold text-sm">
+              PM
+            </div>
+          </button>
+        </UDropdown>
+      </div>
     </div>
 
     <!-- Main -->
@@ -59,16 +77,13 @@
     <!-- Bottom Navigation (Mobile/Tablet Only) -->
     <nav class="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 z-30 safe-area-bottom">
       <div class="flex items-center justify-around h-16">
-        <NuxtLink 
-          v-for="item in bottomNavItems" 
-          :key="item.to"
-          :to="item.to"
+        <NuxtLink v-for="item in bottomNavItems" :key="item.to" :to="item.to"
           class="flex flex-col items-center justify-center gap-1 w-full h-full transition-colors"
-          :class="isActiveRoute(item.to) ? 'text-primary-600' : 'text-slate-500'"
-        >
+          :class="isActiveRoute(item.to) ? 'text-primary-600' : 'text-slate-500'">
           <div class="relative">
             <Icon :name="item.icon" class="w-5 h-5" />
-            <span v-if="item.badge" class="absolute -top-1 -right-2 w-4 h-4 text-[10px] bg-red-500 text-white rounded-full flex items-center justify-center">
+            <span v-if="item.badge"
+              class="absolute -top-1 -right-2 w-4 h-4 text-[10px] bg-red-500 text-white rounded-full flex items-center justify-center">
               {{ item.badge > 9 ? '9+' : item.badge }}
             </span>
           </div>
@@ -108,7 +123,24 @@ const isActiveRoute = (path: string) => {
   return route.path.startsWith(path)
 }
 
-const logout = () => navigateTo('/login')
+const logout = () => { navigateTo('/login') }
+
+const userMenuItems = [
+  [{
+    label: 'Profil Saya',
+    icon: 'i-lucide-user',
+    click: () => { }
+  }, {
+    label: 'Pengaturan',
+    icon: 'i-lucide-settings',
+    click: () => { }
+  }],
+  [{
+    label: 'Keluar',
+    icon: 'i-lucide-log-out',
+    click: () => { navigateTo('/login') }
+  }]
+]
 </script>
 
 <style scoped>

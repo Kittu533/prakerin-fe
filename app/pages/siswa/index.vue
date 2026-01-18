@@ -127,7 +127,7 @@
       <div class="px-5 py-4 border-b border-slate-100">
         <h2 class="font-semibold text-slate-900">Menu Cepat</h2>
       </div>
-      <div class="p-4 grid grid-cols-4 gap-3">
+      <div class="p-4 grid grid-cols-3 sm:grid-cols-6 gap-3">
         <NuxtLink to="/siswa/logbook/create" class="flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-sky-50 transition-colors">
           <div class="w-12 h-12 rounded-xl bg-sky-100 text-sky-600 flex items-center justify-center">
             <Icon name="lucide:plus" class="w-6 h-6" />
@@ -140,17 +140,29 @@
           </div>
           <span class="text-xs font-medium text-slate-700 text-center">Absensi</span>
         </NuxtLink>
-        <NuxtLink to="/siswa/dokumen" class="flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-amber-50 transition-colors">
-          <div class="w-12 h-12 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center">
-            <Icon name="lucide:upload" class="w-6 h-6" />
+        <NuxtLink to="/siswa/internship" class="flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-indigo-50 transition-colors">
+          <div class="w-12 h-12 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center">
+            <Icon name="lucide:briefcase" class="w-6 h-6" />
           </div>
-          <span class="text-xs font-medium text-slate-700 text-center">Upload</span>
+          <span class="text-xs font-medium text-slate-700 text-center">Status PKL</span>
+        </NuxtLink>
+        <NuxtLink to="/siswa/laporan" class="flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-amber-50 transition-colors">
+          <div class="w-12 h-12 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center">
+            <Icon name="lucide:file-text" class="w-6 h-6" />
+          </div>
+          <span class="text-xs font-medium text-slate-700 text-center">Laporan Akhir</span>
         </NuxtLink>
         <NuxtLink to="/siswa/nilai" class="flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-purple-50 transition-colors">
           <div class="w-12 h-12 rounded-xl bg-purple-100 text-purple-600 flex items-center justify-center">
             <Icon name="lucide:award" class="w-6 h-6" />
           </div>
-          <span class="text-xs font-medium text-slate-700 text-center">Nilai</span>
+          <span class="text-xs font-medium text-slate-700 text-center">Nilai PKL</span>
+        </NuxtLink>
+        <NuxtLink to="/siswa/dokumen" class="flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-teal-50 transition-colors">
+          <div class="w-12 h-12 rounded-xl bg-teal-100 text-teal-600 flex items-center justify-center">
+            <Icon name="lucide:folder" class="w-6 h-6" />
+          </div>
+          <span class="text-xs font-medium text-slate-700 text-center">Dokumen</span>
         </NuxtLink>
       </div>
     </div>
@@ -175,7 +187,7 @@
       </div>
 
       <div v-else class="divide-y divide-slate-100">
-        <div v-for="log in recentLogbooks" :key="log.id" class="px-5 py-3 hover:bg-slate-50 transition-colors">
+        <div v-for="log in paginatedLogbooks" :key="log.id" class="px-5 py-3 hover:bg-slate-50 transition-colors">
           <div class="flex items-start gap-3">
             <div class="p-2 rounded-lg shrink-0" :class="getLogStatusBg(log.status)">
               <Icon name="lucide:file-text" class="w-4 h-4" />
@@ -190,10 +202,16 @@
           </div>
         </div>
         
-        <div v-if="!recentLogbooks.length" class="py-8 text-center">
+        <div v-if="!allLogbooks.length" class="py-8 text-center">
           <Icon name="lucide:book-open" class="w-10 h-10 text-slate-300 mx-auto mb-2" />
           <p class="text-sm text-slate-500">Belum ada logbook</p>
         </div>
+      </div>
+      
+      <!-- Pagination -->
+      <div v-if="totalLogbookPages > 1" class="px-5 py-3 border-t border-slate-100 flex items-center justify-between">
+        <p class="text-xs text-slate-500">Menampilkan {{ logbookStartIndex + 1 }}-{{ logbookEndIndex }} dari {{ allLogbooks.length }}</p>
+        <UPagination v-model:page="logbookPage" :total="allLogbooks.length" :items-per-page="logbookPerPage" size="xs" />
       </div>
     </div>
 
@@ -268,13 +286,26 @@ const stats = reactive({
   days: 0
 })
 
-const recentLogbooks = ref([])
+// Pagination for logbooks
+const logbookPage = ref(1)
+const logbookPerPage = 5
+const allLogbooks = ref([])
 
 const currentDate = computed(() => {
   return new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
 })
 
 const progress = computed(() => Math.round((stats.days / 180) * 100))
+
+// Pagination computed
+const paginatedLogbooks = computed(() => {
+  const start = (logbookPage.value - 1) * logbookPerPage
+  return allLogbooks.value.slice(start, start + logbookPerPage)
+})
+
+const totalLogbookPages = computed(() => Math.ceil(allLogbooks.value.length / logbookPerPage))
+const logbookStartIndex = computed(() => (logbookPage.value - 1) * logbookPerPage)
+const logbookEndIndex = computed(() => Math.min(logbookPage.value * logbookPerPage, allLogbooks.value.length))
 
 // Chart Options
 const logbookChartOptions = {
@@ -331,10 +362,20 @@ onMounted(async () => {
   
   Object.assign(stats, { totalLogbook: 48, approved: 42, pending: 4, days: 85 })
   
-  recentLogbooks.value = [
+  // Mock data dengan lebih banyak item untuk demo pagination
+  allLogbooks.value = [
     { id: 1, kegiatan: 'Membuat UI Dashboard Admin', tanggal: '15 Des 2024', status: 'Pending' },
     { id: 2, kegiatan: 'Meeting dengan tim development', tanggal: '14 Des 2024', status: 'Disetujui' },
-    { id: 3, kegiatan: 'Implementasi REST API', tanggal: '13 Des 2024', status: 'Disetujui' }
+    { id: 3, kegiatan: 'Implementasi REST API', tanggal: '13 Des 2024', status: 'Disetujui' },
+    { id: 4, kegiatan: 'Code review dan feedback', tanggal: '12 Des 2024', status: 'Disetujui' },
+    { id: 5, kegiatan: 'Setup database schema', tanggal: '11 Des 2024', status: 'Disetujui' },
+    { id: 6, kegiatan: 'Integrasi API payment', tanggal: '10 Des 2024', status: 'Revisi' },
+    { id: 7, kegiatan: 'Testing unit components', tanggal: '9 Des 2024', status: 'Disetujui' },
+    { id: 8, kegiatan: 'Dokumentasi API endpoint', tanggal: '8 Des 2024', status: 'Disetujui' },
+    { id: 9, kegiatan: 'Optimisasi query database', tanggal: '7 Des 2024', status: 'Pending' },
+    { id: 10, kegiatan: 'Deploy ke staging server', tanggal: '6 Des 2024', status: 'Disetujui' },
+    { id: 11, kegiatan: 'Fix bug authentication', tanggal: '5 Des 2024', status: 'Disetujui' },
+    { id: 12, kegiatan: 'Membuat komponen reusable', tanggal: '4 Des 2024', status: 'Disetujui' }
   ]
   
   loading.value = false

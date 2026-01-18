@@ -34,7 +34,9 @@
         </div>
       </template>
       <template v-else>
-        <div class="bg-white rounded-xl p-5 border border-slate-200 hover:border-sky-300 hover:shadow-md transition-all cursor-pointer" @click="navigateTo('/guru/siswa-bimbingan')">
+        <div
+          class="bg-white rounded-xl p-5 border border-slate-200 hover:border-sky-300 hover:shadow-md transition-all cursor-pointer"
+          @click="navigateTo('/guru/siswa-bimbingan')">
           <div class="flex items-center justify-between mb-3">
             <div class="p-2 rounded-lg bg-sky-100 text-sky-600">
               <Icon name="lucide:users" class="w-5 h-5" />
@@ -45,7 +47,9 @@
           <p class="text-sm text-slate-500">Siswa Bimbingan</p>
         </div>
 
-        <div class="bg-white rounded-xl p-5 border border-slate-200 hover:border-green-300 hover:shadow-md transition-all cursor-pointer" @click="navigateTo('/guru/absensi')">
+        <div
+          class="bg-white rounded-xl p-5 border border-slate-200 hover:border-green-300 hover:shadow-md transition-all cursor-pointer"
+          @click="navigateTo('/guru/absensi')">
           <div class="flex items-center justify-between mb-3">
             <div class="p-2 rounded-lg bg-green-100 text-green-600">
               <Icon name="lucide:bar-chart-3" class="w-5 h-5" />
@@ -56,7 +60,9 @@
           <p class="text-sm text-slate-500">Rata-rata Kehadiran</p>
         </div>
 
-        <div class="bg-white rounded-xl p-5 border border-slate-200 hover:border-amber-300 hover:shadow-md transition-all cursor-pointer" @click="navigateTo('/guru/verifikasi-logbook')">
+        <div
+          class="bg-white rounded-xl p-5 border border-slate-200 hover:border-amber-300 hover:shadow-md transition-all cursor-pointer"
+          @click="navigateTo('/guru/verifikasi-logbook')">
           <div class="flex items-center justify-between mb-3">
             <div class="p-2 rounded-lg bg-amber-100 text-amber-600">
               <Icon name="lucide:book-open" class="w-5 h-5" />
@@ -67,12 +73,15 @@
           <p class="text-sm text-slate-500">Logbook Pending</p>
         </div>
 
-        <div class="bg-white rounded-xl p-5 border border-slate-200 hover:border-red-300 hover:shadow-md transition-all cursor-pointer" @click="navigateTo('/guru/absensi')">
+        <div
+          class="bg-white rounded-xl p-5 border border-slate-200 hover:border-red-300 hover:shadow-md transition-all cursor-pointer"
+          @click="navigateTo('/guru/absensi')">
           <div class="flex items-center justify-between mb-3">
             <div class="p-2 rounded-lg bg-red-100 text-red-600">
               <Icon name="lucide:alert-circle" class="w-5 h-5" />
             </div>
-            <UBadge v-if="stats.absensiPending" color="error" variant="subtle" size="xs">{{ stats.absensiPending }} baru</UBadge>
+            <UBadge v-if="stats.absensiPending" color="error" variant="subtle" size="xs">{{ stats.absensiPending }} baru
+            </UBadge>
           </div>
           <p class="text-2xl font-bold text-slate-900">{{ stats.absensiPending }}</p>
           <p class="text-sm text-slate-500">Absensi Pending</p>
@@ -112,35 +121,81 @@
         <!-- Quick Actions -->
         <div class="bg-white rounded-xl border border-slate-200">
           <div class="px-6 py-4 border-b border-slate-100">
-            <h2 class="font-semibold text-slate-900">Aksi Cepat</h2>
+            <h2 class="font-semibold text-slate-900">Menu Cepat</h2>
+            <p class="text-xs text-slate-500">Akses semua fitur dengan cepat</p>
           </div>
-          <div class="p-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <NuxtLink to="/guru/verifikasi-logbook" class="flex flex-col items-center gap-3 p-4 rounded-xl bg-sky-50 border border-sky-100 hover:border-sky-300 hover:shadow-sm transition-all">
-              <div class="p-3 rounded-xl bg-sky-500 text-white">
-                <Icon name="lucide:book-open" class="w-5 h-5" />
+          <div class="p-4 grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-4 gap-3">
+            <NuxtLink to="/guru/verifikasi-logbook"
+              class="flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-sky-50 transition-all group">
+              <div
+                class="w-12 h-12 rounded-xl bg-sky-100 text-sky-600 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <Icon name="lucide:book-open" class="w-6 h-6" />
               </div>
-              <span class="text-sm font-medium text-slate-700 text-center">Verifikasi Logbook</span>
+              <span class="text-xs font-medium text-slate-700 text-center">Logbook</span>
             </NuxtLink>
 
-            <NuxtLink to="/guru/absensi" class="flex flex-col items-center gap-3 p-4 rounded-xl bg-green-50 border border-green-100 hover:border-green-300 hover:shadow-sm transition-all">
-              <div class="p-3 rounded-xl bg-green-500 text-white">
-                <Icon name="lucide:calendar-check" class="w-5 h-5" />
+            <NuxtLink to="/guru/absensi"
+              class="flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-green-50 transition-all group">
+              <div
+                class="w-12 h-12 rounded-xl bg-green-100 text-green-600 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <Icon name="lucide:calendar-check" class="w-6 h-6" />
               </div>
-              <span class="text-sm font-medium text-slate-700 text-center">Validasi Absensi</span>
+              <span class="text-xs font-medium text-slate-700 text-center">Absensi</span>
             </NuxtLink>
 
-            <NuxtLink to="/guru/kunjungan/create" class="flex flex-col items-center gap-3 p-4 rounded-xl bg-blue-50 border border-blue-100 hover:border-blue-300 hover:shadow-sm transition-all">
-              <div class="p-3 rounded-xl bg-blue-500 text-white">
-                <Icon name="lucide:map-pin" class="w-5 h-5" />
+            <NuxtLink to="/guru/penilaian-nilai"
+              class="flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-amber-50 transition-all group">
+              <div
+                class="w-12 h-12 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <Icon name="lucide:award" class="w-6 h-6" />
               </div>
-              <span class="text-sm font-medium text-slate-700 text-center">Input Kunjungan</span>
+              <span class="text-xs font-medium text-slate-700 text-center">Nilai PKL</span>
             </NuxtLink>
 
-            <NuxtLink to="/guru/penilaian-nilai" class="flex flex-col items-center gap-3 p-4 rounded-xl bg-amber-50 border border-amber-100 hover:border-amber-300 hover:shadow-sm transition-all">
-              <div class="p-3 rounded-xl bg-amber-500 text-white">
-                <Icon name="lucide:award" class="w-5 h-5" />
+            <NuxtLink to="/guru/siswa-bimbingan"
+              class="flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-indigo-50 transition-all group">
+              <div
+                class="w-12 h-12 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <Icon name="lucide:users" class="w-6 h-6" />
               </div>
-              <span class="text-sm font-medium text-slate-700 text-center">Input Nilai</span>
+              <span class="text-xs font-medium text-slate-700 text-center">Siswa</span>
+            </NuxtLink>
+
+            <!-- Menu tidak ada di bottom nav -->
+            <NuxtLink to="/guru/penempatan"
+              class="flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-purple-50 transition-all group">
+              <div
+                class="w-12 h-12 rounded-xl bg-purple-100 text-purple-600 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <Icon name="lucide:building-2" class="w-6 h-6" />
+              </div>
+              <span class="text-xs font-medium text-slate-700 text-center">Penempatan</span>
+            </NuxtLink>
+
+            <NuxtLink to="/guru/kunjungan"
+              class="flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-blue-50 transition-all group">
+              <div
+                class="w-12 h-12 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <Icon name="lucide:map-pin" class="w-6 h-6" />
+              </div>
+              <span class="text-xs font-medium text-slate-700 text-center">Kunjungan</span>
+            </NuxtLink>
+
+            <NuxtLink to="/guru/laporan-akhir"
+              class="flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-teal-50 transition-all group">
+              <div
+                class="w-12 h-12 rounded-xl bg-teal-100 text-teal-600 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <Icon name="lucide:file-text" class="w-6 h-6" />
+              </div>
+              <span class="text-xs font-medium text-slate-700 text-center">Laporan Akhir</span>
+            </NuxtLink>
+
+            <NuxtLink to="/guru/kunjungan/create"
+              class="flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-rose-50 transition-all group">
+              <div
+                class="w-12 h-12 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <Icon name="lucide:plus-circle" class="w-6 h-6" />
+              </div>
+              <span class="text-xs font-medium text-slate-700 text-center">+ Kunjungan</span>
             </NuxtLink>
           </div>
         </div>
@@ -152,11 +207,12 @@
               <h2 class="font-semibold text-slate-900">Siswa Bimbingan</h2>
               <p class="text-sm text-slate-500">Daftar siswa PKL yang Anda bimbing</p>
             </div>
-            <UButton to="/guru/siswa-bimbingan" variant="ghost" color="primary" size="sm" trailing-icon="i-lucide-arrow-right">
+            <UButton to="/guru/siswa-bimbingan" variant="ghost" color="primary" size="sm"
+              trailing-icon="i-lucide-arrow-right">
               Lihat Semua
             </UButton>
           </div>
-          
+
           <div v-if="loading" class="p-4 space-y-3">
             <div v-for="i in 4" :key="i" class="flex items-center gap-4 p-3">
               <USkeleton class="w-10 h-10 rounded-xl" />
@@ -167,10 +223,13 @@
               <USkeleton class="h-6 w-16 rounded-full" />
             </div>
           </div>
-          
+
           <div v-else class="divide-y divide-slate-100">
-            <div v-for="siswa in students" :key="siswa.id" class="flex items-center gap-4 px-6 py-4 hover:bg-slate-50 transition-colors cursor-pointer" @click="navigateTo(`/guru/siswa-bimbingan/${siswa.id}`)">
-              <div class="w-10 h-10 rounded-xl flex items-center justify-center font-semibold text-sm" :class="siswa.status === 'Aktif' ? 'bg-sky-100 text-sky-700' : 'bg-slate-100 text-slate-600'">
+            <div v-for="siswa in students" :key="siswa.id"
+              class="flex items-center gap-4 px-6 py-4 hover:bg-slate-50 transition-colors cursor-pointer"
+              @click="navigateTo(`/guru/siswa-bimbingan/${siswa.id}`)">
+              <div class="w-10 h-10 rounded-xl flex items-center justify-center font-semibold text-sm"
+                :class="siswa.status === 'Aktif' ? 'bg-sky-100 text-sky-700' : 'bg-slate-100 text-slate-600'">
                 {{ siswa.inisial }}
               </div>
               <div class="flex-1 min-w-0">
@@ -180,11 +239,16 @@
               <div class="flex items-center gap-3">
                 <div class="hidden sm:flex items-center gap-1.5">
                   <div class="w-8 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                    <div class="h-full rounded-full" :class="siswa.kehadiran >= 80 ? 'bg-green-500' : 'bg-red-500'" :style="{ width: `${siswa.kehadiran}%` }" />
+                    <div class="h-full rounded-full" :class="siswa.kehadiran >= 80 ? 'bg-green-500' : 'bg-red-500'"
+                      :style="{ width: `${siswa.kehadiran}%` }" />
                   </div>
-                  <span class="text-xs font-medium" :class="siswa.kehadiran >= 80 ? 'text-green-600' : 'text-red-600'">{{ siswa.kehadiran }}%</span>
+                  <span class="text-xs font-medium"
+                    :class="siswa.kehadiran >= 80 ? 'text-green-600' : 'text-red-600'">{{
+                    siswa.kehadiran }}%</span>
                 </div>
-                <UBadge :color="siswa.status === 'Aktif' ? 'success' : 'neutral'" variant="subtle" size="xs">{{ siswa.status }}</UBadge>
+                <UBadge :color="siswa.status === 'Aktif' ? 'success' : 'neutral'" variant="subtle" size="xs">{{
+                  siswa.status
+                  }}</UBadge>
               </div>
             </div>
           </div>
@@ -197,9 +261,10 @@
         <div class="bg-white rounded-xl border border-slate-200">
           <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
             <h2 class="font-semibold text-slate-900">Notifikasi</h2>
-            <UBadge v-if="notifications.length" color="error" variant="solid" size="xs">{{ notifications.length }}</UBadge>
+            <UBadge v-if="notifications.length" color="error" variant="solid" size="xs">{{ notifications.length }}
+            </UBadge>
           </div>
-          
+
           <div v-if="loading" class="p-4 space-y-3">
             <div v-for="i in 3" :key="i" class="flex gap-3">
               <USkeleton class="w-8 h-8 rounded-lg shrink-0" />
@@ -209,9 +274,10 @@
               </div>
             </div>
           </div>
-          
+
           <div v-else class="divide-y divide-slate-100 max-h-72 overflow-y-auto">
-            <div v-for="notif in notifications" :key="notif.id" class="px-5 py-3 hover:bg-slate-50 transition-colors cursor-pointer">
+            <div v-for="notif in notifications" :key="notif.id"
+              class="px-5 py-3 hover:bg-slate-50 transition-colors cursor-pointer">
               <div class="flex gap-3">
                 <div class="p-2 rounded-lg shrink-0" :class="notifStyle[notif.type]">
                   <Icon :name="notif.icon" class="w-4 h-4" />

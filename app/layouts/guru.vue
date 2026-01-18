@@ -9,7 +9,8 @@
       <!-- Main Area -->
       <div class="flex-1 min-w-0 flex flex-col min-h-screen">
         <!-- Header -->
-        <header class="sticky top-0 z-30 bg-white border-b border-slate-200 h-14 lg:h-16 flex items-center px-4 lg:px-6 shrink-0">
+        <header
+          class="sticky top-0 z-30 bg-white border-b border-slate-200 h-14 lg:h-16 flex items-center px-4 lg:px-6 shrink-0">
           <div class="flex items-center justify-between w-full">
             <!-- Left -->
             <div class="flex items-center gap-3">
@@ -29,11 +30,7 @@
             <div class="flex items-center gap-2">
               <!-- Search (Desktop) -->
               <div class="hidden lg:block">
-                <UInput 
-                  placeholder="Cari..." 
-                  class="w-64"
-                  size="sm"
-                >
+                <UInput placeholder="Cari..." class="w-64" size="sm">
                   <template #leading>
                     <Icon name="lucide:search" class="w-4 h-4 text-slate-400" />
                   </template>
@@ -41,27 +38,26 @@
               </div>
 
               <!-- Notifications -->
-              <button class="relative flex items-center justify-center w-10 h-10 rounded-lg hover:bg-slate-100 transition-colors">
+              <button
+                class="relative flex items-center justify-center w-10 h-10 rounded-lg hover:bg-slate-100 transition-colors">
                 <Icon name="lucide:bell" class="w-5 h-5 text-slate-600" />
                 <span class="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full" />
               </button>
 
-              <!-- User Menu (Desktop) -->
-              <UDropdown 
-                :items="userMenuItems" 
-                :popper="{ placement: 'bottom-end' }"
-                class="hidden sm:block"
-              >
-                <button class="flex items-center gap-2 p-1.5 rounded-lg hover:bg-slate-100 transition-colors">
-                  <div class="w-8 h-8 rounded-lg bg-sky-500 flex items-center justify-center text-white font-semibold text-sm">
+              <!-- User Menu -->
+              <UDropdown :items="userMenuItems" :popper="{ placement: 'bottom-end' }" :ui="{ width: 'w-48' }">
+                <div
+                  class="flex items-center gap-2 p-1 rounded-lg hover:bg-slate-50 cursor-pointer transition-colors select-none">
+                  <div
+                    class="w-8 h-8 rounded-lg bg-sky-500 flex items-center justify-center text-white font-semibold text-sm ring-2 ring-transparent group-hover:ring-sky-100">
                     BS
                   </div>
-                  <div class="text-left">
-                    <p class="text-sm font-medium text-slate-900">Budi Santoso</p>
-                    <p class="text-xs text-slate-500">Guru</p>
+                  <div class="text-left hidden sm:block">
+                    <p class="text-xs font-semibold text-slate-900 leading-tight">Budi Santoso</p>
+                    <p class="text-[10px] text-slate-500 font-medium leading-tight">Guru Pembimbing</p>
                   </div>
-                  <Icon name="lucide:chevron-down" class="w-4 h-4 text-slate-400" />
-                </button>
+                  <Icon name="lucide:chevron-down" class="w-4 h-4 text-slate-400 hidden sm:block" />
+                </div>
               </UDropdown>
             </div>
           </div>
@@ -83,16 +79,13 @@
         <!-- Bottom Navigation (Mobile/Tablet Only) -->
         <nav class="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 z-30 safe-area-bottom">
           <div class="flex items-center justify-around h-16">
-            <NuxtLink 
-              v-for="item in bottomNavItems" 
-              :key="item.to"
-              :to="item.to"
+            <NuxtLink v-for="item in bottomNavItems" :key="item.to" :to="item.to"
               class="flex flex-col items-center justify-center gap-1 w-full h-full transition-colors"
-              :class="isActiveRoute(item.to) ? 'text-sky-600' : 'text-slate-500'"
-            >
+              :class="isActiveRoute(item.to) ? 'text-sky-600' : 'text-slate-500'">
               <div class="relative">
                 <Icon :name="item.icon" class="w-5 h-5" />
-                <span v-if="item.badge" class="absolute -top-1 -right-2 w-4 h-4 text-[10px] bg-red-500 text-white rounded-full flex items-center justify-center">
+                <span v-if="item.badge"
+                  class="absolute -top-1 -right-2 w-4 h-4 text-[10px] bg-red-500 text-white rounded-full flex items-center justify-center">
                   {{ item.badge > 9 ? '9+' : item.badge }}
                 </span>
               </div>
@@ -119,13 +112,13 @@ const pageTitle = computed(() => {
     '/guru/penilaian-nilai': 'Penilaian PKL',
     '/guru/laporan-akhir': 'Laporan Akhir'
   }
-  
+
   if (titles[route.path]) return titles[route.path]
-  
+
   for (const [path, title] of Object.entries(titles)) {
     if (route.path.startsWith(path) && path !== '/guru') return title
   }
-  
+
   return 'Dashboard'
 })
 
@@ -146,11 +139,11 @@ const userMenuItems = [
   [{
     label: 'Profil Saya',
     icon: 'i-lucide-user',
-    click: () => {}
+    click: () => { }
   }, {
     label: 'Pengaturan',
     icon: 'i-lucide-settings',
-    click: () => {}
+    click: () => { }
   }],
   [{
     label: 'Keluar',

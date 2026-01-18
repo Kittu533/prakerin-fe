@@ -16,18 +16,18 @@
       <form @submit.prevent="submitForm" class="space-y-5">
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <UFormField label="Tanggal" required>
-            <UTextarea v-model="form.tanggal" :rows="1" placeholder="2026-01-01" />
+            <UInput v-model="form.tanggal" type="date" class="w-full" />
           </UFormField>
           <UFormField label="Jam Mulai" required>
-            <UTextarea v-model="form.jamMulai" :rows="1" placeholder="08:00" />
+            <UInput v-model="form.jamMulai" type="time" class="w-full" />
           </UFormField>
           <UFormField label="Jam Selesai" required>
-            <UTextarea v-model="form.jamSelesai" :rows="1" placeholder="16:00" />
+            <UInput v-model="form.jamSelesai" type="time" class="w-full" />
           </UFormField>
         </div>
 
         <UFormField label="Judul Kegiatan" required>
-          <UTextarea v-model="form.judul" :rows="1" placeholder="Contoh: Membuat UI Dashboard" />
+          <UTextarea v-model="form.judul" :rows="1" placeholder="Contoh: Membuat UI Dashboard" class="w-full" />
           <template #hint>
             <span class="text-xs text-slate-400">Minimal 5 karakter</span>
           </template>
@@ -38,7 +38,8 @@
             v-model="form.deskripsi" 
             placeholder="Jelaskan detail kegiatan yang kamu lakukan hari ini..." 
             :rows="5" 
-            autoresize 
+            autoresize
+            class="w-full"
           />
           <template #hint>
             <span class="text-xs text-slate-400">Minimal 20 karakter</span>

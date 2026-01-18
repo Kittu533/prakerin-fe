@@ -21,7 +21,8 @@
           </template>
         </UInput>
         <USelectMenu v-model="filterKelas" :options="kelasOptions" placeholder="Filter Kelas" class="w-full sm:w-40" />
-        <USelectMenu v-model="filterStatus" :options="statusOptions" placeholder="Filter Status" class="w-full sm:w-40" />
+        <USelectMenu v-model="filterStatus" :options="statusOptions" placeholder="Filter Status"
+          class="w-full sm:w-40" />
       </div>
     </div>
 
@@ -41,46 +42,57 @@
         </div>
       </div>
 
-      <div v-else>
-        <table class="w-full">
+      <div v-else class="overflow-x-auto">
+        <table class="w-full min-w-[600px]">
           <thead class="bg-slate-50 border-b border-slate-200">
             <tr>
-              <th class="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Siswa</th>
-              <th class="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase hidden sm:table-cell">Kelas</th>
-              <th class="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase hidden md:table-cell">Industri</th>
-              <th class="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Kehadiran</th>
-              <th class="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Status</th>
-              <th class="px-6 py-3"></th>
+              <th
+                class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase sticky left-0 bg-slate-50 z-10 min-w-[180px]">
+                Siswa</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase whitespace-nowrap">Kelas
+              </th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase whitespace-nowrap">Industri
+              </th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase whitespace-nowrap">Kehadiran
+              </th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase whitespace-nowrap">Status
+              </th>
+              <th class="px-4 py-3 w-12"></th>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-100">
             <tr v-for="siswa in paginatedStudents" :key="siswa.id" class="hover:bg-slate-50 transition-colors">
-              <td class="px-6 py-4">
+              <td class="px-4 py-4 sticky left-0 bg-white z-10">
                 <div class="flex items-center gap-3">
-                  <div class="w-10 h-10 rounded-xl bg-sky-100 text-sky-700 flex items-center justify-center font-semibold text-sm">
+                  <div
+                    class="w-10 h-10 rounded-xl bg-sky-100 text-sky-700 flex items-center justify-center font-semibold text-sm shrink-0">
                     {{ siswa.inisial }}
                   </div>
-                  <div>
-                    <p class="font-medium text-slate-900">{{ siswa.nama }}</p>
+                  <div class="min-w-0">
+                    <p class="font-medium text-slate-900 truncate">{{ siswa.nama }}</p>
                     <p class="text-xs text-slate-500">{{ siswa.nis }}</p>
                   </div>
                 </div>
               </td>
-              <td class="px-6 py-4 text-sm text-slate-600 hidden sm:table-cell">{{ siswa.kelas }}</td>
-              <td class="px-6 py-4 text-sm text-slate-600 hidden md:table-cell">{{ siswa.industri }}</td>
-              <td class="px-6 py-4">
+              <td class="px-4 py-4 text-sm text-slate-600 whitespace-nowrap">{{ siswa.kelas }}</td>
+              <td class="px-4 py-4 text-sm text-slate-600 whitespace-nowrap max-w-[200px] truncate">{{ siswa.industri }}
+              </td>
+              <td class="px-4 py-4">
                 <div class="flex items-center gap-2">
                   <div class="w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                    <div class="h-full rounded-full" :class="siswa.kehadiran >= 80 ? 'bg-green-500' : 'bg-red-500'" :style="{ width: `${siswa.kehadiran}%` }" />
+                    <div class="h-full rounded-full" :class="siswa.kehadiran >= 80 ? 'bg-green-500' : 'bg-red-500'"
+                      :style="{ width: `${siswa.kehadiran}%` }" />
                   </div>
-                  <span class="text-sm font-medium" :class="siswa.kehadiran >= 80 ? 'text-green-600' : 'text-red-600'">{{ siswa.kehadiran }}%</span>
+                  <span class="text-sm font-medium whitespace-nowrap"
+                    :class="siswa.kehadiran >= 80 ? 'text-green-600' : 'text-red-600'">{{ siswa.kehadiran }}%</span>
                 </div>
               </td>
-              <td class="px-6 py-4">
+              <td class="px-4 py-4">
                 <UBadge :color="getStatusColor(siswa.status)" variant="subtle" size="xs">{{ siswa.status }}</UBadge>
               </td>
-              <td class="px-6 py-4">
-                <UButton icon="i-lucide-eye" color="neutral" variant="ghost" size="xs" @click="navigateTo(`/guru/siswa-bimbingan/${siswa.id}`)" />
+              <td class="px-4 py-4">
+                <UButton icon="i-lucide-eye" color="neutral" variant="ghost" size="xs"
+                  @click="navigateTo(`/guru/siswa-bimbingan/${siswa.id}`)" />
               </td>
             </tr>
           </tbody>

@@ -10,20 +10,23 @@
     <!-- Filter -->
     <div class="bg-white rounded-xl border border-slate-200 p-4">
       <UInput v-model="search" placeholder="Cari siswa..." class="max-w-sm">
-        <template #leading><Icon name="lucide:search" class="w-4 h-4 text-slate-400" /></template>
+        <template #leading>
+          <Icon name="lucide:search" class="w-4 h-4 text-slate-400" />
+        </template>
       </UInput>
     </div>
 
-    <!-- Table -->
-    <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+    <!-- Table (Desktop) -->
+    <div class="hidden lg:block bg-white rounded-xl border border-slate-200 overflow-hidden">
       <div v-if="loading" class="p-4 space-y-3">
         <USkeleton v-for="i in 5" :key="i" class="h-16 rounded-lg" />
       </div>
       <UTable v-else :data="filteredData" :columns="columns">
         <template #siswa-cell="{ row }">
           <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-lg bg-primary-100 flex items-center justify-center text-primary-600 text-sm font-semibold">
-              {{ row.original.siswa.split(' ').map((n: string) => n[0]).join('').slice(0, 2) }}
+            <div
+              class="w-10 h-10 rounded-lg bg-primary-100 flex items-center justify-center text-primary-600 text-sm font-semibold">
+              {{row.original.siswa.split(' ').map((n: string) => n[0]).join('').slice(0, 2)}}
             </div>
             <div>
               <p class="text-sm font-medium text-slate-900">{{ row.original.siswa }}</p>
@@ -32,7 +35,8 @@
           </div>
         </template>
         <template #nilai-cell="{ row }">
-          <span v-if="row.original.nilai" class="text-sm font-bold" :class="row.original.nilai >= 80 ? 'text-success-600' : row.original.nilai >= 70 ? 'text-warning-600' : 'text-error-600'">
+          <span v-if="row.original.nilai" class="text-sm font-bold"
+            :class="row.original.nilai >= 80 ? 'text-success-600' : row.original.nilai >= 70 ? 'text-warning-600' : 'text-error-600'">
             {{ row.original.nilai }}
           </span>
           <span v-else class="text-sm text-slate-400">Belum dinilai</span>
@@ -51,6 +55,47 @@
       </UTable>
     </div>
 
+    <!-- Card List (Mobile) -->
+    <div class="lg:hidden space-y-3">
+      <template v-if="loading">
+        <div v-for="i in 5" :key="i" class="bg-white rounded-xl border border-slate-200 p-4">
+          <USkeleton class="h-4 w-3/4 mb-2" />
+          <USkeleton class="h-3 w-1/2" />
+        </div>
+      </template>
+      <template v-else>
+        <div v-for="item in filteredData" :key="item.id" class="bg-white rounded-xl border border-slate-200 p-4"
+          @click="openModal(item)">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <div
+                class="w-10 h-10 rounded-lg bg-primary-100 flex items-center justify-center text-primary-600 text-sm font-semibold">
+                {{item.siswa.split(' ').map((n: string) => n[0]).join('').slice(0, 2)}}
+              </div>
+              <div>
+                <p class="text-sm font-medium text-slate-900">{{ item.siswa }}</p>
+                <p class="text-xs text-slate-500">{{ item.kelas }}</p>
+              </div>
+            </div>
+            <div class="text-right">
+              <p v-if="item.nilai" class="text-lg font-bold"
+                :class="item.nilai >= 80 ? 'text-success-600' : item.nilai >= 70 ? 'text-warning-600' : 'text-error-600'">
+                {{ item.nilai }}
+              </p>
+              <p v-else class="text-sm text-slate-400">-</p>
+              <UBadge :color="item.nilai ? 'success' : 'warning'" variant="subtle" size="xs">
+                {{ item.nilai ? 'Dinilai' : 'Belum' }}
+              </UBadge>
+            </div>
+          </div>
+        </div>
+        <div v-if="!filteredData.length" class="bg-white rounded-xl border border-slate-200 py-12 text-center">
+          <Icon name="lucide:users" class="w-12 h-12 text-slate-300 mx-auto mb-3" />
+          <p class="text-slate-500">Tidak ada data siswa</p>
+        </div>
+      </template>
+    </div>
+
     <!-- Pagination -->
     <div v-if="totalPages > 1" class="flex justify-center">
       <UPagination v-model:page="currentPage" :total="totalItems" :items-per-page="itemsPerPage" />
@@ -59,7 +104,7 @@
     <!-- Penilaian Modal -->
     <UModal v-model:open="modalOpen">
       <template #content>
-        <UCard v-if="selected">
+        <UCard v-if="selected" class="max-h-[85vh] overflow-y-auto">
           <template #header>
             <div class="flex items-center justify-between">
               <h3 class="font-semibold text-slate-900">Penilaian Siswa</h3>
@@ -69,35 +114,51 @@
             </div>
           </template>
 
-          <div class="space-y-4">
-            <div class="p-3 bg-slate-50 rounded-lg">
-              <p class="font-medium text-slate-900">{{ selected.siswa }}</p>
-              <p class="text-sm text-slate-500">{{ selected.kelas }}</p>
+          <div class="space-y-3">
+            <!-- Siswa Info -->
+            <div class="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
+              <div
+                class="w-10 h-10 rounded-lg bg-primary-100 flex items-center justify-center text-primary-600 font-semibold">
+                {{selected.siswa.split(' ').map((n: string) => n[0]).join('').slice(0, 2)}}
+              </div>
+              <div>
+                <p class="font-medium text-slate-900">{{ selected.siswa }}</p>
+                <p class="text-xs text-slate-500">{{ selected.kelas }}</p>
+              </div>
             </div>
 
-            <UFormField label="Sikap & Disiplin (0-100)" required>
-              <UInput v-model.number="form.sikap" type="number" min="0" max="100" />
+            <!-- Score Inputs - 2 columns on mobile -->
+            <div class="grid grid-cols-2 gap-3">
+              <UFormField label="Sikap" required>
+                <UInput v-model.number="form.sikap" type="number" min="0" max="100" placeholder="0-100"
+                  class="w-full" />
+              </UFormField>
+
+              <UFormField label="Keterampilan" required>
+                <UInput v-model.number="form.keterampilan" type="number" min="0" max="100" placeholder="0-100"
+                  class="w-full" />
+              </UFormField>
+
+              <UFormField label="Kerjasama" required>
+                <UInput v-model.number="form.kerjasama" type="number" min="0" max="100" placeholder="0-100"
+                  class="w-full" />
+              </UFormField>
+
+              <UFormField label="Inisiatif" required>
+                <UInput v-model.number="form.inisiatif" type="number" min="0" max="100" placeholder="0-100"
+                  class="w-full" />
+              </UFormField>
+            </div>
+
+            <!-- Catatan -->
+            <UFormField label="Catatan (opsional)">
+              <UTextarea v-model="form.catatan" placeholder="Catatan tambahan..." :rows="2" class="w-full" />
             </UFormField>
 
-            <UFormField label="Keterampilan Kerja (0-100)" required>
-              <UInput v-model.number="form.keterampilan" type="number" min="0" max="100" />
-            </UFormField>
-
-            <UFormField label="Kerjasama Tim (0-100)" required>
-              <UInput v-model.number="form.kerjasama" type="number" min="0" max="100" />
-            </UFormField>
-
-            <UFormField label="Inisiatif (0-100)" required>
-              <UInput v-model.number="form.inisiatif" type="number" min="0" max="100" />
-            </UFormField>
-
-            <UFormField label="Catatan">
-              <UTextarea v-model="form.catatan" placeholder="Catatan tambahan..." :rows="2" />
-            </UFormField>
-
-            <div class="p-3 bg-primary-50 rounded-lg text-center">
-              <p class="text-sm text-primary-600">Nilai Rata-rata</p>
-              <p class="text-2xl font-bold text-primary-700">{{ averageScore }}</p>
+            <!-- Average Score -->
+            <div class="flex items-center justify-between p-3 bg-primary-50 rounded-lg">
+              <span class="text-sm text-primary-600">Nilai Rata-rata</span>
+              <span class="text-2xl font-bold text-primary-700">{{ averageScore }}</span>
             </div>
           </div>
 
@@ -142,7 +203,7 @@ const columns = [
   { accessorKey: 'aksi', header: '' }
 ]
 
-const allFilteredData = computed(() => data.value.filter(d => 
+const allFilteredData = computed(() => data.value.filter(d =>
   !search.value || d.siswa.toLowerCase().includes(search.value.toLowerCase())
 ))
 

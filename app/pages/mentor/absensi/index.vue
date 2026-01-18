@@ -9,9 +9,12 @@
     <div class="bg-white rounded-xl border border-slate-200 p-4">
       <div class="flex flex-col sm:flex-row gap-3">
         <UInput v-model="search" placeholder="Cari siswa..." class="flex-1">
-          <template #leading><Icon name="lucide:search" class="w-4 h-4 text-slate-400" /></template>
+          <template #leading>
+            <Icon name="lucide:search" class="w-4 h-4 text-slate-400" />
+          </template>
         </UInput>
-        <USelectMenu v-model="filterStatus" :items="['Semua', 'Pending', 'Disetujui', 'Ditolak']" class="w-full sm:w-32" />
+        <USelectMenu v-model="filterStatus" :items="['Semua', 'Pending', 'Disetujui', 'Ditolak']"
+          class="w-full sm:w-32" />
         <UInput v-model="filterDate" type="date" class="w-full sm:w-40" />
       </div>
     </div>
@@ -32,22 +35,24 @@
       </div>
     </div>
 
-    <!-- Table -->
-    <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+    <!-- Table (Desktop) -->
+    <div class="hidden lg:block bg-white rounded-xl border border-slate-200 overflow-hidden">
       <div v-if="loading" class="p-4 space-y-3">
         <USkeleton v-for="i in 6" :key="i" class="h-14 rounded-lg" />
       </div>
       <UTable v-else :data="filteredData" :columns="columns">
         <template #siswa-cell="{ row }">
           <div class="flex items-center gap-2">
-            <div class="w-8 h-8 rounded-lg bg-primary-100 flex items-center justify-center text-primary-600 text-xs font-semibold">
-              {{ row.original.siswa.split(' ').map((n: string) => n[0]).join('').slice(0, 2) }}
+            <div
+              class="w-8 h-8 rounded-lg bg-primary-100 flex items-center justify-center text-primary-600 text-xs font-semibold">
+              {{row.original.siswa.split(' ').map((n: string) => n[0]).join('').slice(0, 2)}}
             </div>
             <span class="text-sm font-medium text-slate-900">{{ row.original.siswa }}</span>
           </div>
         </template>
         <template #status-cell="{ row }">
-          <UBadge :color="statusColor(row.original.status)" variant="subtle" size="xs">{{ row.original.status }}</UBadge>
+          <UBadge :color="statusColor(row.original.status)" variant="subtle" size="xs">{{ row.original.status }}
+          </UBadge>
         </template>
         <template #aksi-cell="{ row }">
           <div v-if="row.original.status === 'Pending'" class="flex gap-1">
@@ -63,6 +68,59 @@
       </UTable>
     </div>
 
+    <!-- Card List (Mobile) -->
+    <div class="lg:hidden space-y-3">
+      <template v-if="loading">
+        <div v-for="i in 6" :key="i" class="bg-white rounded-xl border border-slate-200 p-4">
+          <USkeleton class="h-4 w-3/4 mb-2" />
+          <USkeleton class="h-3 w-1/2" />
+        </div>
+      </template>
+      <template v-else>
+        <div v-for="item in filteredData" :key="item.id" class="bg-white rounded-xl border border-slate-200 p-4">
+          <div class="flex items-center justify-between mb-3">
+            <div class="flex items-center gap-3">
+              <div
+                class="w-10 h-10 rounded-xl bg-primary-100 flex items-center justify-center text-primary-600 font-semibold">
+                {{item.siswa.split(' ').map((n: string) => n[0]).join('').slice(0, 2)}}
+              </div>
+              <div>
+                <p class="font-medium text-slate-900">{{ item.siswa }}</p>
+                <p class="text-xs text-slate-500">{{ item.tanggal }}</p>
+              </div>
+            </div>
+            <UBadge :color="statusColor(item.status)" variant="subtle" size="xs">{{ item.status }}</UBadge>
+          </div>
+
+          <div class="flex items-center justify-between">
+            <div class="flex gap-4 text-sm">
+              <div>
+                <p class="text-xs text-slate-500">Check In</p>
+                <p class="font-medium text-slate-900">{{ item.checkIn }}</p>
+              </div>
+              <div>
+                <p class="text-xs text-slate-500">Check Out</p>
+                <p class="font-medium text-slate-900">{{ item.checkOut || '-' }}</p>
+              </div>
+            </div>
+            <div v-if="item.status === 'Pending'" class="flex gap-2">
+              <UButton size="sm" color="success" variant="soft" @click="approve(item)">
+                <Icon name="lucide:check" class="w-4 h-4" />
+              </UButton>
+              <UButton size="sm" color="error" variant="soft" @click="openReject(item)">
+                <Icon name="lucide:x" class="w-4 h-4" />
+              </UButton>
+            </div>
+          </div>
+        </div>
+
+        <div v-if="!filteredData.length" class="bg-white rounded-xl border border-slate-200 py-12 text-center">
+          <Icon name="lucide:calendar-check" class="w-12 h-12 text-slate-300 mx-auto mb-3" />
+          <p class="text-slate-500">Tidak ada data absensi</p>
+        </div>
+      </template>
+    </div>
+
     <!-- Pagination -->
     <div v-if="totalPages > 1" class="flex justify-center">
       <UPagination v-model:page="currentPage" :total="totalItems" :items-per-page="itemsPerPage" />
@@ -72,7 +130,9 @@
     <UModal v-model:open="rejectModal">
       <template #content>
         <UCard>
-          <template #header><h3 class="font-semibold text-slate-900">Tolak Absensi</h3></template>
+          <template #header>
+            <h3 class="font-semibold text-slate-900">Tolak Absensi</h3>
+          </template>
           <UFormField label="Alasan Penolakan" required>
             <UTextarea v-model="rejectReason" placeholder="Masukkan alasan..." :rows="3" />
           </UFormField>
