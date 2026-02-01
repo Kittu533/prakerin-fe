@@ -19,21 +19,31 @@
         <div class="p-4 lg:p-6">
           <h3 class="font-medium text-slate-900 mb-4">Informasi Kunjungan</h3>
           <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <UFormField label="Siswa" required>
-              <USelectMenu v-model="form.siswa" :options="siswaOptions" placeholder="Pilih siswa yang dikunjungi"
-                option-attribute="nama" value-attribute="id" class="w-full" size="lg" />
+            <UFormField label="Siswa yang Dikunjungi" required>
+              <USelectMenu 
+                v-model="selectedOption" 
+                :items="siswaOptions" 
+                placeholder="Pilih siswa yang dikunjungi"
+                :loading="loadingSiswa"
+                class="w-full" 
+                size="lg"
+                value-attribute="value"
+              >
+                <template #option="{ item }">
+                  <div class="flex flex-col">
+                    <span class="font-medium">{{ item.label }}</span>
+                    <span class="text-xs text-slate-500">{{ item.perusahaan }}</span>
+                  </div>
+                </template>
+              </USelectMenu>
             </UFormField>
 
             <UFormField label="Tanggal Kunjungan" required>
               <UInput v-model="form.tanggal" type="date" class="w-full" size="lg" />
             </UFormField>
 
-            <UFormField label="Jam Kunjungan" required>
-              <UInput v-model="form.jam" type="time" class="w-full" size="lg" />
-            </UFormField>
-
-            <UFormField label="Industri/Perusahaan">
-              <UInput v-model="form.industri" disabled placeholder="Otomatis terisi setelah pilih siswa"
+            <UFormField label="Industri/Perusahaan" class="lg:col-span-2">
+              <UInput :model-value="selectedPerusahaan" disabled placeholder="Otomatis terisi setelah pilih siswa"
                 class="w-full bg-slate-50" size="lg" />
             </UFormField>
           </div>
@@ -43,7 +53,7 @@
         <div class="p-4 lg:p-6">
           <h3 class="font-medium text-slate-900 mb-4">Catatan Kunjungan</h3>
           <UFormField label="Hasil Observasi" required>
-            <UTextarea v-model="form.catatan" :rows="4"
+            <UTextarea v-model="form.hasil_monitoring" :rows="4"
               placeholder="Tuliskan hasil observasi, kondisi lingkungan kerja, dan catatan penting lainnya..."
               class="w-full" />
           </UFormField>
@@ -61,7 +71,7 @@
               <div class="w-12 h-12 rounded-full flex items-center justify-center"
                 :class="form.kondisi === kondisi.value ? kondisi.bgColor : 'bg-slate-100'">
                 <Icon :name="kondisi.icon" class="w-6 h-6"
-                  :class="form.kondisi === kondisi.value ? kondisi.color : 'text-slate-400'" />
+                  :class="form.kondisi === kondisi.value ? kondisi.iconColor : 'text-slate-400'" />
               </div>
               <span class="text-sm font-medium text-center"
                 :class="form.kondisi === kondisi.value ? 'text-sky-700' : 'text-slate-600'">
@@ -75,29 +85,20 @@
         <div class="p-4 lg:p-6">
           <h3 class="font-medium text-slate-900 mb-4">Dokumentasi (Opsional)</h3>
           <div class="border-2 border-dashed rounded-xl p-8 text-center transition-colors cursor-pointer"
-            :class="files.length ? 'border-sky-300 bg-sky-50' : 'border-slate-200 hover:border-sky-300 hover:bg-slate-50'"
+            :class="form.foto_monitoring ? 'border-sky-300 bg-sky-50' : 'border-slate-200 hover:border-sky-300 hover:bg-slate-50'"
             @click="triggerUpload">
-            <input ref="fileInput" type="file" accept="image/*" multiple class="hidden" @change="handleUpload" />
-            <div v-if="!files.length">
+            <input ref="fileInput" type="file" accept="image/*" class="hidden" @change="handleUpload" />
+            <div v-if="!form.foto_monitoring">
               <Icon name="lucide:upload-cloud" class="w-12 h-12 text-slate-400 mx-auto mb-3" />
               <p class="text-sm font-medium text-slate-600">Klik untuk upload foto</p>
-              <p class="text-xs text-slate-400 mt-1">PNG, JPG max 5MB per file</p>
+              <p class="text-xs text-slate-400 mt-1">PNG, JPG max 5MB</p>
             </div>
-            <div v-else class="flex flex-wrap justify-center gap-2">
-              <div v-for="(file, i) in files" :key="i" class="relative">
-                <div class="w-20 h-20 rounded-lg bg-slate-200 flex items-center justify-center overflow-hidden">
-                  <Icon name="lucide:image" class="w-8 h-8 text-slate-400" />
-                </div>
-                <button type="button"
-                  class="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white rounded-full text-xs flex items-center justify-center"
-                  @click.stop="removeFile(i)">
-                  ×
-                </button>
-              </div>
-              <div
-                class="w-20 h-20 rounded-lg border-2 border-dashed border-slate-300 flex items-center justify-center text-slate-400 hover:border-sky-400 hover:text-sky-500">
-                <Icon name="lucide:plus" class="w-6 h-6" />
-              </div>
+            <div v-else class="flex flex-col items-center gap-2">
+              <Icon name="lucide:image" class="w-12 h-12 text-sky-500" />
+              <p class="text-sm text-sky-600">Foto siap diupload</p>
+              <UButton size="xs" variant="soft" color="error" @click.stop="form.foto_monitoring = ''">
+                Hapus Foto
+              </UButton>
             </div>
           </div>
         </div>
@@ -107,7 +108,7 @@
           <UButton type="button" variant="outline" color="neutral" class="w-full sm:w-auto" to="/guru/kunjungan">
             Batal
           </UButton>
-          <UButton type="submit" color="primary" class="w-full sm:w-auto" :loading="submitting">
+          <UButton type="submit" color="primary" class="w-full sm:w-auto" :loading="submitting" :disabled="!isFormValid">
             <Icon name="lucide:save" class="w-4 h-4 mr-2" />
             Simpan Kunjungan
           </UButton>
@@ -117,67 +118,165 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
+import { useMonitoringApi, usePenempatanApi } from '~/composables/api/use-internship'
+import { useSiswaApi } from '~/composables/api/use-academic'
+import { usePerusahaanApi } from '~/composables/api/use-partner'
+
 definePageMeta({ layout: 'guru' })
 
 const toast = useToast()
+const { create: createMonitoring } = useMonitoringApi()
+const { getAll: getAllPenempatan } = usePenempatanApi()
+const { getAll: getAllSiswa } = useSiswaApi()
+const { getAll: getAllPerusahaan } = usePerusahaanApi()
+
 const submitting = ref(false)
-const fileInput = ref(null)
-const files = ref([])
+const loadingSiswa = ref(true)
+const fileInput = ref<HTMLInputElement | null>(null)
 
 const form = reactive({
-  siswa: null,
+  id_penempatan: null as number | null,
   tanggal: '',
-  jam: '',
-  industri: '',
-  catatan: '',
-  kondisi: ''
+  hasil_monitoring: '',
+  kondisi: '',
+  foto_monitoring: ''
 })
 
-const siswaOptions = [
-  { id: 1, nama: 'Ryobi Surya Atmaja - XII RPL 1', industri: 'PT. Telkom Indonesia' },
-  { id: 2, nama: 'Dewi Sartika - XII RPL 2', industri: 'PT. Gojek Indonesia' },
-  { id: 3, nama: 'Ahmad Fauzi - XII TKJ 1', industri: 'CV. Digital Nusantara' },
-  { id: 4, nama: 'Siti Nurhaliza - XII MM 1', industri: 'PT. Media Kreasi' }
-]
+interface SiswaOption {
+  value: number
+  label: string
+  perusahaan: string
+}
+
+const siswaOptions = ref<SiswaOption[]>([])
+const selectedOption = ref<number | null>(null)
+
+// Sync selectedOption to form.id_penempatan
+watch(selectedOption, (val) => {
+  form.id_penempatan = val
+})
+
+const selectedPerusahaan = computed(() => {
+  if (!selectedOption.value) return ''
+  const selected = siswaOptions.value.find(s => s.value === selectedOption.value)
+  return selected?.perusahaan || ''
+})
 
 const kondisiOptions = [
-  { value: 'sangat-baik', label: 'Sangat Baik', icon: 'lucide:smile', color: 'text-green-600', bgColor: 'bg-green-100' },
-  { value: 'baik', label: 'Baik', icon: 'lucide:thumbs-up', color: 'text-sky-600', bgColor: 'bg-sky-100' },
-  { value: 'cukup', label: 'Cukup', icon: 'lucide:minus-circle', color: 'text-amber-600', bgColor: 'bg-amber-100' },
-  { value: 'perlu-perhatian', label: 'Perlu Perhatian', icon: 'lucide:alert-triangle', color: 'text-red-600', bgColor: 'bg-red-100' }
+  { value: 'sangat-baik', label: 'Sangat Baik', icon: 'lucide:smile', iconColor: 'text-green-600', bgColor: 'bg-green-100' },
+  { value: 'baik', label: 'Baik', icon: 'lucide:thumbs-up', iconColor: 'text-sky-600', bgColor: 'bg-sky-100' },
+  { value: 'cukup', label: 'Cukup', icon: 'lucide:minus-circle', iconColor: 'text-amber-600', bgColor: 'bg-amber-100' },
+  { value: 'perlu-perhatian', label: 'Perlu Perhatian', icon: 'lucide:alert-triangle', iconColor: 'text-red-600', bgColor: 'bg-red-100' }
 ]
 
-watch(() => form.siswa, (val) => {
-  const selected = siswaOptions.find(s => s.id === val)
-  form.industri = selected?.industri || ''
+const isFormValid = computed(() => {
+  return form.id_penempatan && form.tanggal && form.hasil_monitoring
 })
 
 const triggerUpload = () => {
   fileInput.value?.click()
 }
 
-const handleUpload = (e) => {
-  const newFiles = Array.from(e.target.files || [])
-  files.value.push(...newFiles)
+const handleUpload = (e: Event) => {
+  const target = e.target as HTMLInputElement
+  const file = target.files?.[0]
+  if (file) {
+    form.foto_monitoring = file.name
+  }
 }
 
-const removeFile = (index) => {
-  files.value.splice(index, 1)
+async function loadSiswaOptions() {
+  loadingSiswa.value = true
+  try {
+    // Fetch all data in parallel (3 requests total, optimized)
+    const [penempatanRes, siswaRes, perusahaanRes] = await Promise.all([
+      getAllPenempatan({ limit: 100 }),
+      getAllSiswa({ limit: 1000 }),
+      getAllPerusahaan({ limit: 1000 })
+    ])
+
+    console.log('Penempatan:', penempatanRes)
+    console.log('Siswa:', siswaRes)
+    console.log('Perusahaan:', perusahaanRes)
+
+    // Create lookup maps
+    const siswaMap = new Map<number, any>()
+    const perusahaanMap = new Map<number, any>()
+
+    if (siswaRes?.data) {
+      for (const s of siswaRes.data) {
+        siswaMap.set(s.id_siswa, s)
+      }
+    }
+    if (perusahaanRes?.data) {
+      for (const p of perusahaanRes.data) {
+        perusahaanMap.set(p.id_perusahaan, p)
+      }
+    }
+
+    // Build options from penempatan data
+    if (penempatanRes?.data) {
+      siswaOptions.value = penempatanRes.data.map((p: any) => {
+        const siswa = siswaMap.get(p.siswa_id)
+        const perusahaan = perusahaanMap.get(p.perusahaan_id)
+
+        return {
+          value: p.id_penempatan,
+          label: siswa?.nama_siswa || `Siswa #${p.siswa_id}`,
+          perusahaan: perusahaan?.nama_perusahaan || `Perusahaan #${p.perusahaan_id}`
+        }
+      })
+    }
+
+    console.log('Options built:', siswaOptions.value)
+  } catch (error) {
+    console.error('Failed to load siswa options:', error)
+    toast.add({ title: 'Gagal memuat data siswa', color: 'error' })
+  } finally {
+    loadingSiswa.value = false
+  }
 }
 
 const submit = async () => {
-  if (!form.siswa || !form.tanggal || !form.catatan) {
+  // Handle case where id_penempatan might be object or number
+  const penempatanId = typeof form.id_penempatan === 'object' && form.id_penempatan !== null
+    ? (form.id_penempatan as any).value 
+    : form.id_penempatan
+
+  console.log('Submitting with id_penempatan:', penempatanId, 'original:', form.id_penempatan)
+
+  if (!penempatanId || !form.tanggal || !form.hasil_monitoring) {
     toast.add({ title: 'Lengkapi semua field wajib', color: 'error' })
     return
   }
 
   submitting.value = true
-  await new Promise(r => setTimeout(r, 1000))
-  submitting.value = false
-  toast.add({ title: 'Kunjungan berhasil disimpan', color: 'success' })
-  navigateTo('/guru/kunjungan')
+  try {
+    const hasilMonitoring = form.kondisi 
+      ? `[Kondisi: ${form.kondisi}] ${form.hasil_monitoring}`
+      : form.hasil_monitoring
+
+    await createMonitoring({
+      id_penempatan: Number(penempatanId),
+      tanggal_monitoring: form.tanggal,
+      hasil_monitoring: hasilMonitoring,
+      foto_monitoring: form.foto_monitoring || undefined
+    })
+
+    toast.add({ title: 'Kunjungan berhasil disimpan', color: 'success' })
+    navigateTo('/guru/kunjungan')
+  } catch (error: any) {
+    console.error('Failed to create monitoring:', error)
+    toast.add({ title: error?.message || 'Gagal menyimpan kunjungan', color: 'error' })
+  } finally {
+    submitting.value = false
+  }
 }
+
+onMounted(() => {
+  loadSiswaOptions()
+})
 
 useHead({ title: 'Input Kunjungan | Guru PKL' })
 </script>

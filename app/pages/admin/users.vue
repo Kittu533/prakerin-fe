@@ -26,23 +26,25 @@
         <USkeleton v-for="i in 6" :key="i" class="h-14 rounded-lg" />
       </div>
       <UTable v-else :data="filteredData" :columns="columns">
-        <template #nama-cell="{ row }">
+        <template #identifier-cell="{ row }">
           <div class="flex items-center gap-2">
             <div class="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-semibold" :class="roleColor(row.original.role).bg">
-              {{ row.original.nama.split(' ').map((n: string) => n[0]).join('').slice(0, 2) }}
+              {{ row.original.identifier.slice(0, 2).toUpperCase() }}
             </div>
             <div>
-              <p class="text-sm font-medium text-slate-900">{{ row.original.nama }}</p>
-              <p class="text-xs text-slate-500">{{ row.original.email }}</p>
+              <p class="text-sm font-medium text-slate-900">{{ row.original.identifier }}</p>
+              <p class="text-xs text-slate-500">ID: {{ row.original.id }}</p>
             </div>
           </div>
         </template>
         <template #role-cell="{ row }">
-          <UBadge :color="roleColor(row.original.role).color" variant="subtle" size="xs">{{ row.original.role }}</UBadge>
+          <UBadge :color="roleColor(row.original.role).color" variant="subtle" size="xs">
+            {{ row.original.role.toUpperCase() }}
+          </UBadge>
         </template>
         <template #status-cell="{ row }">
-          <UBadge :color="row.original.active ? 'success' : 'neutral'" variant="subtle" size="xs">
-            {{ row.original.active ? 'Aktif' : 'Nonaktif' }}
+          <UBadge :color="row.original.is_active ? 'success' : 'neutral'" variant="subtle" size="xs">
+            {{ row.original.is_active ? 'Aktif' : 'Nonaktif' }}
           </UBadge>
         </template>
         <template #aksi-cell="{ row }">
@@ -56,6 +58,11 @@
           </div>
         </template>
       </UTable>
+
+      <div v-if="!loading && !filteredData.length" class="py-12 text-center">
+        <Icon name="lucide:users" class="w-12 h-12 text-slate-300 mx-auto mb-3" />
+        <p class="text-slate-500">Tidak ada data pengguna</p>
+      </div>
     </div>
 
     <!-- Pagination -->
@@ -80,28 +87,26 @@
           </template>
 
           <div class="space-y-5">
-            <!-- Informasi Akun -->
             <div class="space-y-4">
               <p class="text-xs font-semibold text-slate-400 uppercase tracking-wide">Informasi Akun</p>
               
-              <UFormField label="Nama Lengkap" required>
-                <UInput v-model="form.nama" placeholder="Masukkan nama lengkap" class="w-full">
-                  <template #leading>
-                    <Icon name="lucide:user" class="w-4 h-4 text-slate-400" />
-                  </template>
-                </UInput>
-              </UFormField>
-
-              <UFormField label="Email" required>
-                <UInput v-model="form.email" type="email" placeholder="contoh@email.com" class="w-full">
+              <UFormField label="Email/Username" required>
+                <UInput v-model="form.identifier" placeholder="contoh@email.com" class="w-full" :disabled="editing">
                   <template #leading>
                     <Icon name="lucide:mail" class="w-4 h-4 text-slate-400" />
                   </template>
                 </UInput>
               </UFormField>
+
+              <UFormField v-if="!editing" label="Password" required>
+                <UInput v-model="form.password" type="password" placeholder="Minimal 8 karakter" class="w-full">
+                  <template #leading>
+                    <Icon name="lucide:lock" class="w-4 h-4 text-slate-400" />
+                  </template>
+                </UInput>
+              </UFormField>
             </div>
 
-            <!-- Hak Akses -->
             <div class="space-y-4 pt-2 border-t border-slate-100">
               <p class="text-xs font-semibold text-slate-400 uppercase tracking-wide">Hak Akses</p>
               
@@ -120,18 +125,10 @@
                   </div>
                   <div>
                     <p class="text-sm font-medium text-slate-900">Status Akun</p>
-                    <p class="text-xs text-slate-500">{{ form.active ? 'Akun aktif dan dapat login' : 'Akun dinonaktifkan' }}</p>
+                    <p class="text-xs text-slate-500">{{ form.is_active ? 'Akun aktif dan dapat login' : 'Akun dinonaktifkan' }}</p>
                   </div>
                 </div>
-                <USwitch v-model="form.active" />
-              </div>
-            </div>
-
-            <!-- Password info for new account -->
-            <div v-if="!editing" class="p-3 bg-amber-50 border border-amber-100 rounded-xl">
-              <div class="flex items-start gap-2">
-                <Icon name="lucide:info" class="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
-                <p class="text-xs text-amber-700">Password default akan digenerate otomatis dan dapat direset setelah akun dibuat.</p>
+                <USwitch v-model="form.is_active" />
               </div>
             </div>
           </div>
@@ -139,8 +136,7 @@
           <template #footer>
             <div class="flex flex-col-reverse sm:flex-row gap-3 sm:justify-end">
               <UButton variant="outline" color="neutral" @click="modalOpen = false" class="sm:w-auto w-full">
-                <Icon name="lucide:x" class="w-4 h-4 mr-2" />
-                Batal
+                <Icon name="lucide:x" class="w-4 h-4 mr-2" />Batal
               </UButton>
               <UButton color="primary" :loading="processing" @click="saveUser" class="sm:w-auto w-full">
                 <Icon :name="editing ? 'lucide:save' : 'lucide:user-plus'" class="w-4 h-4 mr-2" />
@@ -160,7 +156,7 @@
             <h3 class="font-semibold text-slate-900">Password Baru</h3>
           </template>
           <div class="text-center py-4">
-            <p class="text-sm text-slate-500 mb-3">Password baru untuk {{ resetUser?.nama }}:</p>
+            <p class="text-sm text-slate-500 mb-3">Password baru untuk {{ resetUser?.identifier }}:</p>
             <div class="flex items-center justify-center gap-2 p-3 bg-slate-100 rounded-lg">
               <code class="text-lg font-mono font-bold text-slate-900">{{ newPassword }}</code>
               <UButton size="xs" color="primary" variant="ghost" @click="copyPassword">
@@ -178,107 +174,170 @@
 </template>
 
 <script setup lang="ts">
-definePageMeta({ layout: 'admin' })
+import { useUserApi, type User } from '~/composables/api/use-identity';
 
-const toast = useToast()
-const loading = ref(true)
-const search = ref('')
-const currentPage = ref(1)
-const itemsPerPage = 10
-const filterRole = ref('Semua')
-const modalOpen = ref(false)
-const resetModalOpen = ref(false)
-const editing = ref(false)
-const processing = ref(false)
-const resetUser = ref<any>(null)
-const newPassword = ref('')
+definePageMeta({ layout: 'admin' });
 
-const form = reactive({ id: null as number | null, nama: '', email: '', role: null as string | null, active: true })
+const toast = useToast();
+const userApi = useUserApi();
 
-const roleItems = ['Admin', 'Guru', 'Mentor', 'Siswa']
+const loading = ref(true);
+const search = ref('');
+const currentPage = ref(1);
+const itemsPerPage = 10;
+const filterRole = ref('Semua');
+const modalOpen = ref(false);
+const resetModalOpen = ref(false);
+const editing = ref(false);
+const processing = ref(false);
+const resetUser = ref<User | null>(null);
+const newPassword = ref('');
 
-const data = ref([
-  { id: 1, nama: 'Administrator', email: 'admin@sekolah.id', role: 'Admin', active: true },
-  { id: 2, nama: 'Siti Aminah', email: 'siti@sekolah.id', role: 'Guru', active: true },
-  { id: 3, nama: 'Budi Santoso', email: 'budi@sekolah.id', role: 'Guru', active: true },
-  { id: 4, nama: 'Pak Joko', email: 'joko@telkom.id', role: 'Mentor', active: true },
-  { id: 5, nama: 'Bu Rina', email: 'rina@astra.id', role: 'Mentor', active: false },
-  { id: 6, nama: 'Andi Pratama', email: 'andi@siswa.id', role: 'Siswa', active: true }
-])
+const form = reactive({ 
+  id: null as number | null, 
+  identifier: '', 
+  password: '',
+  role: '' as string, 
+  is_active: true 
+});
+
+const roleItems = ['admin', 'guru', 'mentor', 'siswa'];
+const data = ref<User[]>([]);
 
 const columns = [
-  { accessorKey: 'nama', header: 'Pengguna' },
+  { accessorKey: 'identifier', header: 'Pengguna' },
   { accessorKey: 'role', header: 'Role' },
   { accessorKey: 'status', header: 'Status' },
-  { accessorKey: 'aksi', header: '' }
-]
+  { accessorKey: 'aksi', header: '' },
+];
 
 const allFilteredData = computed(() => data.value.filter(d => {
-  const matchSearch = !search.value || d.nama.toLowerCase().includes(search.value.toLowerCase()) || d.email.toLowerCase().includes(search.value.toLowerCase())
-  const matchRole = filterRole.value === 'Semua' || d.role === filterRole.value
-  return matchSearch && matchRole
-}))
+  const matchSearch = !search.value || d.identifier.toLowerCase().includes(search.value.toLowerCase());
+  const matchRole = filterRole.value === 'Semua' || d.role.toLowerCase() === filterRole.value.toLowerCase();
+  return matchSearch && matchRole;
+}));
 
-const totalItems = computed(() => allFilteredData.value.length)
-const totalPages = computed(() => Math.ceil(totalItems.value / itemsPerPage))
+const totalItems = computed(() => allFilteredData.value.length);
+const totalPages = computed(() => Math.ceil(totalItems.value / itemsPerPage));
 
 const filteredData = computed(() => {
-  const start = (currentPage.value - 1) * itemsPerPage
-  return allFilteredData.value.slice(start, start + itemsPerPage)
-})
+  const start = (currentPage.value - 1) * itemsPerPage;
+  return allFilteredData.value.slice(start, start + itemsPerPage);
+});
 
-watch([search, filterRole], () => { currentPage.value = 1 })
+watch([search, filterRole], () => { currentPage.value = 1; });
 
-const roleColor = (role: string) => ({
-  Admin: { color: 'error', bg: 'bg-red-100 text-red-600' },
-  Guru: { color: 'primary', bg: 'bg-sky-100 text-sky-600' },
-  Mentor: { color: 'warning', bg: 'bg-amber-100 text-amber-600' },
-  Siswa: { color: 'success', bg: 'bg-green-100 text-green-600' }
-})[role] || { color: 'neutral', bg: 'bg-slate-100 text-slate-600' }
+const roleColor = (role: string): { color: 'error' | 'primary' | 'warning' | 'success' | 'neutral'; bg: string } => ({
+  admin: { color: 'error' as const, bg: 'bg-red-100 text-red-600' },
+  guru: { color: 'primary' as const, bg: 'bg-sky-100 text-sky-600' },
+  mentor: { color: 'warning' as const, bg: 'bg-amber-100 text-amber-600' },
+  siswa: { color: 'success' as const, bg: 'bg-green-100 text-green-600' },
+})[role.toLowerCase()] || { color: 'neutral' as const, bg: 'bg-slate-100 text-slate-600' };
 
-const openModal = (user?: any) => {
-  editing.value = !!user
+const openModal = (user?: User) => {
+  editing.value = !!user;
   if (user) {
-    Object.assign(form, { id: user.id, nama: user.nama, email: user.email, role: user.role, active: user.active })
+    Object.assign(form, { 
+      id: user.id, 
+      identifier: user.identifier, 
+      password: '',
+      role: user.role, 
+      is_active: user.is_active 
+    });
   } else {
-    Object.assign(form, { id: null, nama: '', email: '', role: null, active: true })
+    Object.assign(form, { id: null, identifier: '', password: '', role: '', is_active: true });
   }
-  modalOpen.value = true
-}
+  modalOpen.value = true;
+};
 
 const saveUser = async () => {
-  if (!form.nama || !form.email || !form.role) {
-    toast.add({ title: 'Lengkapi semua field', color: 'error' })
-    return
+  if (!form.identifier || !form.role) {
+    toast.add({ title: 'Lengkapi semua field', color: 'error' });
+    return;
   }
-  processing.value = true
-  await new Promise(r => setTimeout(r, 1000))
-  if (editing.value) {
-    const idx = data.value.findIndex(d => d.id === form.id)
-    if (idx !== -1) data.value[idx] = { ...data.value[idx], ...form }
-  } else {
-    data.value.push({ id: Date.now(), nama: form.nama, email: form.email, role: form.role!, active: form.active })
+  if (!editing.value && !form.password) {
+    toast.add({ title: 'Password wajib diisi', color: 'error' });
+    return;
   }
-  processing.value = false
-  modalOpen.value = false
-  toast.add({ title: editing.value ? 'Akun diperbarui' : 'Akun ditambahkan', color: 'success' })
-}
 
-const resetPassword = async (user: any) => {
-  resetUser.value = user
-  newPassword.value = Math.random().toString(36).slice(-8).toUpperCase()
-  resetModalOpen.value = true
-}
+  processing.value = true;
+  try {
+    if (editing.value && form.id) {
+      const response = await userApi.update(form.id, { 
+        role: form.role,
+        is_active: form.is_active 
+      });
+      if (response.success) {
+        toast.add({ title: 'Akun diperbarui', color: 'success' });
+        await fetchData();
+      } else {
+        toast.add({ title: response.message || 'Gagal memperbarui', color: 'error' });
+      }
+    } else {
+      const response = await userApi.create({
+        identifier: form.identifier,
+        password: form.password,
+        role: form.role,
+        entity_id: 1,
+        entity_type: form.role,
+      });
+      if (response.success) {
+        toast.add({ title: 'Akun ditambahkan', color: 'success' });
+        await fetchData();
+      } else {
+        toast.add({ title: response.message || 'Gagal menambahkan', color: 'error' });
+      }
+    }
+    modalOpen.value = false;
+  } catch (error) {
+    toast.add({ title: 'Terjadi kesalahan', color: 'error' });
+  } finally {
+    processing.value = false;
+  }
+};
+
+const resetPassword = async (user: User) => {
+  try {
+    const response = await userApi.resetPassword(user.id);
+    if (response.success && response.data?.generated_password) {
+      resetUser.value = user;
+      newPassword.value = response.data.generated_password;
+      resetModalOpen.value = true;
+    } else {
+      toast.add({ title: response.message || 'Gagal reset password', color: 'error' });
+    }
+  } catch (error) {
+    toast.add({ title: 'Terjadi kesalahan', color: 'error' });
+  }
+};
 
 const copyPassword = () => {
-  navigator.clipboard.writeText(newPassword.value)
-  toast.add({ title: 'Password disalin', color: 'success' })
-}
+  navigator.clipboard.writeText(newPassword.value);
+  toast.add({ title: 'Password disalin', color: 'success' });
+};
 
-onMounted(async () => {
-  await new Promise(r => setTimeout(r, 600))
-  loading.value = false
-})
+const fetchData = async () => {
+  loading.value = true;
+  try {
+    const response = await userApi.getAll({ limit: 100 });
+    if (response.success) {
+      data.value = response.data || [];
+    }
+  } catch (error) {
+    console.error('Failed to fetch users:', error);
+    // Fallback to dummy data if API not available
+    data.value = [
+      { id: 1, identifier: 'admin@prakerin.id', role: 'admin', entity_id: 1, entity_type: 'admin', is_active: true },
+      { id: 2, identifier: 'guru@prakerin.id', role: 'guru', entity_id: 1, entity_type: 'guru', is_active: true },
+      { id: 3, identifier: 'siswa@prakerin.id', role: 'siswa', entity_id: 1, entity_type: 'siswa', is_active: true },
+      { id: 4, identifier: 'mentor@prakerin.id', role: 'mentor', entity_id: 1, entity_type: 'mentor', is_active: true },
+    ];
+  } finally {
+    loading.value = false;
+  }
+};
 
-useHead({ title: 'Kelola Akun | Admin' })
+onMounted(fetchData);
+
+useHead({ title: 'Kelola Akun | Admin' });
 </script>

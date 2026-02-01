@@ -17,11 +17,12 @@
 
     <div class="bg-white rounded-xl border border-slate-200 p-4">
       <div class="flex flex-col sm:flex-row gap-3">
-        <UInput v-model="search" placeholder="Cari siswa..." class="flex-1">
+        <UInput v-model="search" placeholder="Cari siswa..." class="flex-1" @keyup.enter="fetchData">
           <template #leading><Icon name="lucide:search" class="w-4 h-4 text-slate-400" /></template>
         </UInput>
-        <USelectMenu v-model="filterJurusan" :items="['Semua', 'RPL', 'TKJ', 'MM', 'AKL']" class="w-full sm:w-28" />
-        <USelectMenu v-model="filterKelas" :items="kelasOptions" class="w-full sm:w-32" />
+        <USelectMenu v-model="filterKelasId" :items="kelasOptions" value-key="id" class="w-full sm:w-48" @change="fetchData">
+          <template #default>{{ kelasOptions.find(k => k.id === filterKelasId)?.nama_kelas || 'Semua Kelas' }}</template>
+        </USelectMenu>
       </div>
     </div>
 
@@ -29,27 +30,31 @@
       <div v-if="loading" class="p-4 space-y-3">
         <USkeleton v-for="i in 6" :key="i" class="h-14 rounded-lg" />
       </div>
-      <UTable v-else :data="filteredData" :columns="columns">
+      <div v-else-if="!data.length" class="p-8 text-center text-slate-500">
+        <Icon name="lucide:users" class="w-12 h-12 mx-auto mb-3 text-slate-300" />
+        <p>Belum ada data siswa</p>
+      </div>
+      <UTable v-else :data="data" :columns="columns">
         <template #nama-cell="{ row }">
           <div class="flex items-center gap-2">
             <div class="w-8 h-8 rounded-lg bg-sky-100 flex items-center justify-center text-sky-600 text-xs font-semibold">
-              {{ row.original.nama.split(' ').map((n: string) => n[0]).join('').slice(0, 2) }}
+              {{ row.original.nama_siswa.split(' ').map((n: string) => n[0]).join('').slice(0, 2) }}
             </div>
             <div>
-              <p class="text-sm font-medium text-slate-900">{{ row.original.nama }}</p>
-              <p class="text-xs text-slate-500">{{ row.original.nisn }}</p>
+              <p class="text-sm font-medium text-slate-900">{{ row.original.nama_siswa }}</p>
+              <p class="text-xs text-slate-500">{{ row.original.nis }}</p>
             </div>
           </div>
         </template>
         <template #kelas-cell="{ row }">
-          <UBadge color="primary" variant="subtle" size="xs">{{ row.original.kelas }}</UBadge>
+          <UBadge color="primary" variant="subtle" size="xs">{{ row.original.kelas?.nama_kelas || '-' }}</UBadge>
         </template>
         <template #aksi-cell="{ row }">
           <div class="flex gap-1">
             <UButton size="xs" color="neutral" variant="ghost" @click="openModal(row.original)">
               <Icon name="lucide:edit" class="w-4 h-4" />
             </UButton>
-            <UButton size="xs" color="error" variant="ghost" @click="deleteItem(row.original.id)">
+            <UButton size="xs" color="error" variant="ghost" @click="confirmDelete(row.original)">
               <Icon name="lucide:trash-2" class="w-4 h-4" />
             </UButton>
           </div>
@@ -58,8 +63,8 @@
     </div>
 
     <!-- Pagination -->
-    <div v-if="totalPages > 1" class="flex justify-center">
-      <UPagination v-model:page="currentPage" :total="totalItems" :items-per-page="itemsPerPage" />
+    <div v-if="pagination.totalPages > 1" class="flex justify-center">
+      <UPagination v-model:page="currentPage" :total="pagination.total" :items-per-page="pagination.limit" @update:page="fetchData" />
     </div>
 
     <!-- Form Modal -->
@@ -68,20 +73,29 @@
         <UCard>
           <template #header><h3 class="font-semibold text-slate-900">{{ editing ? 'Edit' : 'Tambah' }} Siswa</h3></template>
           <div class="space-y-4">
-            <UFormField label="NISN" required>
-              <UInput v-model="form.nisn" placeholder="0012345678" />
+            <UFormField label="NIS" required>
+              <UInput v-model="form.nis" placeholder="Nomor Induk Siswa" />
             </UFormField>
             <UFormField label="Nama Lengkap" required>
-              <UInput v-model="form.nama" placeholder="Nama lengkap" />
+              <UInput v-model="form.nama_siswa" placeholder="Nama lengkap siswa" />
             </UFormField>
             <UFormField label="Kelas" required>
-              <USelectMenu v-model="form.kelas" :items="['XII RPL 1', 'XII RPL 2', 'XII TKJ 1', 'XII MM 1', 'XII AKL 1']" />
+              <USelectMenu v-model="form.id_kelas" :items="allKelas" value-key="id_kelas" class="w-full">
+                <template #default>{{ allKelas.find(k => k.id_kelas === form.id_kelas)?.nama_kelas || 'Pilih Kelas' }}</template>
+                <template #item="{ item }">{{ item.nama_kelas }}</template>
+              </USelectMenu>
+            </UFormField>
+            <UFormField label="Jenis Kelamin">
+              <USelectMenu v-model="form.jenis_kelamin" :items="['L', 'P']" class="w-full">
+                <template #default>{{ form.jenis_kelamin === 'L' ? 'Laki-laki' : form.jenis_kelamin === 'P' ? 'Perempuan' : 'Pilih' }}</template>
+                <template #item="{ item }">{{ item === 'L' ? 'Laki-laki' : 'Perempuan' }}</template>
+              </USelectMenu>
             </UFormField>
             <UFormField label="Email">
               <UInput v-model="form.email" type="email" placeholder="email@siswa.id" />
             </UFormField>
             <UFormField label="No HP">
-              <UInput v-model="form.hp" type="tel" placeholder="08xxx" />
+              <UInput v-model="form.no_hp" type="tel" placeholder="08xxx" />
             </UFormField>
           </div>
           <template #footer>
@@ -107,31 +121,31 @@
               </UButton>
             </div>
             <div class="p-4 border-2 border-dashed border-slate-200 rounded-lg text-center">
-              <input ref="fileInput" type="file" accept=".xlsx,.xls" class="hidden" @change="handleImport" />
               <Icon name="lucide:file-spreadsheet" class="w-10 h-10 text-slate-300 mx-auto mb-2" />
-              <p class="text-sm text-slate-500 mb-2">Upload file Excel (.xlsx)</p>
-              <UButton size="sm" color="primary" @click="($refs.fileInput as HTMLInputElement).click()">Pilih File</UButton>
-            </div>
-            <div v-if="importPreview.length" class="border border-slate-200 rounded-lg overflow-hidden">
-              <p class="px-3 py-2 bg-slate-50 text-sm font-medium text-slate-700">Preview ({{ importPreview.length }} data)</p>
-              <div class="max-h-40 overflow-y-auto">
-                <table class="w-full text-sm">
-                  <tr v-for="(row, i) in importPreview.slice(0, 5)" :key="i" class="border-t border-slate-100">
-                    <td class="px-3 py-2">{{ row.nisn }}</td>
-                    <td class="px-3 py-2">{{ row.nama }}</td>
-                    <td class="px-3 py-2">{{ row.kelas }}</td>
-                  </tr>
-                </table>
-              </div>
+              <p class="text-sm text-slate-500 mb-2">Fitur import akan segera tersedia</p>
             </div>
           </div>
           <template #footer>
-            <div class="flex gap-3">
-              <UButton variant="outline" color="neutral" class="flex-1" @click="importModal = false">Batal</UButton>
-              <UButton color="primary" class="flex-1" :disabled="!importPreview.length" :loading="importing" @click="commitImport">
-                Import {{ importPreview.length }} Data
-              </UButton>
+            <UButton variant="outline" color="neutral" class="w-full" @click="importModal = false">Tutup</UButton>
+          </template>
+        </UCard>
+      </template>
+    </UModal>
+
+    <!-- Password Info Modal -->
+    <UModal v-model:open="passwordModal">
+      <template #content>
+        <UCard>
+          <template #header><h3 class="font-semibold text-slate-900">Siswa Berhasil Ditambahkan</h3></template>
+          <div class="space-y-4">
+            <div class="p-4 bg-green-50 border border-green-200 rounded-lg">
+              <p class="text-sm text-green-700 mb-2">Password default untuk login:</p>
+              <p class="font-mono text-lg font-bold text-green-800">{{ generatedPassword }}</p>
             </div>
+            <p class="text-sm text-slate-500">Siswa dapat login menggunakan NIS dan password di atas. Pastikan untuk menginformasikan ke siswa.</p>
+          </div>
+          <template #footer>
+            <UButton color="primary" class="w-full" @click="passwordModal = false">Mengerti</UButton>
           </template>
         </UCard>
       </template>
@@ -140,113 +154,178 @@
 </template>
 
 <script setup lang="ts">
-definePageMeta({ layout: 'admin' })
+import { useSiswaApi, useKelasApi, type Siswa, type Kelas } from '~/composables/api/use-academic';
 
-const toast = useToast()
-const loading = ref(true)
-const search = ref('')
-const filterJurusan = ref('Semua')
-const filterKelas = ref('Semua')
-const modalOpen = ref(false)
-const importModal = ref(false)
-const editing = ref(false)
-const processing = ref(false)
-const importing = ref(false)
-const importPreview = ref<any[]>([])
+definePageMeta({ layout: 'admin' });
 
-const form = reactive({ id: null as number | null, nisn: '', nama: '', kelas: null as string | null, email: '', hp: '' })
-const currentPage = ref(1)
-const itemsPerPage = 10
+const toast = useToast();
+const siswaApi = useSiswaApi();
+const kelasApi = useKelasApi();
 
-const kelasOptions = ['Semua', 'XII RPL 1', 'XII RPL 2', 'XII TKJ 1', 'XII MM 1', 'XII AKL 1']
+const loading = ref(true);
+const search = ref('');
+const modalOpen = ref(false);
+const importModal = ref(false);
+const passwordModal = ref(false);
+const editing = ref(false);
+const processing = ref(false);
+const generatedPassword = ref('');
 
-const data = ref([
-  { id: 1, nisn: '0012345678', nama: 'Budi Santoso', kelas: 'XII RPL 1', email: 'budi@siswa.id', hp: '081234567890' },
-  { id: 2, nisn: '0012345679', nama: 'Ani Wijaya', kelas: 'XII TKJ 1', email: 'ani@siswa.id', hp: '081234567891' },
-  { id: 3, nisn: '0012345680', nama: 'Deni Pratama', kelas: 'XII MM 1', email: 'deni@siswa.id', hp: '081234567892' },
-  { id: 4, nisn: '0012345681', nama: 'Siti Aminah', kelas: 'XII RPL 2', email: 'siti@siswa.id', hp: '081234567893' },
-  { id: 5, nisn: '0012345682', nama: 'Rudi Hermawan', kelas: 'XII AKL 1', email: 'rudi@siswa.id', hp: '081234567894' }
-])
+const data = ref<Siswa[]>([]);
+const allKelas = ref<Kelas[]>([]);
+const filterKelasId = ref<number | undefined>(undefined);
+const currentPage = ref(1);
+const pagination = ref({ page: 1, limit: 10, total: 0, totalPages: 0 });
+
+const form = reactive({
+  id_siswa: null as number | null,
+  nis: '',
+  nama_siswa: '',
+  jenis_kelamin: '' as string,
+  email: '',
+  no_hp: '',
+  id_kelas: undefined as number | undefined,
+});
 
 const columns = [
   { accessorKey: 'nama', header: 'Siswa' },
   { accessorKey: 'kelas', header: 'Kelas' },
   { accessorKey: 'email', header: 'Email' },
-  { accessorKey: 'hp', header: 'No HP' },
-  { accessorKey: 'aksi', header: '' }
-]
+  { accessorKey: 'no_hp', header: 'No HP' },
+  { accessorKey: 'aksi', header: '' },
+];
 
-const allFilteredData = computed(() => data.value.filter(d => {
-  const matchSearch = !search.value || d.nama.toLowerCase().includes(search.value.toLowerCase()) || d.nisn.includes(search.value)
-  const matchJurusan = filterJurusan.value === 'Semua' || d.kelas.includes(filterJurusan.value)
-  const matchKelas = filterKelas.value === 'Semua' || d.kelas === filterKelas.value
-  return matchSearch && matchJurusan && matchKelas
-}))
+const kelasOptions = computed(() => [{ id: null, nama_kelas: 'Semua Kelas' }, ...allKelas.value.map(k => ({ id: k.id_kelas, nama_kelas: k.nama_kelas }))]);
 
-const totalItems = computed(() => allFilteredData.value.length)
-const totalPages = computed(() => Math.ceil(totalItems.value / itemsPerPage))
-
-const filteredData = computed(() => {
-  const start = (currentPage.value - 1) * itemsPerPage
-  return allFilteredData.value.slice(start, start + itemsPerPage)
-})
-
-watch([search, filterJurusan, filterKelas], () => { currentPage.value = 1 })
-
-const openModal = (item?: any) => {
-  editing.value = !!item
-  if (item) Object.assign(form, item)
-  else Object.assign(form, { id: null, nisn: '', nama: '', kelas: null, email: '', hp: '' })
-  modalOpen.value = true
-}
-
-const save = async () => {
-  if (!form.nisn || !form.nama || !form.kelas) { toast.add({ title: 'Lengkapi semua field', color: 'error' }); return }
-  processing.value = true
-  await new Promise(r => setTimeout(r, 500))
-  if (editing.value) {
-    const idx = data.value.findIndex(d => d.id === form.id)
-    if (idx !== -1) data.value[idx] = { ...data.value[idx], ...form }
-  } else {
-    data.value.unshift({ id: Date.now(), nisn: form.nisn, nama: form.nama, kelas: form.kelas!, email: form.email, hp: form.hp })
+async function fetchData() {
+  loading.value = true;
+  try {
+    const response = await siswaApi.getAll({
+      page: currentPage.value,
+      limit: 10,
+      search: search.value || undefined,
+      id_kelas: filterKelasId.value || undefined,
+    });
+    if (response.success) {
+      data.value = response.data || [];
+      if (response.pagination) {
+        pagination.value = response.pagination;
+      }
+    }
+  } catch (error) {
+    console.error('Failed to fetch siswa:', error);
+    toast.add({ title: 'Gagal memuat data siswa', color: 'error' });
+  } finally {
+    loading.value = false;
   }
-  processing.value = false
-  modalOpen.value = false
-  toast.add({ title: 'Data disimpan', color: 'success' })
 }
 
-const deleteItem = (id: number) => {
-  data.value = data.value.filter(d => d.id !== id)
-  toast.add({ title: 'Data dihapus', color: 'neutral' })
+async function fetchKelas() {
+  try {
+    const response = await kelasApi.getAll({ limit: 100 });
+    if (response.success) {
+      allKelas.value = response.data;
+    }
+  } catch (error) {
+    console.error('Failed to fetch kelas:', error);
+  }
 }
 
-const handleImport = (e: Event) => {
-  const file = (e.target as HTMLInputElement).files?.[0]
-  if (!file) return
-  // Mock preview - in real app, parse Excel file
-  importPreview.value = [
-    { nisn: '0012345690', nama: 'Import Siswa 1', kelas: 'XII RPL 1' },
-    { nisn: '0012345691', nama: 'Import Siswa 2', kelas: 'XII RPL 1' },
-    { nisn: '0012345692', nama: 'Import Siswa 3', kelas: 'XII TKJ 1' }
-  ]
+function openModal(item?: Siswa) {
+  editing.value = !!item;
+  if (item) {
+    form.id_siswa = item.id_siswa;
+    form.nis = item.nis;
+    form.nama_siswa = item.nama_siswa;
+    form.jenis_kelamin = item.jenis_kelamin || '';
+    form.email = item.email || '';
+    form.no_hp = item.no_hp || '';
+    form.id_kelas = item.id_kelas;
+  } else {
+    form.id_siswa = null;
+    form.nis = '';
+    form.nama_siswa = '';
+    form.jenis_kelamin = '';
+    form.email = '';
+    form.no_hp = '';
+    form.id_kelas = undefined;
+  }
+  modalOpen.value = true;
 }
 
-const commitImport = async () => {
-  importing.value = true
-  await new Promise(r => setTimeout(r, 1000))
-  importPreview.value.forEach(row => {
-    data.value.unshift({ id: Date.now() + Math.random(), ...row, email: '', hp: '' })
-  })
-  importing.value = false
-  importModal.value = false
-  importPreview.value = []
-  toast.add({ title: 'Import berhasil', color: 'success' })
+async function save() {
+  if (!form.nis || !form.nama_siswa || !form.id_kelas) {
+    toast.add({ title: 'Lengkapi NIS, Nama, dan Kelas', color: 'error' });
+    return;
+  }
+
+  processing.value = true;
+  try {
+    if (editing.value && form.id_siswa) {
+      const response = await siswaApi.update(form.id_siswa, {
+        nis: form.nis,
+        nama_siswa: form.nama_siswa,
+        jenis_kelamin: form.jenis_kelamin || undefined,
+        email: form.email || undefined,
+        no_hp: form.no_hp || undefined,
+        id_kelas: form.id_kelas,
+      });
+      if (response.success) {
+        toast.add({ title: 'Data siswa diperbarui', color: 'success' });
+        modalOpen.value = false;
+        fetchData();
+      } else {
+        toast.add({ title: response.message || 'Gagal memperbarui', color: 'error' });
+      }
+    } else {
+      const response = await siswaApi.create({
+        nis: form.nis,
+        nama_siswa: form.nama_siswa,
+        jenis_kelamin: form.jenis_kelamin || undefined,
+        email: form.email || undefined,
+        no_hp: form.no_hp || undefined,
+        id_kelas: form.id_kelas,
+      });
+      if (response.success) {
+        modalOpen.value = false;
+        // Show generated password
+        if (response.data.generated_password) {
+          generatedPassword.value = response.data.generated_password;
+          passwordModal.value = true;
+        } else {
+          toast.add({ title: 'Siswa berhasil ditambahkan', color: 'success' });
+        }
+        fetchData();
+      } else {
+        toast.add({ title: response.message || 'Gagal menambahkan', color: 'error' });
+      }
+    }
+  } catch (error: any) {
+    toast.add({ title: error.message || 'Terjadi kesalahan', color: 'error' });
+  } finally {
+    processing.value = false;
+  }
+}
+
+async function confirmDelete(item: Siswa) {
+  if (!confirm(`Hapus siswa "${item.nama_siswa}"?`)) return;
+  
+  try {
+    const response = await siswaApi.remove(item.id_siswa);
+    if (response.success) {
+      toast.add({ title: 'Siswa dihapus', color: 'success' });
+      fetchData();
+    } else {
+      toast.add({ title: response.message || 'Gagal menghapus', color: 'error' });
+    }
+  } catch (error) {
+    toast.add({ title: 'Gagal menghapus siswa', color: 'error' });
+  }
 }
 
 onMounted(async () => {
-  await new Promise(r => setTimeout(r, 500))
-  loading.value = false
-})
+  await Promise.all([fetchData(), fetchKelas()]);
+});
 
-useHead({ title: 'Siswa | Admin' })
+useHead({ title: 'Siswa | Admin' });
 </script>

@@ -92,7 +92,7 @@
               </td>
               <td class="px-4 py-4">
                 <UButton icon="i-lucide-eye" color="neutral" variant="ghost" size="xs"
-                  @click="navigateTo(`/guru/siswa-bimbingan/${siswa.id}`)" />
+                  @click="navigateTo(`/guru/siswa-bimbingan/${encodeWithSlug(siswa.id, siswa.nama)}`)" />
               </td>
             </tr>
           </tbody>
@@ -112,20 +112,35 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
+import { usePenempatanApi } from '~/composables/api/use-internship'
+import { useSiswaApi } from '~/composables/api/use-academic'
+import { usePerusahaanApi } from '~/composables/api/use-partner'
+import { encodeWithSlug } from '~/composables/use-id-encoder'
+
 definePageMeta({ layout: 'guru' })
+
+const { getAll: getPenempatan } = usePenempatanApi()
+const { getAll: getAllSiswa } = useSiswaApi()
+const { getAll: getAllPerusahaan } = usePerusahaanApi()
 
 const loading = ref(true)
 const search = ref('')
-const filterKelas = ref(null)
-const filterStatus = ref(null)
+const filterKelas = ref<string | null>(null)
+const filterStatus = ref<string | null>(null)
 const currentPage = ref(1)
 const itemsPerPage = 10
 
-const kelasOptions = ['XII RPL 1', 'XII RPL 2', 'XII TKJ 1', 'XII MM 1']
+const kelasOptions = ref<string[]>([])
 const statusOptions = ['Aktif', 'Selesai', 'Dibatalkan']
 
-const students = ref([])
+const students = ref<any[]>([])
+const stats = reactive({ totalSiswa: 0 })
+
+// Helper function to get initials
+function getInitials(name: string): string {
+  return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+}
 
 const filteredStudents = computed(() => {
   return students.value.filter(s => {
@@ -146,21 +161,126 @@ const paginatedStudents = computed(() => {
 
 watch([search, filterKelas, filterStatus], () => { currentPage.value = 1 })
 
-const getStatusColor = (status) => {
-  const colors = { Aktif: 'success', Selesai: 'primary', Dibatalkan: 'error' }
+const getStatusColor = (status: string) => {
+  const colors: Record<string, string> = { Aktif: 'success', Selesai: 'primary', Dibatalkan: 'error' }
   return colors[status] || 'neutral'
 }
 
-onMounted(async () => {
-  await new Promise(r => setTimeout(r, 600))
-  students.value = [
-    { id: 1, nama: 'Ryobi Surya Atmaja', inisial: 'RS', nis: '2023010563', kelas: 'XII RPL 1', industri: 'PT. Telkom Indonesia', kehadiran: 95, status: 'Aktif' },
-    { id: 2, nama: 'Dewi Sartika', inisial: 'DS', nis: '2023010564', kelas: 'XII RPL 2', industri: 'PT. Gojek Indonesia', kehadiran: 88, status: 'Aktif' },
-    { id: 3, nama: 'Ahmad Fauzi', inisial: 'AF', nis: '2023010565', kelas: 'XII TKJ 1', industri: 'CV. Digital Nusantara', kehadiran: 72, status: 'Aktif' },
-    { id: 4, nama: 'Siti Nurhaliza', inisial: 'SN', nis: '2023010566', kelas: 'XII MM 1', industri: 'PT. Media Kreasi', kehadiran: 100, status: 'Selesai' },
-    { id: 5, nama: 'Budi Prasetyo', inisial: 'BP', nis: '2023010567', kelas: 'XII RPL 1', industri: 'PT. Tokopedia', kehadiran: 90, status: 'Aktif' }
-  ]
-  loading.value = false
+async function fetchData() {
+  try {
+    // Fetch penempatan data
+    const penempatanRes = await getPenempatan({ limit: 100, status: 'aktif' })
+    console.log('Penempatan response:', penempatanRes)
+    
+    if (penempatanRes?.data && Array.isArray(penempatanRes.data)) {
+      // Check if data is already populated
+      const isPopulated = penempatanRes.data.length > 0 && penempatanRes.data[0].siswa !== undefined
+      
+      if (isPopulated) {
+        // Data already has siswa/perusahaan populated
+        students.value = penempatanRes.data.map((p: any) => ({
+          id: p.id_penempatan,
+          nama: p.siswa?.nama_siswa || 'Unknown',
+          inisial: getInitials(p.siswa?.nama_siswa || 'U'),
+          nis: p.siswa?.nis || '-',
+          kelas: p.siswa?.kelas?.nama_kelas || '-',
+          industri: p.perusahaan?.nama_perusahaan || '-',
+          kehadiran: p.kehadiran_persen || 85,
+          status: p.status_penempatan === 'aktif' ? 'Aktif' : 
+                  p.status_penempatan === 'selesai' ? 'Selesai' : 'Dibatalkan'
+        }))
+      } else {
+        // Data is not populated - need to fetch siswa/perusahaan separately
+        console.log('Data not populated, fetching siswa and perusahaan...')
+        
+        try {
+          // Fetch all siswa and perusahaan data in parallel
+          const [siswaRes, perusahaanRes] = await Promise.all([
+            getAllSiswa({ limit: 1000 }).catch(err => {
+              console.warn('Failed to fetch siswa (permission?)', err)
+              return { data: [] }
+            }),
+            getAllPerusahaan({ limit: 1000 }).catch(err => {
+              console.warn('Failed to fetch perusahaan (permission?)', err)
+              return { data: [] }
+            })
+          ])
+          
+          console.log('Siswa response:', siswaRes)
+          console.log('Perusahaan response:', perusahaanRes)
+          
+          // Create lookup maps
+          const siswaMap = new Map()
+          const perusahaanMap = new Map()
+          
+          if (siswaRes?.data) {
+            siswaRes.data.forEach((s: any) => {
+              siswaMap.set(s.id_siswa, s)
+            })
+          }
+          
+          if (perusahaanRes?.data) {
+            perusahaanRes.data.forEach((p: any) => {
+              perusahaanMap.set(p.id_perusahaan, p)
+            })
+          }
+          
+          console.log('Created maps - siswa:', siswaMap.size, 'perusahaan:', perusahaanMap.size)
+          
+          // Map penempatan with looked-up data
+          students.value = penempatanRes.data.map((p: any) => {
+            const siswa = siswaMap.get(p.siswa_id)
+            const perusahaan = perusahaanMap.get(p.perusahaan_id)
+            
+            console.log(`Mapping penempatan ${p.id_penempatan}: siswa_id=${p.siswa_id}, perusahaan_id=${p.perusahaan_id}`, { siswa, perusahaan })
+            
+            return {
+              id: p.id_penempatan,
+              nama: siswa?.nama_siswa || `Siswa ID: ${p.siswa_id}`,
+              inisial: getInitials(siswa?.nama_siswa || 'SX'),
+              nis: siswa?.nis || '-',
+              kelas: siswa?.kelas?.nama_kelas || '-',
+              industri: perusahaan?.nama_perusahaan || `Perusahaan ID: ${p.perusahaan_id}`,
+              kehadiran: p.kehadiran_persen || 85,
+              status: p.status_penempatan === 'aktif' ? 'Aktif' : 
+                      p.status_penempatan === 'selesai' ? 'Selesai' : 'Dibatalkan'
+            }
+          })
+        } catch (err) {
+          console.error('Error fetching siswa/perusahaan data', err)
+          // Fallback: just show IDs
+          students.value = penempatanRes.data.map((p: any) => ({
+            id: p.id_penempatan,
+            nama: `Siswa ID: ${p.siswa_id}`,
+            inisial: 'SX',
+            nis: '-',
+            kelas: '-',
+            industri: `Perusahaan ID: ${p.perusahaan_id}`,
+            kehadiran: p.kehadiran_persen || 85,
+            status: p.status_penempatan === 'aktif' ? 'Aktif' : 
+                    p.status_penempatan === 'selesai' ? 'Selesai' : 'Dibatalkan'
+          }))
+        }
+      }
+      
+      // Extract unique kelas for filter options
+      const uniqueKelas = [...new Set(students.value.map(s => s.kelas).filter(k => k !== '-'))]
+      kelasOptions.value = uniqueKelas as string[]
+      
+      // Get total from meta or pagination
+      stats.totalSiswa = penempatanRes.meta?.total || penempatanRes.pagination?.total || students.value.length
+    }
+  } catch (error) {
+    console.error('Failed to fetch data:', error)
+    // Fallback to empty
+    students.value = []
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(() => {
+  fetchData()
 })
 
 useHead({ title: 'Siswa Bimbingan | Guru PKL' })

@@ -6,6 +6,17 @@ export default defineNuxtConfig({
   devServer: {
     port: 3001,
   },
+
+  // Runtime config - accessible via useRuntimeConfig()
+  runtimeConfig: {
+    // Private keys (server-side only)
+    apiSecret: '',
+    // Public keys (exposed to client)
+    public: {
+      apiUrl: process.env.NUXT_PUBLIC_API_URL || 'http://localhost:3000',
+    }
+  },
+
   plugins: ["~/plugins/pinia.ts", "~/plugins/axios.ts"],
   css: ['~/assets/css/main.css'],
   modules: [

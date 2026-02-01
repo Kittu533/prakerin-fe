@@ -12,10 +12,6 @@
         <p class="text-sm text-slate-500">{{ selectedSiswa ? `${selectedSiswa.kelas} • ${selectedSiswa.industri}` :
           'Pilih siswa untuk input nilai' }}</p>
       </div>
-      <UButton v-if="!selectedSiswa" color="primary" @click="exportData">
-        <Icon name="lucide:download" class="w-4 h-4 mr-2" />
-        Export
-      </UButton>
     </div>
 
     <!-- Stats -->
@@ -67,8 +63,6 @@
               <Icon name="lucide:search" class="w-4 h-4 text-slate-400" />
             </template>
           </UInput>
-          <USelectMenu v-model="filterKelas" :options="kelasOptions" placeholder="Filter Kelas"
-            class="w-full sm:w-40" />
           <USelectMenu v-model="filterStatus" :options="statusOptions" placeholder="Filter Status"
             class="w-full sm:w-44" />
         </div>
@@ -135,16 +129,16 @@
 
         <div v-if="selectedSiswa.nilai" class="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <div class="p-4 bg-slate-50 rounded-xl text-center">
-            <p class="text-sm text-slate-500 mb-1">Sikap (30%)</p>
-            <p class="text-2xl font-bold text-slate-900">{{ selectedSiswa.nilaiDetail?.sikap || '-' }}</p>
+            <p class="text-sm text-slate-500 mb-1">Sikap</p>
+            <p class="text-2xl font-bold text-slate-900">{{ selectedSiswa.nilaiDetail?.nilai_sikap || '-' }}</p>
           </div>
           <div class="p-4 bg-slate-50 rounded-xl text-center">
-            <p class="text-sm text-slate-500 mb-1">Keterampilan (40%)</p>
-            <p class="text-2xl font-bold text-slate-900">{{ selectedSiswa.nilaiDetail?.keterampilan || '-' }}</p>
+            <p class="text-sm text-slate-500 mb-1">Keterampilan</p>
+            <p class="text-2xl font-bold text-slate-900">{{ selectedSiswa.nilaiDetail?.nilai_keterampilan || '-' }}</p>
           </div>
           <div class="p-4 bg-slate-50 rounded-xl text-center">
-            <p class="text-sm text-slate-500 mb-1">Pengetahuan (30%)</p>
-            <p class="text-2xl font-bold text-slate-900">{{ selectedSiswa.nilaiDetail?.pengetahuan || '-' }}</p>
+            <p class="text-sm text-slate-500 mb-1">Kedisiplinan</p>
+            <p class="text-2xl font-bold text-slate-900">{{ selectedSiswa.nilaiDetail?.nilai_kedisiplinan || '-' }}</p>
           </div>
           <div class="p-4 bg-sky-50 rounded-xl text-center">
             <p class="text-sm text-sky-600 mb-1">Nilai Akhir</p>
@@ -159,31 +153,6 @@
             <Icon name="lucide:plus" class="w-4 h-4 mr-2" />
             Input Nilai Sekarang
           </UButton>
-        </div>
-      </div>
-
-      <!-- Riwayat Kegiatan -->
-      <div class="bg-white rounded-xl border border-slate-200">
-        <div class="px-5 py-4 border-b border-slate-100">
-          <h3 class="font-semibold text-slate-900">Ringkasan Kegiatan</h3>
-        </div>
-        <div class="p-5 grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <div class="text-center">
-            <p class="text-2xl font-bold text-slate-900">{{ selectedSiswa.totalLogbook || 28 }}</p>
-            <p class="text-sm text-slate-500">Total Logbook</p>
-          </div>
-          <div class="text-center">
-            <p class="text-2xl font-bold text-green-600">{{ selectedSiswa.kehadiran || 95 }}%</p>
-            <p class="text-sm text-slate-500">Kehadiran</p>
-          </div>
-          <div class="text-center">
-            <p class="text-2xl font-bold text-sky-600">{{ selectedSiswa.kunjungan || 3 }}</p>
-            <p class="text-sm text-slate-500">Kunjungan</p>
-          </div>
-          <div class="text-center">
-            <p class="text-2xl font-bold text-slate-900">{{ selectedSiswa.durasi || '3 Bulan' }}</p>
-            <p class="text-sm text-slate-500">Durasi PKL</p>
-          </div>
         </div>
       </div>
     </template>
@@ -215,18 +184,18 @@
 
             <!-- Score Inputs -->
             <div class="grid grid-cols-1 gap-4">
-              <UFormField label="Nilai Sikap (30%)" required>
-                <UInput v-model.number="gradeForm.sikap" type="number" min="0" max="100"
+              <UFormField label="Nilai Sikap" required>
+                <UInput v-model.number="gradeForm.nilai_sikap" type="number" min="0" max="100"
                   placeholder="Masukkan nilai 0-100" class="w-full" size="lg" />
               </UFormField>
 
-              <UFormField label="Nilai Keterampilan (40%)" required>
-                <UInput v-model.number="gradeForm.keterampilan" type="number" min="0" max="100"
+              <UFormField label="Nilai Keterampilan" required>
+                <UInput v-model.number="gradeForm.nilai_keterampilan" type="number" min="0" max="100"
                   placeholder="Masukkan nilai 0-100" class="w-full" size="lg" />
               </UFormField>
 
-              <UFormField label="Nilai Pengetahuan (30%)" required>
-                <UInput v-model.number="gradeForm.pengetahuan" type="number" min="0" max="100"
+              <UFormField label="Nilai Kedisiplinan" required>
+                <UInput v-model.number="gradeForm.nilai_kedisiplinan" type="number" min="0" max="100"
                   placeholder="Masukkan nilai 0-100" class="w-full" size="lg" />
               </UFormField>
             </div>
@@ -235,7 +204,7 @@
             <div class="flex items-center justify-between p-4 bg-sky-50 rounded-xl">
               <div>
                 <p class="text-sm text-sky-600 font-medium">Nilai Akhir</p>
-                <p class="text-xs text-slate-500">Sikap×30% + Keterampilan×40% + Pengetahuan×30%</p>
+                <p class="text-xs text-slate-500">Rata-rata dari ketiga komponen</p>
               </div>
               <p class="text-3xl font-bold"
                 :class="calculatedGrade !== '-' ? getNilaiColor(Number(calculatedGrade)) : 'text-slate-400'">
@@ -245,7 +214,7 @@
 
             <!-- Catatan -->
             <UFormField label="Catatan (opsional)">
-              <UTextarea v-model="gradeForm.catatan" placeholder="Tambahkan catatan untuk siswa..." :rows="2"
+              <UTextarea v-model="gradeForm.catatan_penilaian" placeholder="Tambahkan catatan untuk siswa..." :rows="2"
                 class="w-full" />
             </UFormField>
           </div>
@@ -265,48 +234,63 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
+import { usePenempatanApi, usePenilaianApi } from '~/composables/api/use-internship'
+import { useSiswaApi } from '~/composables/api/use-academic'
+import { usePerusahaanApi } from '~/composables/api/use-partner'
+
 definePageMeta({ layout: 'guru' })
+
+const { getAll: getPenempatan } = usePenempatanApi()
+const { getAll: getPenilaian, upsert: upsertPenilaian } = usePenilaianApi()
+const { getAll: getAllSiswa } = useSiswaApi()
+const { getAll: getAllPerusahaan } = usePerusahaanApi()
 
 const toast = useToast()
 const loading = ref(true)
 const searchSiswa = ref('')
-const filterKelas = ref(null)
 const filterStatus = ref(null)
 const gradeModal = ref(false)
-const selectedSiswa = ref(null)
-const gradeForm = reactive({ sikap: null, keterampilan: null, pengetahuan: null, catatan: '' })
+const selectedSiswa = ref<any>(null)
+const gradeForm = reactive({ 
+  nilai_sikap: null, 
+  nilai_keterampilan: null, 
+  nilai_kedisiplinan: null, 
+  catatan_penilaian: '' 
+})
 
-const kelasOptions = ['XII RPL 1', 'XII RPL 2', 'XII TKJ 1', 'XII MM 1']
 const statusOptions = ['Sudah Dinilai', 'Belum Dinilai']
 const stats = reactive({ total: 0, graded: 0, ungraded: 0, average: 0 })
-const siswaList = ref([])
+const siswaList = ref<any[]>([])
+
+function getInitials(name: string): string {
+  return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+}
 
 const filteredSiswa = computed(() => {
   return siswaList.value.filter(item => {
     const matchSearch = !searchSiswa.value || item.nama.toLowerCase().includes(searchSiswa.value.toLowerCase())
-    const matchKelas = !filterKelas.value || item.kelas === filterKelas.value
     const matchStatus = !filterStatus.value ||
       (filterStatus.value === 'Sudah Dinilai' ? item.nilai : !item.nilai)
-    return matchSearch && matchKelas && matchStatus
+    return matchSearch && matchStatus
   })
 })
 
 const calculatedGrade = computed(() => {
-  const { sikap, keterampilan, pengetahuan } = gradeForm
-  if (!sikap && !keterampilan && !pengetahuan) return '-'
-  const total = ((sikap || 0) * 0.3) + ((keterampilan || 0) * 0.4) + ((pengetahuan || 0) * 0.3)
+  const { nilai_sikap, nilai_keterampilan, nilai_kedisiplinan } = gradeForm
+  if (!nilai_sikap && !nilai_keterampilan && !nilai_kedisiplinan) return '-'
+  const total = ((nilai_sikap || 0) + (nilai_keterampilan || 0) + (nilai_kedisiplinan || 0)) / 3
   return Math.round(total)
 })
 
-const getNilaiColor = (nilai) => {
+const getNilaiColor = (nilai: number) => {
   if (nilai >= 85) return 'text-green-600'
   if (nilai >= 70) return 'text-sky-600'
   if (nilai >= 55) return 'text-amber-600'
   return 'text-red-600'
 }
 
-const selectSiswa = (siswa) => {
+const selectSiswa = (siswa: any) => {
   selectedSiswa.value = siswa
 }
 
@@ -318,50 +302,118 @@ const openGradeModal = () => {
   if (selectedSiswa.value?.nilaiDetail) {
     Object.assign(gradeForm, selectedSiswa.value.nilaiDetail)
   } else {
-    Object.assign(gradeForm, { sikap: null, keterampilan: null, pengetahuan: null, catatan: '' })
+    Object.assign(gradeForm, { nilai_sikap: null, nilai_keterampilan: null, nilai_kedisiplinan: null, catatan_penilaian: '' })
   }
   gradeModal.value = true
 }
 
-const submitGrade = () => {
+const submitGrade = async () => {
   if (selectedSiswa.value && calculatedGrade.value !== '-') {
-    const wasUngraded = !selectedSiswa.value.nilai
-    selectedSiswa.value.nilai = calculatedGrade.value
-    selectedSiswa.value.nilaiDetail = { ...gradeForm }
+    try {
+      const payload = {
+        nilai_sikap: gradeForm.nilai_sikap,
+        nilai_keterampilan: gradeForm.nilai_keterampilan,
+        nilai_kedisiplinan: gradeForm.nilai_kedisiplinan,
+        nilai_pembimbing_sekolah: calculatedGrade.value as number,
+        catatan_penilaian: gradeForm.catatan_penilaian
+      }
 
-    if (wasUngraded) {
-      stats.graded++
-      stats.ungraded--
+      // Use upsert method from composable
+      await upsertPenilaian(selectedSiswa.value.id_penempatan, payload)
+
+      const wasUngraded = !selectedSiswa.value.nilai
+      selectedSiswa.value.nilai = calculatedGrade.value
+      selectedSiswa.value.nilaiDetail = { ...gradeForm }
+
+      if (wasUngraded) {
+        stats.graded++
+        stats.ungraded--
+      }
+
+      // Recalculate average
+      const gradedStudents = siswaList.value.filter(s => s.nilai)
+      if (gradedStudents.length > 0) {
+        stats.average = Math.round(gradedStudents.reduce((sum, s) => sum + s.nilai, 0) / gradedStudents.length)
+      }
+
+      gradeModal.value = false
+      toast.add({ title: 'Nilai berhasil disimpan', color: 'success' })
+    } catch (e) {
+      console.error('Failed to save grade:', e)
+      toast.add({ title: 'Gagal menyimpan nilai', color: 'error' })
+    }
+  }
+}
+
+async function fetchData() {
+  try {
+    // Fetch penempatan, siswa, perusahaan, and penilaian in parallel
+    const [penempatanRes, siswaRes, perusahaanRes, penilaianRes] = await Promise.all([
+      getPenempatan({ limit: 100 }),
+      getAllSiswa({ limit: 1000 }),
+      getAllPerusahaan({ limit: 1000 }),
+      getPenilaian()
+    ])
+
+    // Create lookup maps
+    const siswaMap = new Map<number, any>()
+    const perusahaanMap = new Map<number, any>()
+    const penilaianMap = new Map<number, any>()
+
+    if (siswaRes?.data) {
+      for (const s of siswaRes.data) {
+        siswaMap.set(s.id_siswa, s)
+      }
+    }
+    if (perusahaanRes?.data) {
+      for (const p of perusahaanRes.data) {
+        perusahaanMap.set(p.id_perusahaan, p)
+      }
+    }
+    if (penilaianRes?.data) {
+      for (const pn of penilaianRes.data) {
+        penilaianMap.set(pn.id_penempatan, pn)
+      }
     }
 
-    // Recalculate average
+    // Transform penempatan with resolved names and grades
+    if (penempatanRes?.data) {
+      siswaList.value = penempatanRes.data.map((p: any) => {
+        const siswa = siswaMap.get(p.siswa_id)
+        const perusahaan = perusahaanMap.get(p.perusahaan_id)
+        const penilaian = penilaianMap.get(p.id_penempatan)
+
+        return {
+          id: p.siswa_id,
+          id_penempatan: p.id_penempatan,
+          nama: siswa?.nama_siswa || `Siswa #${p.siswa_id}`,
+          inisial: getInitials(siswa?.nama_siswa || 'XX'),
+          kelas: siswa?.kelas?.nama_kelas || 'N/A',
+          industri: perusahaan?.nama_perusahaan || `Perusahaan #${p.perusahaan_id}`,
+          nilai: penilaian?.nilai_akhir ? Math.round(penilaian.nilai_akhir) : null,
+          nilaiDetail: penilaian || null
+        }
+      })
+    }
+
+    // Calculate stats
+    stats.total = siswaList.value.length
+    stats.graded = siswaList.value.filter(s => s.nilai).length
+    stats.ungraded = stats.total - stats.graded
+
     const gradedStudents = siswaList.value.filter(s => s.nilai)
     if (gradedStudents.length > 0) {
       stats.average = Math.round(gradedStudents.reduce((sum, s) => sum + s.nilai, 0) / gradedStudents.length)
     }
-
-    gradeModal.value = false
-    toast.add({ title: 'Nilai berhasil disimpan', color: 'success' })
+  } catch (e) {
+    console.warn('Failed to fetch data:', e)
+  } finally {
+    loading.value = false
   }
 }
 
-const exportData = () => {
-  toast.add({ title: 'Export data dimulai...', color: 'primary' })
-}
-
-onMounted(async () => {
-  await new Promise(r => setTimeout(r, 600))
-  Object.assign(stats, { total: 24, graded: 18, ungraded: 6, average: 82 })
-
-  siswaList.value = [
-    { id: 1, nama: 'Ryobi Surya Atmaja', inisial: 'RS', nis: '2023010563', kelas: 'XII RPL 1', industri: 'PT. Telkom Indonesia', nilai: 88, nilaiDetail: { sikap: 85, keterampilan: 90, pengetahuan: 88 } },
-    { id: 2, nama: 'Dewi Sartika', inisial: 'DS', nis: '2023010564', kelas: 'XII RPL 2', industri: 'PT. Gojek Indonesia', nilai: 85, nilaiDetail: { sikap: 82, keterampilan: 88, pengetahuan: 84 } },
-    { id: 3, nama: 'Ahmad Fauzi', inisial: 'AF', nis: '2023010565', kelas: 'XII TKJ 1', industri: 'CV. Digital Nusantara', nilai: null, nilaiDetail: null },
-    { id: 4, nama: 'Siti Nurhaliza', inisial: 'SN', nis: '2023010566', kelas: 'XII MM 1', industri: 'PT. Media Kreasi', nilai: 92, nilaiDetail: { sikap: 90, keterampilan: 95, pengetahuan: 90 } },
-    { id: 5, nama: 'Budi Prasetyo', inisial: 'BP', nis: '2023010567', kelas: 'XII RPL 1', industri: 'PT. Tokopedia', nilai: null, nilaiDetail: null }
-  ]
-
-  loading.value = false
+onMounted(() => {
+  fetchData()
 })
 
 useHead({ title: 'Penilaian PKL | Guru PKL' })

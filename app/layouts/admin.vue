@@ -134,6 +134,7 @@ const pageTitle = computed(() => {
     '/admin/users': 'Kelola Akun',
     '/admin/master/academic-years': 'Tahun Ajaran',
     '/admin/master/departments': 'Jurusan',
+    '/admin/master/levels': 'Tingkat',
     '/admin/master/classes': 'Kelas',
     '/admin/master/teachers': 'Guru Pembimbing',
     '/admin/master/students': 'Siswa',
@@ -161,6 +162,7 @@ const menuItems = [
 const masterItems = [
   { to: '/admin/master/academic-years', icon: 'lucide:calendar', label: 'Tahun Ajaran' },
   { to: '/admin/master/departments', icon: 'lucide:layers', label: 'Jurusan' },
+  { to: '/admin/master/levels', icon: 'lucide:signal', label: 'Tingkat' },
   { to: '/admin/master/classes', icon: 'lucide:school', label: 'Kelas' },
   { to: '/admin/master/teachers', icon: 'lucide:user-check', label: 'Guru' },
   { to: '/admin/master/students', icon: 'lucide:graduation-cap', label: 'Siswa' },

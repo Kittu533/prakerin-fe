@@ -99,7 +99,7 @@
                   <Icon name="lucide:users" class="w-4 h-4" />
                   {{ item.siswa.length }} siswa
                 </span>
-                <span class="flex items-center gap-1">
+                <span v-if="item.mentor" class="flex items-center gap-1">
                   <Icon name="lucide:user" class="w-4 h-4" />
                   {{ item.mentor }}
                 </span>
@@ -118,7 +118,7 @@
                 <span class="text-sm text-slate-500">{{ item.siswa.map(s => s.nama.split(' ')[0]).join(', ') }}</span>
               </div>
 
-              <UButton size="sm" variant="soft" color="primary" @click="viewDetail(item.id)">
+              <UButton size="sm" variant="soft" color="primary" @click="viewDetail(item.id, item.industri)">
                 <Icon name="lucide:eye" class="w-4 h-4 mr-1" />
                 Lihat Detail
               </UButton>
@@ -135,68 +135,146 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
+import { usePenempatanApi } from '~/composables/api/use-internship'
+import { useSiswaApi } from '~/composables/api/use-academic'
+import { usePerusahaanApi } from '~/composables/api/use-partner'
+import { encodeWithSlug } from '~/composables/use-id-encoder'
+
 definePageMeta({ layout: 'guru' })
+
+const { getAll: getPenempatan } = usePenempatanApi()
+const { getAll: getAllSiswa } = useSiswaApi()
+const { getAll: getAllPerusahaan } = usePerusahaanApi()
 
 const loading = ref(true)
 const search = ref('')
-const filterStatus = ref(null)
+const filterStatus = ref<string | null>(null)
 
 const statusOptions = ['Aktif', 'Selesai']
 const stats = reactive({ totalIndustri: 0, totalSiswa: 0, aktif: 0, selesai: 0 })
-const data = ref([])
+const data = ref<any[]>([])
+
+// Helper function to get initials
+function getInitials(name: string): string {
+  return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+}
 
 const filteredData = computed(() => {
   return data.value.filter(item => {
     const matchSearch = !search.value || 
       item.industri.toLowerCase().includes(search.value.toLowerCase()) ||
-      item.siswa.some(s => s.nama.toLowerCase().includes(search.value.toLowerCase()))
+      item.siswa.some((s: any) => s.nama.toLowerCase().includes(search.value.toLowerCase()))
     const matchStatus = !filterStatus.value || item.status === filterStatus.value
     return matchSearch && matchStatus
   })
 })
 
-const viewDetail = (id) => navigateTo(`/guru/penempatan/${id}`)
+const viewDetail = (id: number, name: string) => navigateTo(`/guru/penempatan/${encodeWithSlug(id, name)}`)
 
-onMounted(async () => {
-  await new Promise(r => setTimeout(r, 600))
-  Object.assign(stats, { totalIndustri: 8, totalSiswa: 24, aktif: 20, selesai: 4 })
-  data.value = [
-    { 
-      id: 1, 
-      industri: 'PT. Telkom Indonesia', 
-      alamat: 'Jl. Gatot Subroto, Jakarta',
-      mentor: 'Pak Agus Santoso',
-      status: 'Aktif',
-      siswa: [
-        { nama: 'Ryobi Surya Atmaja', inisial: 'RS' },
-        { nama: 'Budi Prasetyo', inisial: 'BP' },
-        { nama: 'Andi Wijaya', inisial: 'AW' }
-      ]
-    },
-    { 
-      id: 2, 
-      industri: 'PT. Gojek Indonesia', 
-      alamat: 'Jl. Kemang Raya, Jakarta',
-      mentor: 'Bu Sari Dewi',
-      status: 'Aktif',
-      siswa: [
-        { nama: 'Dewi Sartika', inisial: 'DS' },
-        { nama: 'Rina Wati', inisial: 'RW' }
-      ]
-    },
-    { 
-      id: 3, 
-      industri: 'CV. Digital Nusantara', 
-      alamat: 'Jl. Sudirman, Wonogiri',
-      mentor: 'Pak Hendra',
-      status: 'Aktif',
-      siswa: [
-        { nama: 'Ahmad Fauzi', inisial: 'AF' }
-      ]
+async function fetchData() {
+  loading.value = true
+  try {
+    // Fetch all penempatan data
+    const penempatanRes = await getPenempatan({ limit: 100 })
+    console.log('Penempatan response:', penempatanRes)
+
+    if (!penempatanRes?.data?.length) {
+      data.value = []
+      return
     }
-  ]
-  loading.value = false
+
+    // Fetch siswa and perusahaan data
+    const [siswaRes, perusahaanRes] = await Promise.all([
+      getAllSiswa({ limit: 1000 }).catch(err => {
+        console.warn('Failed to fetch siswa:', err)
+        return { data: [] }
+      }),
+      getAllPerusahaan({ limit: 1000 }).catch(err => {
+        console.warn('Failed to fetch perusahaan:', err)
+        return { data: [] }
+      })
+    ])
+
+    // Create lookup maps
+    const siswaMap = new Map()
+    const perusahaanMap = new Map()
+
+    if (siswaRes?.data) {
+      siswaRes.data.forEach((s: any) => siswaMap.set(s.id_siswa, s))
+    }
+    if (perusahaanRes?.data) {
+      perusahaanRes.data.forEach((p: any) => perusahaanMap.set(p.id_perusahaan, p))
+    }
+
+    // Group penempatan by perusahaan
+    const groupedByPerusahaan = new Map<number, any[]>()
+    
+    for (const pen of penempatanRes.data) {
+      const perusahaanId = pen.perusahaan_id
+      if (!groupedByPerusahaan.has(perusahaanId)) {
+        groupedByPerusahaan.set(perusahaanId, [])
+      }
+      groupedByPerusahaan.get(perusahaanId)!.push(pen)
+    }
+
+    // Transform to display format
+    const displayData: any[] = []
+    let totalAktif = 0
+    let totalSelesai = 0
+    let totalSiswa = 0
+
+    for (const [perusahaanId, placements] of groupedByPerusahaan) {
+      const perusahaan = perusahaanMap.get(perusahaanId)
+      
+      // Determine status based on majority of placements
+      const aktifCount = placements.filter((p: any) => p.status_penempatan === 'aktif').length
+      const selesaiCount = placements.filter((p: any) => p.status_penempatan === 'selesai').length
+      const status = aktifCount >= selesaiCount ? 'Aktif' : 'Selesai'
+
+      totalAktif += aktifCount
+      totalSelesai += selesaiCount
+      totalSiswa += placements.length
+
+      // Get siswa data for this perusahaan
+      const siswaList = placements.map((p: any) => {
+        const siswa = siswaMap.get(p.siswa_id)
+        return {
+          id: p.siswa_id,
+          nama: siswa?.nama_siswa || `Siswa (ID: ${p.siswa_id})`,
+          inisial: getInitials(siswa?.nama_siswa || 'XX'),
+          penempatanId: p.id_penempatan
+        }
+      })
+
+      displayData.push({
+        id: perusahaanId,
+        industri: perusahaan?.nama_perusahaan || `Perusahaan (ID: ${perusahaanId})`,
+        alamat: perusahaan?.alamat || '-',
+        mentor: perusahaan?.mentor?.nama_mentor || null,
+        status,
+        siswa: siswaList
+      })
+    }
+
+    data.value = displayData
+    
+    // Update stats
+    stats.totalIndustri = displayData.length
+    stats.totalSiswa = totalSiswa
+    stats.aktif = totalAktif
+    stats.selesai = totalSelesai
+
+  } catch (error) {
+    console.error('Failed to fetch penempatan data:', error)
+    data.value = []
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(() => {
+  fetchData()
 })
 
 useHead({ title: 'Penempatan PKL | Guru PKL' })

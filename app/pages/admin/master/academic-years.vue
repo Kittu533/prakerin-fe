@@ -14,21 +14,32 @@
       <div v-if="loading" class="p-4 space-y-3">
         <USkeleton v-for="i in 4" :key="i" class="h-14 rounded-lg" />
       </div>
+      <div v-else-if="!data.length" class="p-8 text-center text-slate-500">
+        <Icon name="lucide:calendar" class="w-12 h-12 mx-auto mb-3 text-slate-300" />
+        <p>Belum ada data tahun ajaran</p>
+      </div>
       <UTable v-else :data="data" :columns="columns">
-        <template #aktif-cell="{ row }">
-          <USwitch :model-value="row.original.aktif" @update:model-value="setActive(row.original)" />
+        <template #status-cell="{ row }">
+          <UBadge :color="row.original.status_aktif ? 'success' : 'neutral'" variant="subtle" size="xs">
+            {{ row.original.status_aktif ? 'Aktif' : 'Nonaktif' }}
+          </UBadge>
         </template>
         <template #aksi-cell="{ row }">
           <div class="flex gap-1">
+            <UButton v-if="!row.original.status_aktif" size="xs" color="success" variant="ghost" @click="setActive(row.original)">
+              <Icon name="lucide:check-circle" class="w-4 h-4" />
+            </UButton>
             <UButton size="xs" color="neutral" variant="ghost" @click="openModal(row.original)">
               <Icon name="lucide:edit" class="w-4 h-4" />
-            </UButton>
-            <UButton size="xs" color="error" variant="ghost" @click="deleteItem(row.original.id)">
-              <Icon name="lucide:trash-2" class="w-4 h-4" />
             </UButton>
           </div>
         </template>
       </UTable>
+    </div>
+
+    <!-- Pagination -->
+    <div v-if="pagination.totalPages > 1" class="flex justify-center">
+      <UPagination v-model:page="currentPage" :total="pagination.total" :items-per-page="pagination.limit" @update:page="fetchData" />
     </div>
 
     <UModal v-model:open="modalOpen">
@@ -39,14 +50,14 @@
           </template>
           <div class="space-y-4">
             <UFormField label="Nama Tahun Ajaran" required>
-              <UInput v-model="form.nama" placeholder="2024/2025" />
+              <UInput v-model="form.nama_tahun_ajaran" placeholder="2024/2025" />
             </UFormField>
             <div class="grid grid-cols-2 gap-3">
-              <UFormField label="Tanggal Mulai">
-                <UInput v-model="form.mulai" type="date" />
+              <UFormField label="Tanggal Mulai" required>
+                <UInput v-model="form.tanggal_mulai" type="date" />
               </UFormField>
-              <UFormField label="Tanggal Selesai">
-                <UInput v-model="form.selesai" type="date" />
+              <UFormField label="Tanggal Selesai" required>
+                <UInput v-model="form.tanggal_selesai" type="date" />
               </UFormField>
             </div>
           </div>
@@ -63,66 +74,132 @@
 </template>
 
 <script setup lang="ts">
-definePageMeta({ layout: 'admin' })
+import { useTahunAjaranApi, type TahunAjaran } from '~/composables/api/use-academic';
 
-const toast = useToast()
-const loading = ref(true)
-const modalOpen = ref(false)
-const editing = ref(false)
-const processing = ref(false)
+definePageMeta({ layout: 'admin' });
 
-const form = reactive({ id: null as number | null, nama: '', mulai: '', selesai: '' })
+const toast = useToast();
+const tahunAjaranApi = useTahunAjaranApi();
 
-const data = ref([
-  { id: 1, nama: '2024/2025', mulai: '2024-07-01', selesai: '2025-06-30', aktif: true },
-  { id: 2, nama: '2023/2024', mulai: '2023-07-01', selesai: '2024-06-30', aktif: false },
-  { id: 3, nama: '2022/2023', mulai: '2022-07-01', selesai: '2023-06-30', aktif: false }
-])
+const loading = ref(true);
+const modalOpen = ref(false);
+const editing = ref(false);
+const processing = ref(false);
+
+const data = ref<TahunAjaran[]>([]);
+const currentPage = ref(1);
+const pagination = ref({ page: 1, limit: 10, total: 0, totalPages: 0 });
+
+const form = reactive({
+  id_tahun_ajaran: null as number | null,
+  nama_tahun_ajaran: '',
+  tanggal_mulai: '',
+  tanggal_selesai: '',
+});
 
 const columns = [
-  { accessorKey: 'nama', header: 'Tahun Ajaran' },
-  { accessorKey: 'mulai', header: 'Mulai' },
-  { accessorKey: 'selesai', header: 'Selesai' },
-  { accessorKey: 'aktif', header: 'Aktif' },
-  { accessorKey: 'aksi', header: '' }
-]
+  { accessorKey: 'nama_tahun_ajaran', header: 'Tahun Ajaran' },
+  { accessorKey: 'tanggal_mulai', header: 'Mulai' },
+  { accessorKey: 'tanggal_selesai', header: 'Selesai' },
+  { accessorKey: 'status', header: 'Status' },
+  { accessorKey: 'aksi', header: '' },
+];
 
-const openModal = (item?: any) => {
-  editing.value = !!item
-  if (item) Object.assign(form, item)
-  else Object.assign(form, { id: null, nama: '', mulai: '', selesai: '' })
-  modalOpen.value = true
-}
-
-const save = async () => {
-  if (!form.nama) { toast.add({ title: 'Nama wajib diisi', color: 'error' }); return }
-  processing.value = true
-  await new Promise(r => setTimeout(r, 500))
-  if (editing.value) {
-    const idx = data.value.findIndex(d => d.id === form.id)
-    if (idx !== -1) data.value[idx] = { ...data.value[idx], ...form }
-  } else {
-    data.value.unshift({ id: Date.now(), nama: form.nama, mulai: form.mulai, selesai: form.selesai, aktif: false })
+async function fetchData() {
+  loading.value = true;
+  try {
+    const response = await tahunAjaranApi.getAll({ page: currentPage.value, limit: 10 });
+    if (response.success) {
+      data.value = response.data || [];
+      if (response.pagination) {
+        pagination.value = response.pagination;
+      }
+    }
+  } catch (error) {
+    console.error('Failed to fetch tahun ajaran:', error);
+    toast.add({ title: 'Gagal memuat data tahun ajaran', color: 'error' });
+  } finally {
+    loading.value = false;
   }
-  processing.value = false
-  modalOpen.value = false
-  toast.add({ title: 'Data disimpan', color: 'success' })
 }
 
-const setActive = (item: any) => {
-  data.value.forEach(d => d.aktif = d.id === item.id)
-  toast.add({ title: `${item.nama} diaktifkan`, color: 'success' })
+function openModal(item?: TahunAjaran) {
+  editing.value = !!item;
+  if (item) {
+    form.id_tahun_ajaran = item.id_tahun_ajaran;
+    form.nama_tahun_ajaran = item.nama_tahun_ajaran;
+    form.tanggal_mulai = item.tanggal_mulai || '';
+    form.tanggal_selesai = item.tanggal_selesai || '';
+  } else {
+    form.id_tahun_ajaran = null;
+    form.nama_tahun_ajaran = '';
+    form.tanggal_mulai = '';
+    form.tanggal_selesai = '';
+  }
+  modalOpen.value = true;
 }
 
-const deleteItem = (id: number) => {
-  data.value = data.value.filter(d => d.id !== id)
-  toast.add({ title: 'Data dihapus', color: 'neutral' })
+async function save() {
+  if (!form.nama_tahun_ajaran) {
+    toast.add({ title: 'Nama tahun ajaran wajib diisi', color: 'error' });
+    return;
+  }
+  if (!editing.value && (!form.tanggal_mulai || !form.tanggal_selesai)) {
+    toast.add({ title: 'Tanggal mulai dan selesai wajib diisi', color: 'error' });
+    return;
+  }
+
+  processing.value = true;
+  try {
+    if (editing.value && form.id_tahun_ajaran) {
+      const payload: any = { nama_tahun_ajaran: form.nama_tahun_ajaran };
+      if (form.tanggal_mulai) payload.tanggal_mulai = form.tanggal_mulai;
+      if (form.tanggal_selesai) payload.tanggal_selesai = form.tanggal_selesai;
+      
+      const response = await tahunAjaranApi.update(form.id_tahun_ajaran, payload);
+      if (response.success) {
+        toast.add({ title: 'Tahun ajaran diperbarui', color: 'success' });
+        modalOpen.value = false;
+        fetchData();
+      } else {
+        toast.add({ title: response.message || 'Gagal memperbarui', color: 'error' });
+      }
+    } else {
+      const response = await tahunAjaranApi.create({
+        nama_tahun_ajaran: form.nama_tahun_ajaran,
+        tanggal_mulai: form.tanggal_mulai,
+        tanggal_selesai: form.tanggal_selesai,
+      });
+      if (response.success) {
+        toast.add({ title: 'Tahun ajaran ditambahkan', color: 'success' });
+        modalOpen.value = false;
+        fetchData();
+      } else {
+        toast.add({ title: response.message || 'Gagal menambahkan', color: 'error' });
+      }
+    }
+  } catch (error: any) {
+    toast.add({ title: error.message || 'Terjadi kesalahan', color: 'error' });
+  } finally {
+    processing.value = false;
+  }
 }
 
-onMounted(async () => {
-  await new Promise(r => setTimeout(r, 500))
-  loading.value = false
-})
+async function setActive(item: TahunAjaran) {
+  try {
+    const response = await tahunAjaranApi.update(item.id_tahun_ajaran, { status_aktif: true });
+    if (response.success) {
+      toast.add({ title: `${item.nama_tahun_ajaran} diaktifkan`, color: 'success' });
+      fetchData();
+    } else {
+      toast.add({ title: response.message || 'Gagal mengaktifkan', color: 'error' });
+    }
+  } catch (error) {
+    toast.add({ title: 'Gagal mengaktifkan tahun ajaran', color: 'error' });
+  }
+}
 
-useHead({ title: 'Tahun Ajaran | Admin' })
+onMounted(() => fetchData());
+
+useHead({ title: 'Tahun Ajaran | Admin' });
 </script>

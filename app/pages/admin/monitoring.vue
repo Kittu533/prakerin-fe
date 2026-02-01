@@ -45,7 +45,7 @@
       <div v-if="loading" class="p-4 space-y-3">
         <USkeleton v-for="i in 6" :key="i" class="h-14 rounded-lg" />
       </div>
-      <UTable v-else :data="filteredData" :columns="columns">
+      <UTable v-else :data="paginatedData" :columns="columns">
         <template #siswa-cell="{ row }">
           <div class="flex items-center gap-2">
             <div class="w-8 h-8 rounded-lg bg-sky-100 flex items-center justify-center text-sky-600 text-xs font-semibold">
@@ -79,32 +79,31 @@
 
     <!-- Pagination -->
     <div v-if="totalPages > 1" class="flex justify-center">
-      <UPagination v-model:page="currentPage" :total="totalItems" :items-per-page="itemsPerPage" />
+      <UPagination v-model:page="currentPage" :total="filteredData.length" :items-per-page="itemsPerPage" />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import { useMonitoringApi, type MonitoringSiswa, type MonitoringStats } from '~/composables/api/use-internship'
+
 definePageMeta({ layout: 'admin' })
 
+const { getMonitoringSiswa, getMonitoringStats } = useMonitoringApi()
+
 const loading = ref(true)
+const apiError = ref(false)
 const search = ref('')
 const filterYear = ref('2024/2025')
 const filterJurusan = ref('Semua')
 const filterKelas = ref('Semua')
 const currentPage = ref(1)
 const itemsPerPage = 10
+const totalItems = ref(0)
 
-const stats = reactive({ total: 0, good: 0, warning: 0, critical: 0 })
+const stats = reactive<MonitoringStats>({ total: 0, good: 0, warning: 0, critical: 0 })
 
-const data = ref([
-  { id: 1, siswa: 'Budi Santoso', kelas: 'XII RPL 1', perusahaan: 'PT Telkom', absensi: 95, logbook: 45, nilai: 87 },
-  { id: 2, siswa: 'Ani Wijaya', kelas: 'XII TKJ 2', perusahaan: 'PT Biznet', absensi: 88, logbook: 42, nilai: 82 },
-  { id: 3, siswa: 'Deni Pratama', kelas: 'XII MM 1', perusahaan: 'CV Digital', absensi: 75, logbook: 38, nilai: null },
-  { id: 4, siswa: 'Siti Aminah', kelas: 'XII RPL 2', perusahaan: 'PT Astra', absensi: 68, logbook: 30, nilai: null },
-  { id: 5, siswa: 'Rudi Hermawan', kelas: 'XII AKL 1', perusahaan: 'PT Bank BCA', absensi: 92, logbook: 44, nilai: 85 },
-  { id: 6, siswa: 'Eka Putri', kelas: 'XII RPL 1', perusahaan: 'PT Infomedia', absensi: 78, logbook: 35, nilai: null }
-])
+const data = ref<MonitoringSiswa[]>([])
 
 const columns = [
   { accessorKey: 'siswa', header: 'Siswa' },
@@ -115,31 +114,78 @@ const columns = [
   { accessorKey: 'aksi', header: '' }
 ]
 
-const allFilteredData = computed(() => data.value.filter(d => {
-  const matchSearch = !search.value || d.siswa.toLowerCase().includes(search.value.toLowerCase())
-  const matchJurusan = filterJurusan.value === 'Semua' || d.kelas.includes(filterJurusan.value)
-  const matchKelas = filterKelas.value === 'Semua' || d.kelas === filterKelas.value
-  return matchSearch && matchJurusan && matchKelas
-}))
+// Computed for local filtering (when API doesn't support all filters)
+const filteredData = computed(() => {
+  return data.value.filter(d => {
+    const matchSearch = !search.value || d.siswa.toLowerCase().includes(search.value.toLowerCase())
+    const matchJurusan = filterJurusan.value === 'Semua' || d.kelas.includes(filterJurusan.value)
+    const matchKelas = filterKelas.value === 'Semua' || d.kelas === filterKelas.value
+    return matchSearch && matchJurusan && matchKelas
+  })
+})
 
-const totalItems = computed(() => allFilteredData.value.length)
 const totalPages = computed(() => Math.ceil(totalItems.value / itemsPerPage))
 
-const filteredData = computed(() => {
+const paginatedData = computed(() => {
   const start = (currentPage.value - 1) * itemsPerPage
-  return allFilteredData.value.slice(start, start + itemsPerPage)
+  return filteredData.value.slice(start, start + itemsPerPage)
 })
 
 watch([search, filterYear, filterJurusan, filterKelas], () => { currentPage.value = 1 })
 
-const viewDetail = (item: any) => {
+async function fetchData() {
+  loading.value = true
+  apiError.value = false
+  
+  try {
+    const [statsRes, dataRes] = await Promise.allSettled([
+      getMonitoringStats(),
+      getMonitoringSiswa({ page: currentPage.value, limit: 100 })
+    ])
+
+    // Process stats
+    if (statsRes.status === 'fulfilled' && statsRes.value?.success) {
+      Object.assign(stats, statsRes.value.data)
+    }
+
+    // Process data
+    if (dataRes.status === 'fulfilled' && dataRes.value?.success) {
+      data.value = dataRes.value.data
+      totalItems.value = dataRes.value.pagination?.total || dataRes.value.data.length
+    }
+
+    // If both failed, use dummy data
+    if (statsRes.status === 'rejected' && dataRes.status === 'rejected') {
+      useDummyData()
+    }
+  } catch (err) {
+    console.error('[Monitoring] Error fetching data:', err)
+    apiError.value = true
+    useDummyData()
+  } finally {
+    loading.value = false
+  }
+}
+
+function useDummyData() {
+  Object.assign(stats, { total: 198, good: 156, warning: 30, critical: 12 })
+  data.value = [
+    { id: 1, siswa: 'Budi Santoso', kelas: 'XII RPL 1', perusahaan: 'PT Telkom', absensi: 95, logbook: 45, nilai: 87, status: 'aktif' },
+    { id: 2, siswa: 'Ani Wijaya', kelas: 'XII TKJ 2', perusahaan: 'PT Biznet', absensi: 88, logbook: 42, nilai: 82, status: 'aktif' },
+    { id: 3, siswa: 'Deni Pratama', kelas: 'XII MM 1', perusahaan: 'CV Digital', absensi: 75, logbook: 38, nilai: null, status: 'aktif' },
+    { id: 4, siswa: 'Siti Aminah', kelas: 'XII RPL 2', perusahaan: 'PT Astra', absensi: 68, logbook: 30, nilai: null, status: 'bermasalah' },
+    { id: 5, siswa: 'Rudi Hermawan', kelas: 'XII AKL 1', perusahaan: 'PT Bank BCA', absensi: 92, logbook: 44, nilai: 85, status: 'aktif' },
+    { id: 6, siswa: 'Eka Putri', kelas: 'XII RPL 1', perusahaan: 'PT Infomedia', absensi: 78, logbook: 35, nilai: null, status: 'aktif' }
+  ]
+  totalItems.value = data.value.length
+}
+
+const viewDetail = (item: MonitoringSiswa) => {
   navigateTo(`/admin/monitoring/${item.id}`)
 }
 
-onMounted(async () => {
-  await new Promise(r => setTimeout(r, 600))
-  Object.assign(stats, { total: 198, good: 156, warning: 30, critical: 12 })
-  loading.value = false
+onMounted(() => {
+  fetchData()
 })
 
 useHead({ title: 'Monitoring | Admin' })

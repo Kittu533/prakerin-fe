@@ -18,10 +18,10 @@ logs
 .fleet
 .idea
 
+# Docs
+docs/
+
 # Local env files
 .env
 .env.*
-!.env.example
 
-# md files generated for docs
-docs/**/*.md

@@ -50,10 +50,10 @@
                   class="flex items-center gap-2 p-1 rounded-lg hover:bg-slate-50 cursor-pointer transition-colors select-none">
                   <div
                     class="w-8 h-8 rounded-lg bg-sky-500 flex items-center justify-center text-white font-semibold text-sm ring-2 ring-transparent group-hover:ring-sky-100">
-                    BS
+                    {{ guruInitials }}
                   </div>
                   <div class="text-left hidden sm:block">
-                    <p class="text-xs font-semibold text-slate-900 leading-tight">Budi Santoso</p>
+                    <p class="text-xs font-semibold text-slate-900 leading-tight">{{ guruName }}</p>
                     <p class="text-[10px] text-slate-500 font-medium leading-tight">Guru Pembimbing</p>
                   </div>
                   <Icon name="lucide:chevron-down" class="w-4 h-4 text-slate-400 hidden sm:block" />
@@ -99,7 +99,41 @@
 </template>
 
 <script setup lang="ts">
+import { useAuth } from '~/composables/auth/use-auth'
+import { useGuruApi } from '~/composables/api/use-academic'
+
 const route = useRoute()
+const { user } = useAuth()
+const { getMe } = useGuruApi()
+
+// Guru state
+const guru = ref<any>(null)
+const loading = ref(true)
+
+// Fetch guru data
+async function fetchGuruData() {
+  try {
+    const res = await getMe()
+    if (res?.data) {
+      guru.value = res.data
+    }
+  } catch (e) {
+    console.warn('Failed to fetch guru data:', e)
+  } finally {
+    loading.value = false
+  }
+}
+
+// Computed values for display
+const guruName = computed(() => guru.value?.nama_guru || user.value?.nama || 'Guru')
+const guruInitials = computed(() => {
+  const name = guruName.value
+  const parts = name.split(' ')
+  if (parts.length >= 2) {
+    return (parts[0][0] + parts[1][0]).toUpperCase()
+  }
+  return name.slice(0, 2).toUpperCase()
+})
 
 const pageTitle = computed(() => {
   const titles: Record<string, string> = {
@@ -151,6 +185,10 @@ const userMenuItems = [
     click: () => navigateTo('/login')
   }]
 ]
+
+onMounted(() => {
+  fetchGuruData()
+})
 </script>
 
 <style scoped>

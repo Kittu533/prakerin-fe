@@ -266,19 +266,28 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
+import { usePenempatanApi, useLogbookApi } from '~/composables/api/use-internship'
+import { useSiswaApi } from '~/composables/api/use-academic'
+import { usePerusahaanApi } from '~/composables/api/use-partner'
+
 definePageMeta({ layout: 'guru' })
+
+const { getAll: getPenempatan } = usePenempatanApi()
+const { getAll: getLogbooks, approve: approveLogbook, requestRevision } = useLogbookApi()
+const { getAll: getAllSiswa } = useSiswaApi()
+const { getAll: getAllPerusahaan } = usePerusahaanApi()
 
 const toast = useToast()
 const loading = ref(true)
 const loadingLogbook = ref(false)
 const search = ref('')
 const searchSiswa = ref('')
-const filterStatus = ref(null)
+const filterStatus = ref<string | null>(null)
 const revisionModal = ref(false)
 const revisionNote = ref('')
-const selectedItem = ref(null)
-const selectedSiswa = ref(null)
+const selectedItem = ref<any>(null)
+const selectedSiswa = ref<any>(null)
 const currentPage = ref(1)
 const itemsPerPage = ref(10)
 
@@ -287,8 +296,13 @@ const perPageOptions = [5, 10, 25, 50]
 const stats = reactive({ pending: 0, approved: 0, revision: 0, total: 0 })
 
 // Siswa data
-const siswaList = ref([])
-const logbooks = ref([])
+const siswaList = ref<any[]>([])
+const logbooks = ref<any[]>([])
+
+// Helper function to get initials
+function getInitials(name: string): string {
+  return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+}
 
 const filteredSiswa = computed(() => {
   if (!searchSiswa.value) return siswaList.value
@@ -316,58 +330,31 @@ const paginatedLogbooks = computed(() => filteredLogbooks.value.slice(startIndex
 // Reset page when filter changes
 watch([search, filterStatus, itemsPerPage], () => { currentPage.value = 1 })
 
-const selectSiswa = async (siswa) => {
+const selectSiswa = async (siswa: any) => {
   selectedSiswa.value = siswa
   loadingLogbook.value = true
   currentPage.value = 1
 
-  // Simulate loading logbook data
-  await new Promise(r => setTimeout(r, 400))
-
-  // Generate 35 logbook entries untuk demo pagination
-  const activities = [
-    'Membuat UI Dashboard',
-    'Meeting dengan Tim',
-    'Implementasi REST API',
-    'Code Review',
-    'Deploy ke Production',
-    'Bug Fixing',
-    'Database Design',
-    'Documentation',
-    'Unit Testing',
-    'Integration Testing'
-  ]
-
-  const descriptions = [
-    'Mengerjakan tampilan dashboard admin menggunakan Vue.js dan Tailwind CSS',
-    'Diskusi progress project dan pembagian tugas sprint berikutnya',
-    'Membangun endpoint API untuk fitur authentication dan user management',
-    'Melakukan review code dari tim developer dan memberikan feedback',
-    'Deploy aplikasi ke server production dengan CI/CD pipeline',
-    'Memperbaiki bug yang ditemukan pada fitur login dan registrasi',
-    'Merancang skema database untuk fitur baru inventory management',
-    'Menulis dokumentasi API dan technical documentation',
-    'Membuat unit test untuk komponen dan service layer',
-    'Melakukan integration testing antar modul aplikasi'
-  ]
-
-  const statuses = ['Pending', 'Disetujui', 'Revisi']
-
-  logbooks.value = Array.from({ length: 35 }, (_, i) => {
-    const date = new Date()
-    date.setDate(date.getDate() - i)
-    return {
-      id: i + 1,
-      kegiatan: activities[i % activities.length],
-      deskripsi: descriptions[i % descriptions.length],
-      tanggal: date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }),
-      jamMulai: `0${7 + (i % 3)}:00`.slice(-5),
-      jamSelesai: `${15 + (i % 3)}:00`,
-      status: i < 5 ? 'Pending' : statuses[Math.floor(Math.random() * 3)]
+  try {
+    // Fetch logbooks for this student's penempatan
+    const res = await getLogbooks({ id_penempatan: siswa.id_penempatan, limit: 100 })
+    if (res?.data) {
+      logbooks.value = res.data.map((l: any) => ({
+        id: l.id_logbook,
+        kegiatan: l.kegiatan || '-',
+        deskripsi: l.deskripsi || '-',
+        tanggal: new Date(l.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }),
+        jamMulai: l.jam_mulai || '-',
+        jamSelesai: l.jam_selesai || '-',
+        status: l.status === 'pending' ? 'Pending' : l.status === 'approved' ? 'Disetujui' : 'Revisi'
+      }))
     }
-  })
-
-  loadingLogbook.value = false
+  } catch (e) {
+    console.warn('Failed to fetch logbooks:', e)
+    logbooks.value = []
+  } finally {
+    loadingLogbook.value = false
+  }
 }
 
 const backToList = () => {
@@ -378,13 +365,13 @@ const backToList = () => {
   currentPage.value = 1
 }
 
-const getStatusColor = (status) => {
-  const colors = { Pending: 'warning', Disetujui: 'success', Revisi: 'error' }
+const getStatusColor = (status: string) => {
+  const colors: Record<string, string> = { Pending: 'warning', Disetujui: 'success', Revisi: 'error' }
   return colors[status] || 'neutral'
 }
 
-const getStatusBg = (status) => {
-  const bgs = {
+const getStatusBg = (status: string) => {
+  const bgs: Record<string, string> = {
     Pending: 'bg-amber-100 text-amber-600',
     Disetujui: 'bg-green-100 text-green-600',
     Revisi: 'bg-red-100 text-red-600'
@@ -392,56 +379,110 @@ const getStatusBg = (status) => {
   return bgs[status] || 'bg-slate-100 text-slate-600'
 }
 
-const approve = (id) => {
-  const item = logbooks.value.find(d => d.id === id)
-  if (item) {
-    item.status = 'Disetujui'
-    stats.pending--
-    stats.approved++
-
-    // Update siswa pending count
-    if (selectedSiswa.value) {
-      selectedSiswa.value.pending = Math.max(0, selectedSiswa.value.pending - 1)
+const approve = async (id: number) => {
+  try {
+    await approveLogbook(id)
+    const item = logbooks.value.find(d => d.id === id)
+    if (item) {
+      item.status = 'Disetujui'
+      stats.pending--
+      stats.approved++
+      if (selectedSiswa.value) {
+        selectedSiswa.value.pending = Math.max(0, selectedSiswa.value.pending - 1)
+      }
     }
-
     toast.add({ title: 'Logbook disetujui', color: 'success' })
+  } catch (e) {
+    toast.add({ title: 'Gagal menyetujui logbook', color: 'error' })
   }
 }
 
-const openRevision = (item) => {
+const openRevision = (item: any) => {
   selectedItem.value = item
   revisionNote.value = ''
   revisionModal.value = true
 }
 
-const submitRevision = () => {
+const submitRevision = async () => {
   if (selectedItem.value && revisionNote.value) {
-    selectedItem.value.status = 'Revisi'
-    stats.pending--
-    stats.revision++
-
-    if (selectedSiswa.value) {
-      selectedSiswa.value.pending = Math.max(0, selectedSiswa.value.pending - 1)
+    try {
+      await requestRevision(selectedItem.value.id, revisionNote.value)
+      selectedItem.value.status = 'Revisi'
+      stats.pending--
+      stats.revision++
+      if (selectedSiswa.value) {
+        selectedSiswa.value.pending = Math.max(0, selectedSiswa.value.pending - 1)
+      }
+      revisionModal.value = false
+      toast.add({ title: 'Permintaan revisi dikirim', color: 'warning' })
+    } catch (e) {
+      toast.add({ title: 'Gagal mengirim permintaan revisi', color: 'error' })
     }
-
-    revisionModal.value = false
-    toast.add({ title: 'Permintaan revisi dikirim', color: 'warning' })
   }
 }
 
-onMounted(async () => {
-  await new Promise(r => setTimeout(r, 600))
-  Object.assign(stats, { pending: 12, approved: 156, revision: 8, total: 176 })
+async function fetchData() {
+  try {
+    // Fetch penempatan, siswa, and perusahaan in parallel (optimized)
+    const [penempatanRes, siswaRes, perusahaanRes] = await Promise.all([
+      getPenempatan({ limit: 100 }),
+      getAllSiswa({ limit: 1000 }),
+      getAllPerusahaan({ limit: 1000 })
+    ])
 
-  siswaList.value = [
-    { id: 1, nama: 'Ryobi Surya Atmaja', inisial: 'RS', kelas: 'XII RPL 1', industri: 'PT. Telkom Indonesia', pending: 5 },
-    { id: 2, nama: 'Dewi Sartika', inisial: 'DS', kelas: 'XII RPL 2', industri: 'PT. Gojek Indonesia', pending: 3 },
-    { id: 3, nama: 'Ahmad Fauzi', inisial: 'AF', kelas: 'XII TKJ 1', industri: 'CV. Digital Nusantara', pending: 4 },
-    { id: 4, nama: 'Siti Nurhaliza', inisial: 'SN', kelas: 'XII MM 1', industri: 'PT. Media Kreasi', pending: 0 },
-    { id: 5, nama: 'Budi Prasetyo', inisial: 'BP', kelas: 'XII RPL 1', industri: 'PT. Tokopedia', pending: 0 }
-  ]
+    // Create lookup maps
+    const siswaMap = new Map<number, any>()
+    const perusahaanMap = new Map<number, any>()
 
-  loading.value = false
+    if (siswaRes?.data) {
+      for (const s of siswaRes.data) {
+        siswaMap.set(s.id_siswa, s)
+      }
+    }
+    if (perusahaanRes?.data) {
+      for (const p of perusahaanRes.data) {
+        perusahaanMap.set(p.id_perusahaan, p)
+      }
+    }
+
+    // Transform penempatan with resolved names
+    if (penempatanRes?.data) {
+      siswaList.value = penempatanRes.data.map((p: any) => {
+        const siswa = siswaMap.get(p.siswa_id)
+        const perusahaan = perusahaanMap.get(p.perusahaan_id)
+
+        return {
+          id: p.siswa_id,
+          id_penempatan: p.id_penempatan,
+          nama: siswa?.nama_siswa || `Siswa #${p.siswa_id}`,
+          inisial: getInitials(siswa?.nama_siswa || 'XX'),
+          kelas: siswa?.kelas?.nama_kelas || 'N/A',
+          industri: perusahaan?.nama_perusahaan || `Perusahaan #${p.perusahaan_id}`,
+          pending: 0
+        }
+      })
+    }
+
+    // Get logbook counts by status_persetujuan
+    const pendingRes = await getLogbooks({ status_persetujuan: 'menunggu', limit: 1 })
+    stats.pending = pendingRes?.meta?.total || 0
+    
+    const approvedRes = await getLogbooks({ status_persetujuan: 'disetujui', limit: 1 })
+    stats.approved = approvedRes?.meta?.total || 0
+    
+    const revisionRes = await getLogbooks({ status_persetujuan: 'ditolak', limit: 1 })
+    stats.revision = revisionRes?.meta?.total || 0
+    
+    stats.total = stats.pending + stats.approved + stats.revision
+  } catch (e) {
+    console.warn('Failed to fetch data:', e)
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(() => {
+  fetchData()
 })
 
 useHead({ title: 'Verifikasi Logbook | Guru PKL' })

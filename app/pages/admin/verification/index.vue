@@ -11,8 +11,23 @@
         <UInput v-model="search" placeholder="Cari siswa..." class="flex-1">
           <template #leading><Icon name="lucide:search" class="w-4 h-4 text-slate-400" /></template>
         </UInput>
-        <USelectMenu v-model="filterStatus" :items="['Semua', 'Menunggu', 'Disetujui', 'Ditolak']" class="w-full sm:w-36" />
-        <USelectMenu v-model="filterJurusan" :items="['Semua Jurusan', 'RPL', 'TKJ', 'MM', 'AKL']" class="w-full sm:w-36" />
+        <USelectMenu v-model="filterStatus" :items="statusOptions" class="w-full sm:w-36" />
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="grid grid-cols-3 gap-4">
+      <div class="bg-white rounded-xl border border-slate-200 p-4 text-center">
+        <p class="text-2xl font-bold text-amber-600">{{ stats.pending }}</p>
+        <p class="text-sm text-slate-500">Menunggu</p>
+      </div>
+      <div class="bg-white rounded-xl border border-slate-200 p-4 text-center">
+        <p class="text-2xl font-bold text-green-600">{{ stats.approved }}</p>
+        <p class="text-sm text-slate-500">Disetujui</p>
+      </div>
+      <div class="bg-white rounded-xl border border-slate-200 p-4 text-center">
+        <p class="text-2xl font-bold text-red-600">{{ stats.rejected }}</p>
+        <p class="text-sm text-slate-500">Ditolak</p>
       </div>
     </div>
 
@@ -25,19 +40,24 @@
         <template #siswa-cell="{ row }">
           <div class="flex items-center gap-2">
             <div class="w-8 h-8 rounded-lg bg-sky-100 flex items-center justify-center text-sky-600 text-xs font-semibold">
-              {{ row.original.siswa.split(' ').map((n: string) => n[0]).join('') }}
+              {{ getInitials(row.original.siswa?.nama_siswa || '-') }}
             </div>
             <div>
-              <p class="text-sm font-medium text-slate-900">{{ row.original.siswa }}</p>
-              <p class="text-xs text-slate-500">{{ row.original.kelas }}</p>
+              <p class="text-sm font-medium text-slate-900">{{ row.original.siswa?.nama_siswa || '-' }}</p>
+              <p class="text-xs text-slate-500">{{ row.original.siswa?.kelas?.nama_kelas || '-' }}</p>
             </div>
           </div>
         </template>
-        <template #jalur-cell="{ row }">
-          <UBadge :color="row.original.jalur === 'Mitra' ? 'primary' : 'warning'" variant="subtle" size="xs">{{ row.original.jalur }}</UBadge>
+        <template #perusahaan-cell="{ row }">
+          <span class="text-sm">{{ row.original.perusahaan?.nama_perusahaan || '-' }}</span>
+        </template>
+        <template #tanggal-cell="{ row }">
+          <span class="text-sm">{{ formatDate(row.original.tanggal_pengajuan) }}</span>
         </template>
         <template #status-cell="{ row }">
-          <UBadge :color="statusColor(row.original.status)" variant="subtle" size="xs">{{ row.original.status }}</UBadge>
+          <UBadge :color="statusColor(row.original.status)" variant="subtle" size="xs">
+            {{ statusLabel(row.original.status) }}
+          </UBadge>
         </template>
         <template #aksi-cell="{ row }">
           <UButton size="xs" color="primary" variant="ghost" @click="openDetail(row.original)">
@@ -45,6 +65,11 @@
           </UButton>
         </template>
       </UTable>
+
+      <div v-if="!loading && !filteredData.length" class="py-12 text-center">
+        <Icon name="lucide:inbox" class="w-12 h-12 text-slate-300 mx-auto mb-3" />
+        <p class="text-slate-500">Tidak ada data pengajuan</p>
+      </div>
     </div>
 
     <!-- Pagination -->
@@ -68,54 +93,48 @@
           <div class="space-y-4">
             <div class="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
               <div class="w-12 h-12 rounded-lg bg-sky-100 flex items-center justify-center text-sky-600 font-semibold">
-                {{ selected.siswa.split(' ').map((n: string) => n[0]).join('') }}
+                {{ getInitials(selected.siswa?.nama_siswa || '-') }}
               </div>
               <div>
-                <p class="font-semibold text-slate-900">{{ selected.siswa }}</p>
-                <p class="text-sm text-slate-500">{{ selected.kelas }} - {{ selected.jurusan }}</p>
+                <p class="font-semibold text-slate-900">{{ selected.siswa?.nama_siswa }}</p>
+                <p class="text-sm text-slate-500">
+                  {{ selected.siswa?.kelas?.nama_kelas }} - {{ selected.siswa?.kelas?.jurusan?.nama_jurusan }}
+                </p>
               </div>
             </div>
 
             <div class="grid grid-cols-2 gap-3 text-sm">
               <div class="p-3 bg-slate-50 rounded-lg">
                 <p class="text-slate-500">Perusahaan</p>
-                <p class="font-medium text-slate-900">{{ selected.perusahaan }}</p>
-              </div>
-              <div class="p-3 bg-slate-50 rounded-lg">
-                <p class="text-slate-500">Jalur</p>
-                <p class="font-medium text-slate-900">{{ selected.jalur }}</p>
-              </div>
-              <div class="p-3 bg-slate-50 rounded-lg">
-                <p class="text-slate-500">Bidang Perusahaan</p>
-                <p class="font-medium text-slate-900">{{ selected.bidang }}</p>
+                <p class="font-medium text-slate-900">{{ selected.perusahaan?.nama_perusahaan }}</p>
               </div>
               <div class="p-3 bg-slate-50 rounded-lg">
                 <p class="text-slate-500">Tanggal Pengajuan</p>
-                <p class="font-medium text-slate-900">{{ selected.tanggal }}</p>
+                <p class="font-medium text-slate-900">{{ formatDate(selected.tanggal_pengajuan) }}</p>
               </div>
             </div>
 
-            <!-- Match indicator -->
-            <UAlert :color="selected.jurusan === selected.bidang ? 'success' : 'warning'" :icon="selected.jurusan === selected.bidang ? 'lucide:check-circle' : 'lucide:alert-circle'">
-              <template #title>{{ selected.jurusan === selected.bidang ? 'Jurusan Sesuai' : 'Jurusan Berbeda' }}</template>
-              <template #description>Jurusan siswa: {{ selected.jurusan }} | Bidang perusahaan: {{ selected.bidang }}</template>
-            </UAlert>
+            <div v-if="selected.catatan" class="p-3 bg-amber-50 rounded-lg">
+              <p class="text-sm text-amber-700">Catatan: {{ selected.catatan }}</p>
+            </div>
 
-            <UFormField v-if="selected.status === 'Menunggu'" label="Alasan Penolakan (jika ditolak)">
-              <UTextarea v-model="rejectReason" placeholder="Masukkan alasan..." :rows="2" />
+            <UFormField v-if="selected.status === 'pending'" label="Catatan (opsional untuk approve, wajib untuk tolak)">
+              <UTextarea v-model="actionNote" placeholder="Masukkan catatan..." :rows="2" />
             </UFormField>
           </div>
 
           <template #footer>
-            <div v-if="selected.status === 'Menunggu'" class="flex gap-3">
-              <UButton color="error" variant="outline" class="flex-1" :loading="processing" @click="reject">
+            <div v-if="selected.status === 'pending'" class="flex gap-3">
+              <UButton color="error" variant="outline" class="flex-1" :loading="processing" @click="handleReject">
                 <Icon name="lucide:x" class="w-4 h-4 mr-2" />Tolak
               </UButton>
-              <UButton color="success" class="flex-1" :loading="processing" @click="approve">
+              <UButton color="success" class="flex-1" :loading="processing" @click="handleApprove">
                 <Icon name="lucide:check" class="w-4 h-4 mr-2" />Setujui
               </UButton>
             </div>
-            <UBadge v-else :color="statusColor(selected.status)" size="lg">{{ selected.status }}</UBadge>
+            <UBadge v-else :color="statusColor(selected.status)" size="lg">
+              {{ statusLabel(selected.status) }}
+            </UBadge>
           </template>
         </UCard>
       </template>
@@ -124,88 +143,159 @@
 </template>
 
 <script setup lang="ts">
-definePageMeta({ layout: 'admin' })
+import { usePengajuanApi, type Pengajuan } from '~/composables/api/use-internship';
 
-const toast = useToast()
-const loading = ref(true)
-const search = ref('')
-const filterStatus = ref('Semua')
-const filterJurusan = ref('Semua Jurusan')
-const modalOpen = ref(false)
-const selected = ref<any>(null)
-const rejectReason = ref('')
-const currentPage = ref(1)
-const itemsPerPage = 10
-const processing = ref(false)
+definePageMeta({ layout: 'admin' });
 
-const data = ref([
-  { id: 1, siswa: 'Budi Santoso', kelas: 'XII RPL 1', jurusan: 'RPL', perusahaan: 'PT Telkom', bidang: 'IT', jalur: 'Mitra', tanggal: '15 Des 2024', status: 'Menunggu' },
-  { id: 2, siswa: 'Ani Wijaya', kelas: 'XII TKJ 2', jurusan: 'TKJ', perusahaan: 'PT Biznet', bidang: 'Jaringan', jalur: 'Mitra', tanggal: '14 Des 2024', status: 'Menunggu' },
-  { id: 3, siswa: 'Deni Pratama', kelas: 'XII MM 1', jurusan: 'MM', perusahaan: 'CV Digital', bidang: 'Multimedia', jalur: 'Mandiri', tanggal: '14 Des 2024', status: 'Disetujui' },
-  { id: 4, siswa: 'Siti Aminah', kelas: 'XII RPL 2', jurusan: 'RPL', perusahaan: 'PT Astra', bidang: 'Otomotif', jalur: 'Mitra', tanggal: '13 Des 2024', status: 'Ditolak' },
-  { id: 5, siswa: 'Rudi Hermawan', kelas: 'XII AKL 1', jurusan: 'AKL', perusahaan: 'PT Bank BCA', bidang: 'Keuangan', jalur: 'Mandiri', tanggal: '12 Des 2024', status: 'Menunggu' }
-])
+const toast = useToast();
+const pengajuanApi = usePengajuanApi();
+
+const loading = ref(true);
+const search = ref('');
+const filterStatus = ref('Semua');
+const modalOpen = ref(false);
+const selected = ref<Pengajuan | null>(null);
+const actionNote = ref('');
+const currentPage = ref(1);
+const itemsPerPage = 10;
+const processing = ref(false);
+
+const statusOptions = ['Semua', 'Menunggu', 'Disetujui', 'Ditolak'];
+const data = ref<Pengajuan[]>([]);
+const stats = reactive({ pending: 0, approved: 0, rejected: 0 });
 
 const columns = [
   { accessorKey: 'siswa', header: 'Siswa' },
   { accessorKey: 'perusahaan', header: 'Perusahaan' },
-  { accessorKey: 'jalur', header: 'Jalur' },
   { accessorKey: 'tanggal', header: 'Tanggal' },
   { accessorKey: 'status', header: 'Status' },
-  { accessorKey: 'aksi', header: '' }
-]
+  { accessorKey: 'aksi', header: '' },
+];
 
-const allFilteredData = computed(() => data.value.filter(d => {
-  const matchSearch = !search.value || d.siswa.toLowerCase().includes(search.value.toLowerCase())
-  const matchStatus = filterStatus.value === 'Semua' || d.status === filterStatus.value
-  const matchJurusan = filterJurusan.value === 'Semua Jurusan' || d.jurusan === filterJurusan.value
-  return matchSearch && matchStatus && matchJurusan
-}))
+// Helpers
+const getInitials = (name: string) => {
+  return name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+};
 
-const totalItems = computed(() => allFilteredData.value.length)
-const totalPages = computed(() => Math.ceil(totalItems.value / itemsPerPage))
+const formatDate = (date: string) => {
+  if (!date) return '-';
+  return new Date(date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+};
+
+const statusColor = (s: string): 'warning' | 'success' | 'error' | 'neutral' => {
+  const colors: Record<string, 'warning' | 'success' | 'error' | 'neutral'> = { 
+    pending: 'warning', 
+    approved: 'success', 
+    rejected: 'error' 
+  };
+  return colors[s] || 'neutral';
+};
+
+const statusLabel = (s: string) => {
+  const labels: Record<string, string> = { pending: 'Menunggu', approved: 'Disetujui', rejected: 'Ditolak' };
+  return labels[s] || s;
+};
+
+const statusApiValue = (s: string) => {
+  const values: Record<string, string> = { Menunggu: 'pending', Disetujui: 'approved', Ditolak: 'rejected' };
+  return values[s] || '';
+};
+
+// Computed
+const allFilteredData = computed(() => {
+  return data.value.filter(d => {
+    const matchSearch = !search.value || 
+      d.siswa?.nama_siswa?.toLowerCase().includes(search.value.toLowerCase());
+    const matchStatus = filterStatus.value === 'Semua' || 
+      d.status === statusApiValue(filterStatus.value);
+    return matchSearch && matchStatus;
+  });
+});
+
+const totalItems = computed(() => allFilteredData.value.length);
+const totalPages = computed(() => Math.ceil(totalItems.value / itemsPerPage));
 
 const filteredData = computed(() => {
-  const start = (currentPage.value - 1) * itemsPerPage
-  return allFilteredData.value.slice(start, start + itemsPerPage)
-})
+  const start = (currentPage.value - 1) * itemsPerPage;
+  return allFilteredData.value.slice(start, start + itemsPerPage);
+});
 
-watch([search, filterStatus, filterJurusan], () => { currentPage.value = 1 })
+watch([search, filterStatus], () => { currentPage.value = 1; });
 
-const statusColor = (s: string) => ({ Menunggu: 'warning', Disetujui: 'success', Ditolak: 'error' })[s] || 'neutral'
+// Actions
+const openDetail = (item: Pengajuan) => {
+  selected.value = item;
+  actionNote.value = '';
+  modalOpen.value = true;
+};
 
-const openDetail = (item: any) => {
-  selected.value = item
-  rejectReason.value = ''
-  modalOpen.value = true
-}
-
-const approve = async () => {
-  processing.value = true
-  await new Promise(r => setTimeout(r, 1000))
-  selected.value.status = 'Disetujui'
-  processing.value = false
-  modalOpen.value = false
-  toast.add({ title: 'Pengajuan disetujui', color: 'success' })
-}
-
-const reject = async () => {
-  if (!rejectReason.value) {
-    toast.add({ title: 'Masukkan alasan penolakan', color: 'error' })
-    return
+const handleApprove = async () => {
+  if (!selected.value) return;
+  processing.value = true;
+  try {
+    const response = await pengajuanApi.approve(selected.value.id_pengajuan, actionNote.value || undefined);
+    if (response.success) {
+      selected.value.status = 'approved';
+      stats.pending--;
+      stats.approved++;
+      modalOpen.value = false;
+      toast.add({ title: 'Pengajuan disetujui', color: 'success' });
+    } else {
+      toast.add({ title: response.message || 'Gagal menyetujui', color: 'error' });
+    }
+  } catch (error) {
+    toast.add({ title: 'Terjadi kesalahan', color: 'error' });
+  } finally {
+    processing.value = false;
   }
-  processing.value = true
-  await new Promise(r => setTimeout(r, 1000))
-  selected.value.status = 'Ditolak'
-  processing.value = false
-  modalOpen.value = false
-  toast.add({ title: 'Pengajuan ditolak', color: 'error' })
-}
+};
 
-onMounted(async () => {
-  await new Promise(r => setTimeout(r, 600))
-  loading.value = false
-})
+const handleReject = async () => {
+  if (!selected.value) return;
+  if (!actionNote.value) {
+    toast.add({ title: 'Masukkan alasan penolakan', color: 'error' });
+    return;
+  }
+  processing.value = true;
+  try {
+    const response = await pengajuanApi.reject(selected.value.id_pengajuan, actionNote.value);
+    if (response.success) {
+      selected.value.status = 'rejected';
+      stats.pending--;
+      stats.rejected++;
+      modalOpen.value = false;
+      toast.add({ title: 'Pengajuan ditolak', color: 'error' });
+    } else {
+      toast.add({ title: response.message || 'Gagal menolak', color: 'error' });
+    }
+  } catch (error) {
+    toast.add({ title: 'Terjadi kesalahan', color: 'error' });
+  } finally {
+    processing.value = false;
+  }
+};
 
-useHead({ title: 'Verifikasi | Admin' })
+// Fetch data
+const fetchData = async () => {
+  loading.value = true;
+  try {
+    const response = await pengajuanApi.getAll({ limit: 100 });
+    if (response.success) {
+      data.value = response.data || [];
+      // Calculate stats
+      stats.pending = data.value.filter(d => d.status === 'pending').length;
+      stats.approved = data.value.filter(d => d.status === 'approved').length;
+      stats.rejected = data.value.filter(d => d.status === 'rejected').length;
+    }
+  } catch (error) {
+    console.error('Failed to fetch pengajuan:', error);
+    toast.add({ title: 'Gagal memuat data', color: 'error' });
+  } finally {
+    loading.value = false;
+  }
+};
+
+onMounted(fetchData);
+
+useHead({ title: 'Verifikasi | Admin' });
 </script>

@@ -240,16 +240,25 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
+import { usePenempatanApi, useAbsensiApi } from '~/composables/api/use-internship'
+import { useSiswaApi } from '~/composables/api/use-academic'
+import { usePerusahaanApi } from '~/composables/api/use-partner'
+
 definePageMeta({ layout: 'guru' })
+
+const { getAll: getPenempatan } = usePenempatanApi()
+const { getAll: getAbsensi, validate: validateAbsensi } = useAbsensiApi()
+const { getAll: getAllSiswa } = useSiswaApi()
+const { getAll: getAllPerusahaan } = usePerusahaanApi()
 
 const toast = useToast()
 const loading = ref(true)
 const loadingAbsensi = ref(false)
 const searchSiswa = ref('')
-const filterStatus = ref(null)
+const filterStatus = ref<string | null>(null)
 const filterDate = ref('')
-const selectedSiswa = ref(null)
+const selectedSiswa = ref<any>(null)
 const currentPage = ref(1)
 const itemsPerPage = ref(10)
 
@@ -258,8 +267,13 @@ const perPageOptions = [5, 10, 25, 50]
 const stats = reactive({ pending: 0, approved: 0, rejected: 0, total: 0 })
 
 // Data
-const siswaList = ref([])
-const absensiData = ref([])
+const siswaList = ref<any[]>([])
+const absensiData = ref<any[]>([])
+
+// Helper function to get initials
+function getInitials(name: string): string {
+  return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+}
 
 const filteredSiswa = computed(() => {
   if (!searchSiswa.value) return siswaList.value
@@ -285,37 +299,39 @@ const paginatedAbsensi = computed(() => filteredAbsensi.value.slice(startIndex.v
 // Reset page when filter changes
 watch([filterStatus, itemsPerPage], () => { currentPage.value = 1 })
 
-const selectSiswa = async (siswa) => {
+const selectSiswa = async (siswa: any) => {
   selectedSiswa.value = siswa
   loadingAbsensi.value = true
   currentPage.value = 1
 
-  // Simulate loading
-  await new Promise(r => setTimeout(r, 400))
-
-  // Generate 30 absensi entries
-  const statuses = ['Pending', 'Disetujui', 'Ditolak']
-
-  absensiData.value = Array.from({ length: 30 }, (_, i) => {
-    const date = new Date()
-    date.setDate(date.getDate() - i)
-    const checkInHour = 7 + Math.floor(Math.random() * 2)
-    const checkInMin = Math.floor(Math.random() * 60)
-    const checkOutHour = 15 + Math.floor(Math.random() * 3)
-    const checkOutMin = Math.floor(Math.random() * 60)
-    const durasi = checkOutHour - checkInHour
-
-    return {
-      id: i + 1,
-      tanggal: date.toLocaleDateString('id-ID', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }),
-      checkIn: `${String(checkInHour).padStart(2, '0')}:${String(checkInMin).padStart(2, '0')}`,
-      checkOut: i % 5 === 0 ? null : `${String(checkOutHour).padStart(2, '0')}:${String(checkOutMin).padStart(2, '0')}`,
-      durasi: i % 5 === 0 ? '-' : `${durasi} jam`,
-      status: i < 3 ? 'Pending' : statuses[Math.floor(Math.random() * 3)]
+  try {
+    // Fetch absensi for this student's penempatan
+    const res = await getAbsensi({ id_penempatan: siswa.id_penempatan, limit: 100 })
+    if (res?.data) {
+      absensiData.value = res.data.map((a: any) => ({
+        id: a.id_absensi,
+        tanggal: new Date(a.tanggal).toLocaleDateString('id-ID', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }),
+        checkIn: a.jam_masuk || '-',
+        checkOut: a.jam_keluar || '-',
+        durasi: a.jam_masuk && a.jam_keluar ? calculateDuration(a.jam_masuk, a.jam_keluar) : '-',
+        status: !a.validasi_guru ? 'Pending' : a.status === 'hadir' ? 'Disetujui' : 'Ditolak'
+      }))
     }
-  })
+  } catch (e) {
+    console.warn('Failed to fetch absensi:', e)
+    absensiData.value = []
+  } finally {
+    loadingAbsensi.value = false
+  }
+}
 
-  loadingAbsensi.value = false
+function calculateDuration(start: string, end: string): string {
+  const startParts = start.split(':').map(Number)
+  const endParts = end.split(':').map(Number)
+  const sh = startParts[0] ?? 0
+  const eh = endParts[0] ?? 0
+  const hours = eh - sh
+  return `${hours} jam`
 }
 
 const backToList = () => {
@@ -326,13 +342,15 @@ const backToList = () => {
   currentPage.value = 1
 }
 
-const getStatusColor = (status) => {
-  const colors = { Pending: 'warning', Disetujui: 'success', Ditolak: 'error' }
+type BadgeColor = 'primary' | 'secondary' | 'success' | 'warning' | 'error' | 'info' | 'neutral'
+
+const getStatusColor = (status: string): BadgeColor => {
+  const colors: Record<string, BadgeColor> = { Pending: 'warning', Disetujui: 'success', Ditolak: 'error' }
   return colors[status] || 'neutral'
 }
 
-const getStatusBg = (status) => {
-  const bgs = {
+const getStatusBg = (status: string) => {
+  const bgs: Record<string, string> = {
     Pending: 'bg-amber-100 text-amber-600',
     Disetujui: 'bg-green-100 text-green-600',
     Ditolak: 'bg-red-100 text-red-600'
@@ -340,49 +358,98 @@ const getStatusBg = (status) => {
   return bgs[status] || 'bg-slate-100 text-slate-600'
 }
 
-const approve = (id) => {
-  const item = absensiData.value.find(d => d.id === id)
-  if (item) {
-    item.status = 'Disetujui'
-    stats.pending--
-    stats.approved++
-
-    if (selectedSiswa.value) {
-      selectedSiswa.value.pending = Math.max(0, selectedSiswa.value.pending - 1)
+const approve = async (id: number) => {
+  try {
+    await validateAbsensi(id, { validasi_guru: true })
+    const item = absensiData.value.find(d => d.id === id)
+    if (item) {
+      item.status = 'Disetujui'
+      stats.pending--
+      stats.approved++
+      if (selectedSiswa.value) {
+        selectedSiswa.value.pending = Math.max(0, selectedSiswa.value.pending - 1)
+      }
     }
-
     toast.add({ title: 'Absensi disetujui', color: 'success' })
+  } catch (e) {
+    toast.add({ title: 'Gagal menyetujui absensi', color: 'error' })
   }
 }
 
-const reject = (id) => {
-  const item = absensiData.value.find(d => d.id === id)
-  if (item) {
-    item.status = 'Ditolak'
-    stats.pending--
-    stats.rejected++
+const reject = async (id: number) => {
+  try {
+    await validateAbsensi(id, { validasi_guru: false, keterangan: 'Ditolak oleh guru' })
+    const item = absensiData.value.find(d => d.id === id)
+    if (item) {
+      item.status = 'Ditolak'
+      stats.pending--
+      stats.rejected++
+      if (selectedSiswa.value) {
+        selectedSiswa.value.pending = Math.max(0, selectedSiswa.value.pending - 1)
+      }
+    }
+    toast.add({ title: 'Absensi ditolak', color: 'error' })
+  } catch (e) {
+    toast.add({ title: 'Gagal menolak absensi', color: 'error' })
+  }
+}
 
-    if (selectedSiswa.value) {
-      selectedSiswa.value.pending = Math.max(0, selectedSiswa.value.pending - 1)
+async function fetchData() {
+  try {
+    // Fetch penempatan, siswa, and perusahaan in parallel (optimized)
+    const [penempatanRes, siswaRes, perusahaanRes] = await Promise.all([
+      getPenempatan({ limit: 100 }),
+      getAllSiswa({ limit: 1000 }),
+      getAllPerusahaan({ limit: 1000 })
+    ])
+
+    // Create lookup maps
+    const siswaMap = new Map<number, any>()
+    const perusahaanMap = new Map<number, any>()
+
+    if (siswaRes?.data) {
+      for (const s of siswaRes.data) {
+        siswaMap.set(s.id_siswa, s)
+      }
+    }
+    if (perusahaanRes?.data) {
+      for (const p of perusahaanRes.data) {
+        perusahaanMap.set(p.id_perusahaan, p)
+      }
     }
 
-    toast.add({ title: 'Absensi ditolak', color: 'error' })
+    // Transform penempatan with resolved names
+    if (penempatanRes?.data) {
+      siswaList.value = penempatanRes.data.map((p: any) => {
+        const siswa = siswaMap.get(p.siswa_id)
+        const perusahaan = perusahaanMap.get(p.perusahaan_id)
+
+        return {
+          id: p.siswa_id,
+          id_penempatan: p.id_penempatan,
+          nama: siswa?.nama_siswa || `Siswa #${p.siswa_id}`,
+          inisial: getInitials(siswa?.nama_siswa || 'XX'),
+          kelas: siswa?.kelas?.nama_kelas || 'N/A',
+          industri: perusahaan?.nama_perusahaan || `Perusahaan #${p.perusahaan_id}`,
+          pending: 0,
+          kehadiran: 0
+        }
+      })
+    }
+
+    // Get pending absensi count
+    const pendingRes = await getAbsensi({ validasi_guru: false, limit: 1 })
+    stats.pending = pendingRes?.meta?.total || 0
+    stats.total = stats.pending + stats.approved + stats.rejected
+  } catch (e) {
+    console.warn('Failed to fetch data:', e)
+  } finally {
+    loading.value = false
   }
 }
 
-onMounted(async () => {
-  await new Promise(r => setTimeout(r, 600))
-  Object.assign(stats, { pending: 8, approved: 156, rejected: 5, total: 169 })
-
-  siswaList.value = [
-    { id: 1, nama: 'Ryobi Surya Atmaja', inisial: 'RS', kelas: 'XII RPL 1', industri: 'PT. Telkom Indonesia', pending: 3, kehadiran: 95 },
-    { id: 2, nama: 'Dewi Sartika', inisial: 'DS', kelas: 'XII RPL 2', industri: 'PT. Gojek Indonesia', pending: 2, kehadiran: 88 },
-    { id: 3, nama: 'Ahmad Fauzi', inisial: 'AF', kelas: 'XII TKJ 1', industri: 'CV. Digital Nusantara', pending: 3, kehadiran: 72 },
-    { id: 4, nama: 'Siti Nurhaliza', inisial: 'SN', kelas: 'XII MM 1', industri: 'PT. Media Kreasi', pending: 0, kehadiran: 100 },
-    { id: 5, nama: 'Budi Prasetyo', inisial: 'BP', kelas: 'XII RPL 1', industri: 'PT. Tokopedia', pending: 0, kehadiran: 90 }
-  ]
-
-  loading.value = false
+onMounted(() => {
+  fetchData()
 })
 
 useHead({ title: 'Validasi Absensi | Guru PKL' })

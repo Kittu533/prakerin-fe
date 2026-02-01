@@ -8,7 +8,7 @@
           <h1 class="text-xl lg:text-2xl font-bold mt-1">Administrator 👋</h1>
           <p class="text-sky-100 text-sm mt-1">Panel Admin SIM Prakerin</p>
         </div>
-        <UButton color="white" variant="solid" size="sm" class="shrink-0">
+        <UButton color="neutral" variant="solid" size="sm" class="shrink-0 bg-white text-sky-600 hover:bg-sky-50">
           <Icon name="lucide:download" class="w-4 h-4 mr-1" />
           Export
         </UButton>
@@ -115,21 +115,27 @@
 </template>
 
 <script setup lang="ts">
+import { useDashboardApi, type DashboardStats, type PenempatanPerJurusan, type TrendPengajuan, type StatusSiswa, type RecentPengajuan } from '~/composables/api/use-reporting'
+
 definePageMeta({ layout: 'admin' })
 
-const loading = ref(true)
+const { getAdminStats, getPenempatanPerJurusan, getTrendPengajuan, getStatusSiswa, getRecentPengajuan } = useDashboardApi()
 
+const loading = ref(true)
+const apiError = ref(false)
+
+// Stats data
 const stats = ref([
-  { label: 'Total Siswa PKL', value: 245, icon: 'lucide:users', bg: 'bg-sky-100', color: 'text-sky-600', change: 12 },
-  { label: 'Menunggu Verifikasi', value: 18, icon: 'lucide:clock', bg: 'bg-amber-100', color: 'text-amber-600' },
-  { label: 'Sudah Ditempatkan', value: 198, icon: 'lucide:check-circle', bg: 'bg-green-100', color: 'text-green-600', change: 8 },
-  { label: 'Masalah Absensi', value: 12, icon: 'lucide:alert-triangle', bg: 'bg-red-100', color: 'text-red-600' }
+  { label: 'Total Siswa PKL', value: 0, icon: 'lucide:users', bg: 'bg-sky-100', color: 'text-sky-600', change: 0 },
+  { label: 'Menunggu Verifikasi', value: 0, icon: 'lucide:clock', bg: 'bg-amber-100', color: 'text-amber-600' },
+  { label: 'Sudah Ditempatkan', value: 0, icon: 'lucide:check-circle', bg: 'bg-green-100', color: 'text-green-600', change: 0 },
+  { label: 'Masalah Absensi', value: 0, icon: 'lucide:alert-triangle', bg: 'bg-red-100', color: 'text-red-600' }
 ])
 
 const alerts = ref([
-  { id: 1, color: 'warning' as const, icon: 'lucide:clock', title: '5 pengajuan baru', desc: 'Menunggu verifikasi' },
-  { id: 2, color: 'error' as const, icon: 'lucide:alert-circle', title: '3 siswa absensi rendah', desc: 'Kehadiran < 80%' },
-  { id: 3, color: 'primary' as const, icon: 'lucide:info', title: 'Kuota PT Telkom hampir penuh', desc: 'Sisa 1 slot' }
+  { id: 1, color: 'warning' as const, icon: 'lucide:clock', title: '0 pengajuan baru', desc: 'Menunggu verifikasi' },
+  { id: 2, color: 'error' as const, icon: 'lucide:alert-circle', title: '0 siswa absensi rendah', desc: 'Kehadiran < 80%' },
+  { id: 3, color: 'primary' as const, icon: 'lucide:info', title: 'Sistem berjalan normal', desc: 'Semua layanan aktif' }
 ])
 
 // Chart Options
@@ -158,7 +164,7 @@ const placementChartOptions = {
   }]
 }
 
-const placementChartSeries = [{ name: 'Penempatan', data: [85, 72, 68, 55] }]
+const placementChartSeries = ref([{ name: 'Penempatan', data: [0, 0, 0, 0] }])
 
 const trendChartOptions = {
   chart: { 
@@ -187,10 +193,10 @@ const trendChartOptions = {
   }]
 }
 
-const trendChartSeries = [
-  { name: 'Pengajuan', data: [45, 52, 38, 65, 48, 42] },
-  { name: 'Diterima', data: [40, 48, 35, 58, 45, 38] }
-]
+const trendChartSeries = ref([
+  { name: 'Pengajuan', data: [0, 0, 0, 0, 0, 0] },
+  { name: 'Diterima', data: [0, 0, 0, 0, 0, 0] }
+])
 
 const statusChartOptions = {
   chart: { type: 'donut' },
@@ -211,7 +217,7 @@ const statusChartOptions = {
   }
 }
 
-const statusChartSeries = [198, 18, 17, 12]
+const statusChartSeries = ref([0, 0, 0, 0])
 
 const columns = [
   { accessorKey: 'siswa', header: 'Siswa' },
@@ -221,16 +227,113 @@ const columns = [
   { accessorKey: 'status', header: 'Status' }
 ]
 
-const recentApps = ref([
-  { siswa: 'Budi Santoso', jurusan: 'RPL', perusahaan: 'PT Telkom', tanggal: '15 Des 2024', status: 'Menunggu' },
-  { siswa: 'Ani Wijaya', jurusan: 'TKJ', perusahaan: 'PT Biznet', tanggal: '14 Des 2024', status: 'Menunggu' },
-  { siswa: 'Deni Pratama', jurusan: 'MM', perusahaan: 'CV Digital', tanggal: '14 Des 2024', status: 'Disetujui' },
-  { siswa: 'Siti Aminah', jurusan: 'RPL', perusahaan: 'PT Astra', tanggal: '13 Des 2024', status: 'Ditolak' }
-])
+const recentApps = ref<RecentPengajuan[]>([])
 
-onMounted(async () => {
-  await new Promise(r => setTimeout(r, 600))
-  loading.value = false
+// Fetch all dashboard data
+async function fetchDashboardData() {
+  loading.value = true
+  apiError.value = false
+  
+  try {
+    // Fetch all data in parallel
+    const [statsRes, penempatanRes, trendRes, statusRes, recentRes] = await Promise.allSettled([
+      getAdminStats(),
+      getPenempatanPerJurusan(),
+      getTrendPengajuan(),
+      getStatusSiswa(),
+      getRecentPengajuan(5)
+    ])
+
+    // Process stats - backend returns snake_case fields
+    if (statsRes.status === 'fulfilled' && statsRes.value?.success && statsRes.value.data) {
+      const s = statsRes.value.data as any // Backend uses snake_case
+      if (stats.value[0]) stats.value[0].value = s.total_siswa ?? 0
+      if (stats.value[1]) stats.value[1].value = s.total_pengajuan_pending ?? 0
+      if (stats.value[2]) stats.value[2].value = s.total_penempatan_aktif ?? 0
+      if (stats.value[3]) stats.value[3].value = 0 // masalahAbsensi not available from backend
+      
+      // Update alerts
+      if (alerts.value[0]) alerts.value[0].title = `${s.total_pengajuan_pending ?? 0} pengajuan baru`
+      if (alerts.value[1]) alerts.value[1].title = `0 siswa absensi rendah`
+    }
+
+    // Process penempatan per jurusan
+    if (penempatanRes.status === 'fulfilled' && penempatanRes.value?.success) {
+      const data = penempatanRes.value.data as PenempatanPerJurusan[]
+      if (data.length > 0) {
+        placementChartOptions.xaxis.categories = data.map(d => d.jurusan)
+        placementChartSeries.value = [{ name: 'Penempatan', data: data.map(d => d.persentase) }]
+      }
+    }
+
+    // Process trend pengajuan
+    if (trendRes.status === 'fulfilled' && trendRes.value?.success) {
+      const data = trendRes.value.data as TrendPengajuan[]
+      if (data.length > 0) {
+        trendChartOptions.xaxis.categories = data.map(d => d.bulan)
+        trendChartSeries.value = [
+          { name: 'Pengajuan', data: data.map(d => d.pengajuan) },
+          { name: 'Diterima', data: data.map(d => d.diterima) }
+        ]
+      }
+    }
+
+    // Process status siswa
+    if (statusRes.status === 'fulfilled' && statusRes.value?.success) {
+      const data = statusRes.value.data as StatusSiswa[]
+      if (data.length > 0) {
+        statusChartOptions.labels = data.map(d => d.status)
+        statusChartSeries.value = data.map(d => d.total)
+      }
+    }
+
+    // Process recent pengajuan
+    if (recentRes.status === 'fulfilled' && recentRes.value?.success) {
+      recentApps.value = recentRes.value.data as RecentPengajuan[]
+    }
+
+  } catch (err) {
+    console.error('[Dashboard] Error fetching data:', err)
+    apiError.value = true
+    // Use dummy data as fallback
+    useDummyData()
+  } finally {
+    loading.value = false
+  }
+}
+
+// Fallback dummy data
+function useDummyData() {
+  stats.value = [
+    { label: 'Total Siswa PKL', value: 245, icon: 'lucide:users', bg: 'bg-sky-100', color: 'text-sky-600', change: 12 },
+    { label: 'Menunggu Verifikasi', value: 18, icon: 'lucide:clock', bg: 'bg-amber-100', color: 'text-amber-600' },
+    { label: 'Sudah Ditempatkan', value: 198, icon: 'lucide:check-circle', bg: 'bg-green-100', color: 'text-green-600', change: 8 },
+    { label: 'Masalah Absensi', value: 12, icon: 'lucide:alert-triangle', bg: 'bg-red-100', color: 'text-red-600' }
+  ]
+  
+  alerts.value = [
+    { id: 1, color: 'warning' as const, icon: 'lucide:clock', title: '5 pengajuan baru', desc: 'Menunggu verifikasi' },
+    { id: 2, color: 'error' as const, icon: 'lucide:alert-circle', title: '3 siswa absensi rendah', desc: 'Kehadiran < 80%' },
+    { id: 3, color: 'primary' as const, icon: 'lucide:info', title: 'Kuota PT Telkom hampir penuh', desc: 'Sisa 1 slot' }
+  ]
+  
+  placementChartSeries.value = [{ name: 'Penempatan', data: [85, 72, 68, 55] }]
+  trendChartSeries.value = [
+    { name: 'Pengajuan', data: [45, 52, 38, 65, 48, 42] },
+    { name: 'Diterima', data: [40, 48, 35, 58, 45, 38] }
+  ]
+  statusChartSeries.value = [198, 18, 17, 12]
+  
+  recentApps.value = [
+    { id: 1, siswa: 'Budi Santoso', jurusan: 'RPL', perusahaan: 'PT Telkom', tanggal: '15 Des 2024', status: 'Menunggu' },
+    { id: 2, siswa: 'Ani Wijaya', jurusan: 'TKJ', perusahaan: 'PT Biznet', tanggal: '14 Des 2024', status: 'Menunggu' },
+    { id: 3, siswa: 'Deni Pratama', jurusan: 'MM', perusahaan: 'CV Digital', tanggal: '14 Des 2024', status: 'Disetujui' },
+    { id: 4, siswa: 'Siti Aminah', jurusan: 'RPL', perusahaan: 'PT Astra', tanggal: '13 Des 2024', status: 'Ditolak' }
+  ]
+}
+
+onMounted(() => {
+  fetchDashboardData()
 })
 
 useHead({ title: 'Dashboard | Admin' })

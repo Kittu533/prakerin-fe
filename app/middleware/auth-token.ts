@@ -1,42 +1,41 @@
-import { defineNuxtRouteMiddleware, navigateTo } from '#app'
-import { useDataStore } from '~/stores/data-store'
-import { apiFetch } from '~/composables/api-fetch'
-import type { AuthProfileResponse } from '~/composables/types-auth/auth.interface'
+import { defineNuxtRouteMiddleware, navigateTo } from '#app';
+import { useAuth } from '~/composables/auth/use-auth';
 
-export default defineNuxtRouteMiddleware(async () => {
-  if (!import.meta.client) return // middleware hanya berjalan di client
+/**
+ * Auth Middleware
+ * - Checks if user is authenticated
+ * - Redirects to login if not authenticated
+ * - Fetches user profile if token exists
+ */
+export default defineNuxtRouteMiddleware(async (to) => {
+  // Only run on client side
+  if (!import.meta.client) return;
 
-  const dataStore = useDataStore()
-  dataStore.initializeFromLocalStorage()
+  const { isAuthenticated, checkAuth, userRole, getDashboardRoute } = useAuth();
 
-  // Jika belum login → arahkan ke /login
-  if (!dataStore.token) {
-    return navigateTo('/login')
+  // Check authentication
+  const isAuth = await checkAuth();
+
+  // If not authenticated, redirect to login
+  if (!isAuth) {
+    return navigateTo('/login');
   }
 
-  try {
-    // Ambil ulang profil pengguna (GET /auth/me)
-    const { data: profileResponse } = await apiFetch<AuthProfileResponse>(
-      'AuthService',
-      '/auth/me',
-      { method: 'GET' },
-      true
-    )
+  // Optional: Check role-based access
+  const path = to.path;
+  const role = userRole.value;
 
-    // Simpan profil user
-    if (profileResponse?.data) {
-      dataStore.setProfile(profileResponse.data)
-    } else {
-      // Jika gagal ambil profil → arahkan ke login
-      dataStore.clearToken()
-      return navigateTo('/login')
-    }
-  } catch (error) {
-    console.error('[Auth Middleware] Error:', error)
-    // Jika token expired / tidak valid → hapus data & redirect
-    dataStore.clearToken()
-    dataStore.clearRefreshToken()
-    dataStore.clearProfile()
-    return navigateTo('/login')
+  // Role-based route protection
+  if (path.startsWith('/admin') && role !== 'admin') {
+    return navigateTo(getDashboardRoute());
   }
-})
+  if (path.startsWith('/guru') && role !== 'guru') {
+    return navigateTo(getDashboardRoute());
+  }
+  if (path.startsWith('/siswa') && role !== 'siswa') {
+    return navigateTo(getDashboardRoute());
+  }
+  if (path.startsWith('/mentor') && role !== 'mentor') {
+    return navigateTo(getDashboardRoute());
+  }
+});

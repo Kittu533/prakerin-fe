@@ -127,23 +127,7 @@
         <span v-show="!isMinimized" class="text-xs">Collapse Menu</span>
       </button>
 
-      <!-- User Card -->
-      <div 
-        class="flex items-center gap-3 p-2 rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors cursor-pointer" 
-        :class="isMinimized ? 'justify-center' : ''"
-        :title="isMinimized ? 'Budi Santoso, S.Pd' : ''"
-      >
-        <div class="w-9 h-9 rounded-lg bg-sky-500 flex items-center justify-center text-white font-semibold text-sm shrink-0 shadow-sm">
-          BS
-        </div>
-        <Transition name="fade">
-          <div v-show="!isMinimized" class="flex-1 min-w-0">
-            <p class="text-sm font-medium text-slate-900 truncate">Budi Santoso, S.Pd</p>
-            <p class="text-xs text-slate-500">Guru Pembimbing</p>
-          </div>
-        </Transition>
-        <Icon v-show="!isMinimized" name="lucide:chevron-right" class="w-4 h-4 text-slate-400" />
-      </div>
+
 
       <!-- Logout -->
       <button

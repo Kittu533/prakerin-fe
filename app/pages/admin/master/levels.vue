@@ -2,8 +2,8 @@
   <div class="space-y-6">
     <div class="flex items-center justify-between">
       <div>
-        <h1 class="text-xl lg:text-2xl font-bold text-slate-900">Jurusan</h1>
-        <p class="text-sm text-slate-500">Kelola data jurusan</p>
+        <h1 class="text-xl lg:text-2xl font-bold text-slate-900">Tingkat</h1>
+        <p class="text-sm text-slate-500">Kelola data tingkat kelas (X, XI, XII)</p>
       </div>
       <UButton color="primary" @click="openModal()">
         <Icon name="lucide:plus" class="w-4 h-4 mr-2" />Tambah
@@ -15,8 +15,8 @@
         <USkeleton v-for="i in 4" :key="i" class="h-14 rounded-lg" />
       </div>
       <div v-else-if="!data.length" class="p-8 text-center text-slate-500">
-        <Icon name="lucide:layers" class="w-12 h-12 mx-auto mb-3 text-slate-300" />
-        <p>Belum ada data jurusan</p>
+        <Icon name="lucide:signal" class="w-12 h-12 mx-auto mb-3 text-slate-300" />
+        <p>Belum ada data tingkat</p>
       </div>
       <UTable v-else :data="data" :columns="columns">
         <template #aksi-cell="{ row }">
@@ -32,21 +32,18 @@
       </UTable>
     </div>
 
-    <!-- Pagination -->
-    <div v-if="pagination.totalPages > 1" class="flex justify-center">
-      <UPagination v-model:page="currentPage" :total="pagination.total" :items-per-page="pagination.limit" @update:page="fetchData" />
-    </div>
-
     <UModal v-model:open="modalOpen">
       <template #content>
         <UCard>
-          <template #header><h3 class="font-semibold text-slate-900">{{ editing ? 'Edit' : 'Tambah' }} Jurusan</h3></template>
+          <template #header>
+            <h3 class="font-semibold text-slate-900">{{ editing ? 'Edit' : 'Tambah' }} Tingkat</h3>
+          </template>
           <div class="space-y-4">
-            <UFormField label="Kode Jurusan" required>
-              <UInput v-model="form.kode_jurusan" placeholder="RPL" />
+            <UFormField label="Kode Tingkat" required>
+              <UInput v-model="form.kode_tingkat" placeholder="X, XI, XII" />
             </UFormField>
-            <UFormField label="Nama Jurusan" required>
-              <UInput v-model="form.nama_jurusan" placeholder="Rekayasa Perangkat Lunak" />
+            <UFormField label="Urutan" required>
+              <UInput v-model.number="form.urutan" type="number" min="1" placeholder="1" />
             </UFormField>
           </div>
           <template #footer>
@@ -62,93 +59,88 @@
 </template>
 
 <script setup lang="ts">
-import { useJurusanApi, type Jurusan } from '~/composables/api/use-academic';
+import { useTingkatApi, type Tingkat } from '~/composables/api/use-academic';
 
 definePageMeta({ layout: 'admin' });
 
 const toast = useToast();
-const jurusanApi = useJurusanApi();
+const tingkatApi = useTingkatApi();
 
 const loading = ref(true);
 const modalOpen = ref(false);
 const editing = ref(false);
 const processing = ref(false);
 
-const data = ref<Jurusan[]>([]);
-const currentPage = ref(1);
-const pagination = ref({ page: 1, limit: 10, total: 0, totalPages: 0 });
+const data = ref<Tingkat[]>([]);
 
 const form = reactive({
-  id_jurusan: null as number | null,
-  kode_jurusan: '',
-  nama_jurusan: '',
+  id_tingkat: null as number | null,
+  kode_tingkat: '',
+  urutan: 1,
 });
 
 const columns = [
-  { accessorKey: 'kode_jurusan', header: 'Kode' },
-  { accessorKey: 'nama_jurusan', header: 'Nama Jurusan' },
+  { accessorKey: 'kode_tingkat', header: 'Kode Tingkat' },
+  { accessorKey: 'urutan', header: 'Urutan' },
   { accessorKey: 'aksi', header: '' },
 ];
 
 async function fetchData() {
   loading.value = true;
   try {
-    const response = await jurusanApi.getAll({ page: currentPage.value, limit: 10 });
+    const response = await tingkatApi.getAll();
     if (response.success) {
       data.value = response.data || [];
-      if (response.pagination) {
-        pagination.value = response.pagination;
-      }
     }
   } catch (error) {
-    console.error('Failed to fetch jurusan:', error);
-    toast.add({ title: 'Gagal memuat data jurusan', color: 'error' });
+    console.error('Failed to fetch tingkat:', error);
+    toast.add({ title: 'Gagal memuat data tingkat', color: 'error' });
   } finally {
     loading.value = false;
   }
 }
 
-function openModal(item?: Jurusan) {
+function openModal(item?: Tingkat) {
   editing.value = !!item;
   if (item) {
-    form.id_jurusan = item.id_jurusan;
-    form.kode_jurusan = item.kode_jurusan;
-    form.nama_jurusan = item.nama_jurusan;
+    form.id_tingkat = item.id_tingkat;
+    form.kode_tingkat = item.kode_tingkat;
+    form.urutan = item.urutan;
   } else {
-    form.id_jurusan = null;
-    form.kode_jurusan = '';
-    form.nama_jurusan = '';
+    form.id_tingkat = null;
+    form.kode_tingkat = '';
+    form.urutan = data.value.length + 1;
   }
   modalOpen.value = true;
 }
 
 async function save() {
-  if (!form.kode_jurusan || !form.nama_jurusan) {
-    toast.add({ title: 'Lengkapi Kode dan Nama Jurusan', color: 'error' });
+  if (!form.kode_tingkat || !form.urutan) {
+    toast.add({ title: 'Lengkapi Kode Tingkat dan Urutan', color: 'error' });
     return;
   }
 
   processing.value = true;
   try {
-    if (editing.value && form.id_jurusan) {
-      const response = await jurusanApi.update(form.id_jurusan, {
-        kode_jurusan: form.kode_jurusan,
-        nama_jurusan: form.nama_jurusan,
+    if (editing.value && form.id_tingkat) {
+      const response = await tingkatApi.update(form.id_tingkat, {
+        kode_tingkat: form.kode_tingkat,
+        urutan: form.urutan,
       });
       if (response.success) {
-        toast.add({ title: 'Jurusan diperbarui', color: 'success' });
+        toast.add({ title: 'Tingkat diperbarui', color: 'success' });
         modalOpen.value = false;
         fetchData();
       } else {
         toast.add({ title: response.message || 'Gagal memperbarui', color: 'error' });
       }
     } else {
-      const response = await jurusanApi.create({
-        kode_jurusan: form.kode_jurusan,
-        nama_jurusan: form.nama_jurusan,
+      const response = await tingkatApi.create({
+        kode_tingkat: form.kode_tingkat,
+        urutan: form.urutan,
       });
       if (response.success) {
-        toast.add({ title: 'Jurusan ditambahkan', color: 'success' });
+        toast.add({ title: 'Tingkat ditambahkan', color: 'success' });
         modalOpen.value = false;
         fetchData();
       } else {
@@ -162,23 +154,23 @@ async function save() {
   }
 }
 
-async function confirmDelete(item: Jurusan) {
-  if (!confirm(`Hapus jurusan "${item.nama_jurusan}"?`)) return;
+async function confirmDelete(item: Tingkat) {
+  if (!confirm(`Hapus tingkat "${item.kode_tingkat}"?`)) return;
 
   try {
-    const response = await jurusanApi.remove(item.id_jurusan);
+    const response = await tingkatApi.remove(item.id_tingkat);
     if (response.success) {
-      toast.add({ title: 'Jurusan dihapus', color: 'success' });
+      toast.add({ title: 'Tingkat dihapus', color: 'success' });
       fetchData();
     } else {
       toast.add({ title: response.message || 'Gagal menghapus', color: 'error' });
     }
   } catch (error) {
-    toast.add({ title: 'Gagal menghapus jurusan', color: 'error' });
+    toast.add({ title: 'Gagal menghapus tingkat', color: 'error' });
   }
 }
 
 onMounted(() => fetchData());
 
-useHead({ title: 'Jurusan | Admin' });
+useHead({ title: 'Tingkat | Admin' });
 </script>
