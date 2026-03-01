@@ -171,15 +171,11 @@
 </template>
 
 <script setup lang="ts">
-import { useMonitoringApi, type Kunjungan } from '~/composables/api/use-internship'
-import { useSiswaApi } from '~/composables/api/use-academic'
-import { usePerusahaanApi } from '~/composables/api/use-partner'
+import { useGuruApi } from '~/composables/api/use-guru'
 
 definePageMeta({ layout: 'guru' })
 
-const { getKunjungan } = useMonitoringApi()
-const { getAll: getAllSiswa } = useSiswaApi()
-const { getAll: getAllPerusahaan } = usePerusahaanApi()
+const guruApi = useGuruApi()
 
 const loading = ref(true)
 const search = ref('')
@@ -188,9 +184,18 @@ const itemsPerPage = ref(10)
 
 const perPageOptions = [5, 10, 25, 50]
 
-interface KunjunganDisplay extends Kunjungan {
+interface KunjunganDisplay {
+  id_monitoring: string | number
+  id_penempatan: string
+  tanggal_monitoring: string
+  hasil_monitoring: string | null
+  foto_monitoring: string | null
+  kendala: string | null
+  solusi: string | null
   siswa_nama: string
+  siswa_id: string
   perusahaan_nama: string
+  perusahaan_id: string
 }
 
 const kunjunganList = ref<KunjunganDisplay[]>([])
@@ -209,9 +214,8 @@ const kunjunganBulanIni = computed(() => {
 const siswaDikunjungi = computed(() => new Set(kunjunganList.value.map(k => k.siswa_id)).size)
 const perusahaanDikunjungi = computed(() => new Set(kunjunganList.value.map(k => k.perusahaan_id)).size)
 
-// Helpers
 function getInitials(name: string): string {
-  const parts = name.split(' ').filter(Boolean)
+  const parts = (name || '').split(' ').filter(Boolean)
   if (parts.length === 0) return 'XX'
   return parts.map(n => n[0]).join('').toUpperCase().slice(0, 2)
 }
@@ -224,58 +228,61 @@ function formatDate(dateStr: string): string {
 const filteredKunjungan = computed(() => {
   if (!search.value) return kunjunganList.value
   const q = search.value.toLowerCase()
-  return kunjunganList.value.filter(item => 
+  return kunjunganList.value.filter(item =>
     item.siswa_nama.toLowerCase().includes(q) ||
     item.perusahaan_nama.toLowerCase().includes(q) ||
     (item.hasil_monitoring || '').toLowerCase().includes(q)
   )
 })
 
-// Pagination computed
 const totalItems = computed(() => filteredKunjungan.value.length)
 const totalPages = computed(() => Math.ceil(totalItems.value / itemsPerPage.value))
 const startIndex = computed(() => (currentPage.value - 1) * itemsPerPage.value)
 const endIndex = computed(() => Math.min(startIndex.value + itemsPerPage.value, totalItems.value))
 const paginatedKunjungan = computed(() => filteredKunjungan.value.slice(startIndex.value, endIndex.value))
 
-// Reset page when filter changes
 watch([search, itemsPerPage], () => { currentPage.value = 1 })
 
 async function fetchData() {
   loading.value = true
   try {
-    // Fetch kunjungan records, siswa, and perusahaan in parallel
-    const [kunjunganRes, siswaRes, perusahaanRes] = await Promise.all([
-      getKunjungan({ limit: 1000 }),
-      getAllSiswa({ limit: 1000 }),
-      getAllPerusahaan({ limit: 1000 })
-    ])
+    // Get guru's penempatan — monitoring records are nested inside each penempatan
+    const res = await guruApi.getSiswaBimbingan({ limit: 100 })
 
-    console.log('Kunjungan response:', kunjunganRes)
+    const allKunjungan: KunjunganDisplay[] = []
 
-    // Create lookup maps
-    const siswaMap = new Map<number, any>()
-    const perusahaanMap = new Map<number, any>()
+    for (const pen of (res?.data ?? [])) {
+      const siswa_nama = pen.siswa?.nama_siswa || '-'
+      const siswa_id = pen.siswa?.id_siswa ?? pen.id_penempatan
+      const perusahaan_nama = pen.perusahaan?.nama_perusahaan || '-'
+      const perusahaan_id = pen.perusahaan?.id_perusahaan ?? ''
 
-    if (siswaRes?.data) {
-      for (const s of siswaRes.data) {
-        siswaMap.set(s.id_siswa, s)
+      // monitoring is an array of kunjungan records for this penempatan
+      const monitoringRecords: any[] = (pen as any).monitoring ?? []
+
+      for (const m of monitoringRecords) {
+        allKunjungan.push({
+          id_monitoring: m.id_monitoring,
+          id_penempatan: pen.id_penempatan,
+          tanggal_monitoring: m.tanggal_monitoring,
+          hasil_monitoring: m.hasil_monitoring ?? null,
+          foto_monitoring: m.foto_monitoring ?? null,
+          kendala: m.kendala ?? null,
+          solusi: m.solusi ?? null,
+          siswa_nama,
+          siswa_id,
+          perusahaan_nama,
+          perusahaan_id,
+        })
       }
     }
-    if (perusahaanRes?.data) {
-      for (const p of perusahaanRes.data) {
-        perusahaanMap.set(p.id_perusahaan, p)
-      }
-    }
 
-    // Transform kunjungan data with resolved names
-    if (kunjunganRes?.data) {
-      kunjunganList.value = kunjunganRes.data.map((k: Kunjungan) => ({
-        ...k,
-        siswa_nama: siswaMap.get(k.siswa_id)?.nama_siswa || `Siswa #${k.siswa_id}`,
-        perusahaan_nama: perusahaanMap.get(k.perusahaan_id)?.nama_perusahaan || `Perusahaan #${k.perusahaan_id}`
-      }))
-    }
+    // Sort by date descending
+    allKunjungan.sort((a, b) =>
+      new Date(b.tanggal_monitoring).getTime() - new Date(a.tanggal_monitoring).getTime()
+    )
+
+    kunjunganList.value = allKunjungan
   } catch (error) {
     console.error('Failed to fetch kunjungan data:', error)
   } finally {

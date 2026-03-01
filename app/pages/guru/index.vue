@@ -351,14 +351,10 @@
 
 <script setup lang="ts">
 import { useGuruApi } from '~/composables/api/use-guru'
-import { usePenempatanApi, useLogbookApi, useAbsensiApi } from '~/composables/api/use-internship'
 
 definePageMeta({ layout: 'guru' })
 
-const { getSiswaBimbingan, getDashboardStats } = useGuruApi()
-const { getAll: getPenempatan } = usePenempatanApi()
-const { getAll: getLogbooks } = useLogbookApi()
-const { getAll: getAbsensi } = useAbsensiApi()
+const { getSiswaBimbingan } = useGuruApi()
 
 const loading = ref(true)
 const guru = reactive({ nama: '', inisial: '' })
@@ -367,6 +363,9 @@ const activity = reactive({ kunjungan: 0, logbook: 0, nilai: 0 })
 const notifications = ref<any[]>([])
 const students = ref<any[]>([])
 const nextVisit = ref<{ industri: string; tanggal: string } | null>(null)
+
+// All penempatan data for computing charts and stats
+const allPenempatan = ref<any[]>([])
 
 // Get auth user from store or cookie
 const authUser = useCookie('auth_user')
@@ -378,26 +377,25 @@ const greeting = computed(() => {
 
 const currentDate = computed(() => new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }))
 
-const notifStyle = {
+const notifStyle: Record<string, string> = {
   warning: 'bg-amber-100 text-amber-600',
   error: 'bg-red-100 text-red-600',
   success: 'bg-green-100 text-green-600',
   info: 'bg-sky-100 text-sky-600'
 }
 
-// Helper function to get initials
 function getInitials(name: string): string {
   return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
 }
 
 // Chart Options
 const attendanceChartOptions = {
-  chart: { type: 'bar', toolbar: { show: false } },
+  chart: { type: 'bar' as const, toolbar: { show: false } },
   plotOptions: { bar: { borderRadius: 4, columnWidth: '60%' } },
   colors: ['#0ea5e9', '#22c55e'],
   xaxis: { categories: ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'] },
-  yaxis: { max: 30, labels: { formatter: (val: number) => Math.round(val).toString() } },
-  legend: { position: 'top' },
+  yaxis: { labels: { formatter: (val: number) => Math.round(val).toString() } },
+  legend: { position: 'top' as const },
   dataLabels: { enabled: false },
   grid: { borderColor: '#f1f5f9' }
 }
@@ -408,10 +406,10 @@ const attendanceChartSeries = ref([
 ])
 
 const logbookChartOptions = {
-  chart: { type: 'donut' },
-  labels: ['Disetujui', 'Pending', 'Revisi'],
+  chart: { type: 'donut' as const },
+  labels: ['Disetujui', 'Menunggu', 'Ditolak'],
   colors: ['#22c55e', '#f59e0b', '#ef4444'],
-  legend: { position: 'bottom' },
+  legend: { position: 'bottom' as const },
   dataLabels: { enabled: false },
   plotOptions: {
     pie: {
@@ -428,6 +426,26 @@ const logbookChartOptions = {
 
 const logbookChartSeries = ref([0, 0, 0])
 
+function computeWeeklyAttendance(penempatanList: any[]) {
+  // Aggregate all absensi records and group by day of week (0=Mon ... 5=Sat)
+  const hadirPerDay = [0, 0, 0, 0, 0, 0]
+  const tidakHadirPerDay = [0, 0, 0, 0, 0, 0]
+
+  for (const p of penempatanList) {
+    for (const a of (p.absensi || [])) {
+      const date = new Date(a.tanggal)
+      let dow = date.getDay() - 1 // JS: 0=Sun, we want 0=Mon
+      if (dow < 0 || dow > 5) continue // skip Sunday
+      if (a.status_absensi === 'hadir') {
+        hadirPerDay[dow]++
+      } else {
+        tidakHadirPerDay[dow]++
+      }
+    }
+  }
+  return { hadirPerDay, tidakHadirPerDay }
+}
+
 async function fetchDashboardData() {
   try {
     // Get auth user info
@@ -437,94 +455,126 @@ async function fetchDashboardData() {
       guru.inisial = getInitials(guru.nama)
     }
 
-    // Fetch penempatan (siswa bimbingan) - fallback to getPenempatan if getSiswaBimbingan not available
-    try {
-      const penempatanRes = await getPenempatan({ limit: 10, status: 'aktif' })
-      if (penempatanRes?.data) {
-        students.value = penempatanRes.data.map((p: any) => ({
-          id: p.id_penempatan,
-          nama: p.siswa?.nama_siswa || 'Unknown',
-          inisial: getInitials(p.siswa?.nama_siswa || 'U'),
-          kelas: p.siswa?.kelas?.nama_kelas || '-',
-          industri: p.perusahaan?.nama_perusahaan || '-',
-          kehadiran: p.kehadiran_persen || 85, // Fallback if not computed
-          status: p.status_penempatan === 'aktif' ? 'Aktif' : 'Selesai'
-        }))
-        stats.totalSiswa = penempatanRes.pagination?.total || students.value.length
-      }
-    } catch (e) {
-      console.warn('Failed to fetch penempatan:', e)
-      // Use fallback data if API fails
-      students.value = []
-      stats.totalSiswa = 0
-    }
+    // Single API call to get all guru's penempatan data with nested relations
+    const res = await getSiswaBimbingan({ limit: 100 })
+    allPenempatan.value = res?.data || []
 
-    // Fetch logbooks pending
-    try {
-      const logbookRes = await getLogbooks({ status: 'pending', limit: 100 })
-      stats.logbookPending = logbookRes?.pagination?.total || logbookRes?.data?.length || 0
-      
-      // Also get approved and revision for chart
-      const approvedRes = await getLogbooks({ status: 'approved', limit: 1 })
-      const revisionRes = await getLogbooks({ status: 'revision', limit: 1 })
-      logbookChartSeries.value = [
-        approvedRes?.pagination?.total || 0,
-        stats.logbookPending,
-        revisionRes?.pagination?.total || 0
-      ]
-    } catch (e) {
-      console.warn('Failed to fetch logbooks:', e)
-    }
+    // Map students for display (show first 10)
+    students.value = allPenempatan.value.slice(0, 10).map((p: any) => ({
+      id: p.id_penempatan,
+      nama: p.siswa?.nama_siswa || 'Unknown',
+      inisial: getInitials(p.siswa?.nama_siswa || 'U'),
+      kelas: p.siswa?.kelas?.nama_kelas || '-',
+      industri: p.perusahaan?.nama_perusahaan || '-',
+      kehadiran: p.stats?.kehadiran ?? 0,
+      status: p.status_penempatan === 'aktif' ? 'Aktif' : 'Selesai'
+    }))
 
-    // Fetch absensi pending validation
-    try {
-      const absensiRes = await getAbsensi({ validasi_guru: false, limit: 100 })
-      stats.absensiPending = absensiRes?.pagination?.total || absensiRes?.data?.length || 0
-    } catch (e) {
-      console.warn('Failed to fetch absensi:', e)
-    }
+    // Compute stats from penempatan data
+    stats.totalSiswa = allPenempatan.value.length
 
-    // Calculate average attendance (simplified)
-    stats.kehadiran = students.value.length > 0 
-      ? Math.round(students.value.reduce((sum, s) => sum + s.kehadiran, 0) / students.value.length)
+    // Average kehadiran
+    const kehadiranValues = allPenempatan.value
+      .map((p: any) => p.stats?.kehadiran ?? 0)
+      .filter((v: number) => v > 0)
+    stats.kehadiran = kehadiranValues.length > 0
+      ? Math.round(kehadiranValues.reduce((a: number, b: number) => a + b, 0) / kehadiranValues.length)
       : 0
 
-    // Generate notifications based on data
+    // Logbook stats (aggregate from all penempatan)
+    let logbookDisetujui = 0
+    let logbookMenunggu = 0
+    let logbookDitolak = 0
+    for (const p of allPenempatan.value) {
+      for (const l of (p.logbook || [])) {
+        if (l.status_persetujuan === 'disetujui') logbookDisetujui++
+        else if (l.status_persetujuan === 'menunggu') logbookMenunggu++
+        else if (l.status_persetujuan === 'ditolak') logbookDitolak++
+      }
+    }
+    stats.logbookPending = logbookMenunggu
+    logbookChartSeries.value = [logbookDisetujui, logbookMenunggu, logbookDitolak]
+
+    // Absensi pending (today's records without full attendance - simplified: count siswa with no absensi today)
+    const today = new Date().toISOString().split('T')[0]
+    let absensiToday = 0
+    for (const p of allPenempatan.value) {
+      if (p.status_penempatan !== 'aktif') continue
+      const hasAbsensiToday = (p.absensi || []).some((a: any) => {
+        const tanggal = new Date(a.tanggal).toISOString().split('T')[0]
+        return tanggal === today
+      })
+      if (!hasAbsensiToday) absensiToday++
+    }
+    stats.absensiPending = absensiToday
+
+    // Weekly attendance chart
+    const { hadirPerDay, tidakHadirPerDay } = computeWeeklyAttendance(allPenempatan.value)
+    attendanceChartSeries.value = [
+      { name: 'Hadir', data: hadirPerDay },
+      { name: 'Tidak Hadir', data: tidakHadirPerDay }
+    ]
+
+    // Activity summary
+    activity.logbook = logbookDisetujui
+    activity.kunjungan = allPenempatan.value.reduce((sum: number, p: any) => sum + (p.monitoring?.length || 0), 0)
+    activity.nilai = allPenempatan.value.filter((p: any) => p.penilaian != null).length
+
+    // Next visit - find latest monitoring with future-looking context
+    const allMonitoring: any[] = []
+    for (const p of allPenempatan.value) {
+      for (const m of (p.monitoring || [])) {
+        allMonitoring.push({ ...m, perusahaan: p.perusahaan?.nama_perusahaan || '-' })
+      }
+    }
+    allMonitoring.sort((a, b) => new Date(b.tanggal_monitoring).getTime() - new Date(a.tanggal_monitoring).getTime())
+    if (allMonitoring.length > 0) {
+      const latest = allMonitoring[0]
+      nextVisit.value = {
+        industri: latest.perusahaan,
+        tanggal: new Date(latest.tanggal_monitoring).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
+      }
+    }
+
+    // Generate notifications based on real data
     notifications.value = []
     if (stats.logbookPending > 0) {
       notifications.value.push({
-        id: 1, 
-        type: 'warning', 
-        icon: 'lucide:clock', 
-        message: `${stats.logbookPending} logbook menunggu verifikasi`, 
+        id: 1, type: 'warning', icon: 'lucide:clock',
+        message: `${stats.logbookPending} logbook menunggu verifikasi`,
         time: 'Baru saja'
       })
     }
     if (stats.absensiPending > 0) {
       notifications.value.push({
-        id: 2, 
-        type: 'info', 
-        icon: 'lucide:calendar-check', 
-        message: `${stats.absensiPending} absensi perlu validasi`, 
-        time: 'Baru saja'
+        id: 2, type: 'info', icon: 'lucide:calendar-check',
+        message: `${stats.absensiPending} siswa belum absen hari ini`,
+        time: 'Hari ini'
       })
     }
-    // Check for low attendance
-    const lowAttendance = students.value.filter(s => s.kehadiran < 80)
+    const lowAttendance = allPenempatan.value.filter((p: any) => (p.stats?.kehadiran ?? 0) < 80 && p.status_penempatan === 'aktif')
     if (lowAttendance.length > 0) {
       notifications.value.push({
-        id: 3, 
-        type: 'error', 
-        icon: 'lucide:alert-triangle', 
-        message: `${lowAttendance.length} siswa kehadiran < 80%`, 
+        id: 3, type: 'error', icon: 'lucide:alert-triangle',
+        message: `${lowAttendance.length} siswa kehadiran < 80%`,
         time: 'Perlu perhatian'
       })
     }
-
-    // Activity summary (simplified counts)
-    activity.logbook = logbookChartSeries.value[0] // approved count
-    activity.nilai = 0 // Would need separate API call
-    activity.kunjungan = 0 // Would need monitoring API
+    if (logbookDitolak > 0) {
+      notifications.value.push({
+        id: 4, type: 'error', icon: 'lucide:x-circle',
+        message: `${logbookDitolak} logbook ditolak, perlu revisi siswa`,
+        time: 'Baru saja'
+      })
+    }
+    const belumDinilai = allPenempatan.value.filter((p: any) => p.status_penempatan === 'selesai' && !p.penilaian)
+    if (belumDinilai.length > 0) {
+      notifications.value.push({
+        id: 5, type: 'warning', icon: 'lucide:star',
+        message: `${belumDinilai.length} siswa selesai PKL tapi belum dinilai`,
+        time: 'Perlu tindakan'
+      })
+    }
 
   } catch (error) {
     console.error('Error fetching dashboard data:', error)

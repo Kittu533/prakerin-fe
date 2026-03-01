@@ -2,7 +2,7 @@
  * Identity Service API Composable
  * Handles: User management, authentication
  */
-import { apiFetch } from '~/composables/api-fetch';
+import { apiFetch } from "~/composables/api-fetch";
 
 // =============================================
 // TYPES
@@ -10,12 +10,14 @@ import { apiFetch } from '~/composables/api-fetch';
 export interface User {
   id: number;
   identifier: string;
-  role: 'admin' | 'guru' | 'siswa' | 'mentor';
+  role: "admin" | "guru" | "siswa" | "mentor";
   entity_id: number;
   entity_type: string;
   is_active: boolean;
   created_at?: string;
   updated_at?: string;
+  nama?: string;
+  additionalInfo?: string;
 }
 
 export interface PaginatedResponse<T> {
@@ -40,28 +42,33 @@ export interface SingleResponse<T> {
 // USER API
 // =============================================
 export function useUserApi() {
-  async function getAll(params?: { page?: number; limit?: number; role?: string; search?: string }) {
+  async function getAll(params?: {
+    page?: number;
+    limit?: number;
+    role?: string;
+    search?: string;
+  }) {
     const query = new URLSearchParams();
-    if (params?.page) query.append('page', String(params.page));
-    if (params?.limit) query.append('limit', String(params.limit));
-    if (params?.role) query.append('role', params.role);
-    if (params?.search) query.append('search', params.search);
+    if (params?.page) query.append("page", String(params.page));
+    if (params?.limit) query.append("limit", String(params.limit));
+    if (params?.role) query.append("role", params.role);
+    if (params?.search) query.append("search", params.search);
 
     const { data } = await apiFetch<PaginatedResponse<User>>(
-      'AuthService',
+      "AuthService",
       `/users?${query.toString()}`,
-      { method: 'GET' },
-      true
+      { method: "GET" },
+      true,
     );
     return data;
   }
 
   async function getById(id: number) {
     const { data } = await apiFetch<SingleResponse<User>>(
-      'AuthService',
+      "AuthService",
       `/users/${id}`,
-      { method: 'GET' },
-      true
+      { method: "GET" },
+      true,
     );
     return data;
   }
@@ -74,57 +81,65 @@ export function useUserApi() {
     entity_type: string;
   }) {
     const { data } = await apiFetch<SingleResponse<User>>(
-      'AuthService',
-      '/users',
-      { method: 'POST', data: payload },
-      true
+      "AuthService",
+      "/users",
+      { method: "POST", data: payload },
+      true,
     );
     return data;
   }
 
-  async function update(id: number, payload: Partial<{
-    identifier: string;
-    role: string;
-    is_active: boolean;
-  }>) {
+  async function update(
+    id: number,
+    payload: Partial<{
+      identifier: string;
+      role: string;
+      is_active: boolean;
+    }>,
+  ) {
     const { data } = await apiFetch<SingleResponse<User>>(
-      'AuthService',
+      "AuthService",
       `/users/${id}`,
-      { method: 'PUT', data: payload },
-      true
+      { method: "PUT", data: payload },
+      true,
     );
     return data;
   }
 
   async function remove(id: number) {
     const { data } = await apiFetch<SingleResponse<null>>(
-      'AuthService',
+      "AuthService",
       `/users/${id}`,
-      { method: 'DELETE' },
-      true
+      { method: "DELETE" },
+      true,
     );
     return data;
   }
 
   async function resetPassword(id: number) {
-    const { data } = await apiFetch<SingleResponse<{ generated_password: string }>>(
-      'AuthService',
-      `/users/${id}/reset-password`,
-      { method: 'POST' },
-      true
-    );
+    const { data } = await apiFetch<
+      SingleResponse<{ generated_password: string }>
+    >("AuthService", `/users/${id}/reset-password`, { method: "POST" }, true);
     return data;
   }
 
   async function toggleStatus(id: number, is_active: boolean) {
     const { data } = await apiFetch<SingleResponse<User>>(
-      'AuthService',
+      "AuthService",
       `/users/${id}/status`,
-      { method: 'PATCH', data: { is_active } },
-      true
+      { method: "PATCH", data: { is_active } },
+      true,
     );
     return data;
   }
 
-  return { getAll, getById, create, update, remove, resetPassword, toggleStatus };
+  return {
+    getAll,
+    getById,
+    create,
+    update,
+    remove,
+    resetPassword,
+    toggleStatus,
+  };
 }

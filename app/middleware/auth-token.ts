@@ -1,41 +1,37 @@
-import { defineNuxtRouteMiddleware, navigateTo } from '#app';
-import { useAuth } from '~/composables/auth/use-auth';
+import { defineNuxtRouteMiddleware, navigateTo } from "#app";
+import { useAuth } from "~/composables/auth/use-auth";
 
 /**
- * Auth Middleware
+ * Auth Middleware (Alternative)
  * - Checks if user is authenticated
  * - Redirects to login if not authenticated
- * - Fetches user profile if token exists
+ * - Uses JWT validation (no API calls)
  */
-export default defineNuxtRouteMiddleware(async (to) => {
+export default defineNuxtRouteMiddleware((to) => {
   // Only run on client side
   if (!import.meta.client) return;
 
-  const { isAuthenticated, checkAuth, userRole, getDashboardRoute } = useAuth();
-
-  // Check authentication
-  const isAuth = await checkAuth();
+  const { isAuthenticated, userRole, getDashboardRoute } = useAuth();
 
   // If not authenticated, redirect to login
-  if (!isAuth) {
-    return navigateTo('/login');
+  if (!isAuthenticated.value) {
+    return navigateTo("/login");
   }
 
-  // Optional: Check role-based access
+  // Role-based route protection
   const path = to.path;
   const role = userRole.value;
 
-  // Role-based route protection
-  if (path.startsWith('/admin') && role !== 'admin') {
+  if (path.startsWith("/admin") && role !== "admin") {
     return navigateTo(getDashboardRoute());
   }
-  if (path.startsWith('/guru') && role !== 'guru') {
+  if (path.startsWith("/guru") && role !== "guru") {
     return navigateTo(getDashboardRoute());
   }
-  if (path.startsWith('/siswa') && role !== 'siswa') {
+  if (path.startsWith("/siswa") && role !== "siswa") {
     return navigateTo(getDashboardRoute());
   }
-  if (path.startsWith('/mentor') && role !== 'mentor') {
+  if (path.startsWith("/mentor") && role !== "mentor") {
     return navigateTo(getDashboardRoute());
   }
 });

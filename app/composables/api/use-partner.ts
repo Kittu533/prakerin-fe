@@ -1,20 +1,22 @@
 /**
  * Partner Service API Composable
  * Handles: Perusahaan, Mentor
- * 
+ *
  * API Endpoints (via Gateway):
  * - /api/perusahaan
  * - /api/mentor
  */
-import { apiFetch } from '~/composables/api-fetch';
+import { apiFetch } from "~/composables/api-fetch";
 
 // =============================================
 // TYPES
 // =============================================
 export interface Perusahaan {
-  id_perusahaan: number;
+  id_perusahaan: string;
   nama_perusahaan: string;
   alamat?: string;
+  latitude?: number | null;
+  longitude?: number | null;
   no_hp?: string;
   email?: string;
   bidang_usaha?: string;
@@ -25,15 +27,15 @@ export interface Perusahaan {
 }
 
 export interface Mentor {
-  id_mentor: number;
+  id_mentor: string;
   nama_mentor: string;
   jabatan?: string;
   email?: string;
   no_hp?: string;
-  id_perusahaan: number;
+  id_perusahaan: string;
   status_aktif?: boolean;
   perusahaan?: {
-    id_perusahaan: number;
+    id_perusahaan: string;
     nama_perusahaan: string;
   };
   created_at?: string;
@@ -62,27 +64,31 @@ export interface SingleResponse<T> {
 // PERUSAHAAN API
 // =============================================
 export function usePerusahaanApi() {
-  async function getAll(params?: { page?: number; limit?: number; search?: string }) {
+  async function getAll(params?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+  }) {
     const query = new URLSearchParams();
-    if (params?.page) query.append('page', String(params.page));
-    if (params?.limit) query.append('limit', String(params.limit));
-    if (params?.search) query.append('search', params.search);
+    if (params?.page) query.append("page", String(params.page));
+    if (params?.limit) query.append("limit", String(params.limit));
+    if (params?.search) query.append("search", params.search);
 
     const { data } = await apiFetch<PaginatedResponse<Perusahaan>>(
-      'PartnerService',
+      "PartnerService",
       `/perusahaan?${query.toString()}`,
-      { method: 'GET' },
-      true
+      { method: "GET" },
+      true,
     );
     return data;
   }
 
-  async function getById(id: number) {
+  async function getById(id: string) {
     const { data } = await apiFetch<SingleResponse<Perusahaan>>(
-      'PartnerService',
+      "PartnerService",
       `/perusahaan/${id}`,
-      { method: 'GET' },
-      true
+      { method: "GET" },
+      true,
     );
     return data;
   }
@@ -98,38 +104,41 @@ export function usePerusahaanApi() {
     tahun_mulai_kerjasama?: number;
   }) {
     const { data } = await apiFetch<SingleResponse<Perusahaan>>(
-      'PartnerService',
-      '/perusahaan',
-      { method: 'POST', data: payload },
-      true
+      "PartnerService",
+      "/perusahaan",
+      { method: "POST", data: payload },
+      true,
     );
     return data;
   }
 
-  async function update(id: number, payload: Partial<{
-    nama_perusahaan: string;
-    alamat: string;
-    no_hp: string;
-    email: string;
-    bidang_usaha: string;
-    kapasitas_siswa: number;
-    status_kerjasama: boolean;
-  }>) {
+  async function update(
+    id: string,
+    payload: Partial<{
+      nama_perusahaan: string;
+      alamat: string;
+      no_hp: string;
+      email: string;
+      bidang_usaha: string;
+      kapasitas_siswa: number;
+      status_kerjasama: boolean;
+    }>,
+  ) {
     const { data } = await apiFetch<SingleResponse<Perusahaan>>(
-      'PartnerService',
+      "PartnerService",
       `/perusahaan/${id}`,
-      { method: 'PUT', data: payload },
-      true
+      { method: "PUT", data: payload },
+      true,
     );
     return data;
   }
 
-  async function remove(id: number) {
+  async function remove(id: string) {
     const { data } = await apiFetch<SingleResponse<Perusahaan>>(
-      'PartnerService',
+      "PartnerService",
       `/perusahaan/${id}`,
-      { method: 'DELETE' },
-      true
+      { method: "DELETE" },
+      true,
     );
     return data;
   }
@@ -141,27 +150,32 @@ export function usePerusahaanApi() {
 // MENTOR API
 // =============================================
 export function useMentorApi() {
-  async function getAll(params?: { page?: number; limit?: number; id_perusahaan?: number }) {
+  async function getAll(params?: {
+    page?: number;
+    limit?: number;
+    id_perusahaan?: string;
+  }) {
     const query = new URLSearchParams();
-    if (params?.page) query.append('page', String(params.page));
-    if (params?.limit) query.append('limit', String(params.limit));
-    if (params?.id_perusahaan) query.append('id_perusahaan', String(params.id_perusahaan));
+    if (params?.page) query.append("page", String(params.page));
+    if (params?.limit) query.append("limit", String(params.limit));
+    if (params?.id_perusahaan)
+      query.append("id_perusahaan", String(params.id_perusahaan));
 
     const { data } = await apiFetch<PaginatedResponse<Mentor>>(
-      'PartnerService',
+      "PartnerService",
       `/mentor?${query.toString()}`,
-      { method: 'GET' },
-      true
+      { method: "GET" },
+      true,
     );
     return data;
   }
 
-  async function getById(id: number) {
+  async function getById(id: string) {
     const { data } = await apiFetch<SingleResponse<Mentor>>(
-      'PartnerService',
+      "PartnerService",
       `/mentor/${id}`,
-      { method: 'GET' },
-      true
+      { method: "GET" },
+      true,
     );
     return data;
   }
@@ -171,52 +185,71 @@ export function useMentorApi() {
     jabatan?: string;
     email: string;
     no_hp?: string;
-    id_perusahaan: number;
+    id_perusahaan: string;
   }) {
     const { data } = await apiFetch<SingleResponse<Mentor>>(
-      'PartnerService',
-      '/mentor',
-      { method: 'POST', data: payload },
-      true
+      "PartnerService",
+      "/mentor",
+      { method: "POST", data: payload },
+      true,
     );
     return data;
   }
 
-  async function update(id: number, payload: Partial<{
-    nama_mentor: string;
-    jabatan: string;
-    email: string;
-    no_hp: string;
-    id_perusahaan: number;
-  }>) {
+  async function update(
+    id: string,
+    payload: Partial<{
+      nama_mentor: string;
+      jabatan: string;
+      email: string;
+      no_hp: string;
+      id_perusahaan: string;
+    }>,
+  ) {
     const { data } = await apiFetch<SingleResponse<Mentor>>(
-      'PartnerService',
+      "PartnerService",
       `/mentor/${id}`,
-      { method: 'PUT', data: payload },
-      true
+      { method: "PUT", data: payload },
+      true,
     );
     return data;
   }
 
-  async function remove(id: number) {
+  async function remove(id: string) {
     const { data } = await apiFetch<SingleResponse<Mentor>>(
-      'PartnerService',
+      "PartnerService",
       `/mentor/${id}`,
-      { method: 'DELETE' },
-      true
+      { method: "DELETE" },
+      true,
     );
     return data;
   }
 
-  async function resetPassword(id: number) {
-    const { data } = await apiFetch<SingleResponse<{ generated_password: string }>>(
-      'PartnerService',
+  async function resetPassword(id: string) {
+    const { data } = await apiFetch<
+      SingleResponse<{ generated_password: string }>
+    >(
+      "PartnerService",
       `/mentor/${id}/reset-password`,
-      { method: 'POST' },
-      true
+      { method: "POST" },
+      true,
     );
     return data;
   }
 
-  return { getAll, getById, create, update, remove, resetPassword };
+  /**
+   * Get current mentor's profile (for authenticated mentor)
+   * Uses /mentor/me endpoint which allows mentors to access their own profile
+   */
+  async function getMe() {
+    const { data } = await apiFetch<SingleResponse<Mentor>>(
+      "PartnerService",
+      `/mentor/me`,
+      { method: "GET" },
+      true,
+    );
+    return data;
+  }
+
+  return { getAll, getById, getMe, create, update, remove, resetPassword };
 }

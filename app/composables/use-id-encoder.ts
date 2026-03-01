@@ -63,9 +63,23 @@ export function generateSlug(name: string): string {
     .replace(/^-|-$/g, '')
 }
 
-export function encodeWithSlug(id: number, name: string): string {
-  const encodedId = encodeId(id)
+function isUUID(str: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str)
+}
+
+/**
+ * Encode an ID (numeric or UUID string) with a name slug for URL usage.
+ * - Numeric IDs: obfuscated via XOR encoding
+ * - UUID strings: hyphens stripped → 32 hex chars, then appended with slug
+ */
+export function encodeWithSlug(id: number | string, name: string): string {
   const slug = generateSlug(name)
+  if (typeof id === 'string' && isUUID(id)) {
+    // Strip hyphens: UUID → 32 lowercase hex chars
+    const encodedId = id.replace(/-/g, '').toLowerCase()
+    return slug ? `${encodedId}-${slug}` : encodedId
+  }
+  const encodedId = encodeId(id as number)
   return slug ? `${encodedId}-${slug}` : encodedId
 }
 
@@ -83,4 +97,18 @@ export function decodeFromUrl(urlSegment: string): number | null {
   }
   
   return decodeId(urlSegment)
+}
+
+/**
+ * Decode a UUID-based encoded URL segment.
+ * Expects the first 32 chars to be a UUID without hyphens.
+ * Returns the full UUID string (e.g. "638db913-xxxx-xxxx-xxxx-xxxxxxxxxxxx").
+ */
+export function decodeUUIDFromUrl(urlSegment: string): string | null {
+  // UUID is 32 hex chars when hyphens are stripped
+  const match = urlSegment.match(/^([0-9a-f]{32})/i)
+  if (!match || !match[1]) return null
+  const hex = match[1].toLowerCase()
+  // Re-insert hyphens: 8-4-4-4-12
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20, 32)}`
 }

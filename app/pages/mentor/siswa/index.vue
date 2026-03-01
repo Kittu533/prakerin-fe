@@ -14,40 +14,51 @@
       </UInput>
     </div>
 
+    <!-- Error State -->
+    <div v-if="error" class="bg-red-50 border border-red-200 rounded-xl p-4 text-center">
+      <Icon name="lucide:alert-circle" class="w-8 h-8 text-red-400 mx-auto mb-2" />
+      <p class="text-red-600">{{ error }}</p>
+      <UButton color="primary" variant="soft" size="sm" class="mt-2" @click="fetchData">Coba Lagi</UButton>
+    </div>
+
     <!-- Table (Desktop) -->
-    <div class="hidden lg:block bg-white rounded-xl border border-slate-200 overflow-hidden">
+    <div v-else class="hidden lg:block bg-white rounded-xl border border-slate-200 overflow-hidden">
       <div v-if="loading" class="p-4 space-y-3">
         <USkeleton v-for="i in 5" :key="i" class="h-16 rounded-lg" />
+      </div>
+      <div v-else-if="!filteredData.length" class="p-8 text-center">
+        <Icon name="lucide:users" class="w-12 h-12 text-slate-300 mx-auto mb-3" />
+        <p class="text-slate-500">Tidak ada data siswa</p>
       </div>
       <UTable v-else :data="filteredData" :columns="columns">
         <template #nama-cell="{ row }">
           <div class="flex items-center gap-3">
             <div
               class="w-10 h-10 rounded-lg bg-primary-100 flex items-center justify-center text-primary-600 text-sm font-semibold">
-              {{row.original.nama.split(' ').map((n: string) => n[0]).join('').slice(0, 2)}}
+              {{ getInitials(row.original.siswa?.nama_siswa || 'XX') }}
             </div>
             <div>
-              <p class="text-sm font-medium text-slate-900">{{ row.original.nama }}</p>
-              <p class="text-xs text-slate-500">{{ row.original.nisn }}</p>
+              <p class="text-sm font-medium text-slate-900">{{ row.original.siswa?.nama_siswa || `Siswa
+                #${row.original.siswa_id}` }}</p>
+              <p class="text-xs text-slate-500">{{ row.original.siswa?.nis || '-' }}</p>
             </div>
           </div>
         </template>
-        <template #absensi-cell="{ row }">
-          <div class="flex items-center gap-2">
-            <div class="w-16 h-2 bg-slate-100 rounded-full">
-              <div class="h-full rounded-full" :class="row.original.absensi >= 80 ? 'bg-success-500' : 'bg-error-500'"
-                :style="{ width: `${row.original.absensi}%` }" />
-            </div>
-            <span class="text-sm" :class="row.original.absensi >= 80 ? 'text-success-600' : 'text-error-600'">{{
-              row.original.absensi }}%</span>
-          </div>
+        <template #kelas-cell="{ row }">
+          <span class="text-sm text-slate-700">{{ row.original.siswa?.kelas?.nama_kelas || '-' }}</span>
+        </template>
+        <template #periode-cell="{ row }">
+          <span class="text-sm text-slate-700">{{ formatDate(row.original.tanggal_mulai) }} - {{
+            formatDate(row.original.tanggal_selesai) }}</span>
         </template>
         <template #status-cell="{ row }">
-          <UBadge :color="row.original.status === 'Aktif' ? 'success' : 'neutral'" variant="subtle" size="xs">{{
-            row.original.status }}</UBadge>
+          <UBadge :color="row.original.status_penempatan === 'aktif' ? 'success' : 'neutral'" variant="subtle"
+            size="xs">
+            {{ row.original.status_penempatan === 'aktif' ? 'Aktif' : row.original.status_penempatan }}
+          </UBadge>
         </template>
         <template #aksi-cell="{ row }">
-          <UButton size="xs" color="primary" variant="ghost" :to="`/mentor/siswa/${row.original.id}`">
+          <UButton size="xs" color="primary" variant="ghost" :to="`/mentor/siswa/${row.original.id_penempatan}`">
             <Icon name="lucide:eye" class="w-4 h-4" />
           </UButton>
         </template>
@@ -55,7 +66,7 @@
     </div>
 
     <!-- Card List (Mobile) -->
-    <div class="lg:hidden space-y-3">
+    <div v-if="!error" class="lg:hidden space-y-3">
       <template v-if="loading">
         <div v-for="i in 5" :key="i" class="bg-white rounded-xl border border-slate-200 p-4">
           <USkeleton class="h-4 w-3/4 mb-2" />
@@ -63,36 +74,31 @@
         </div>
       </template>
       <template v-else>
-        <NuxtLink v-for="item in filteredData" :key="item.id" :to="`/mentor/siswa/${item.id}`"
+        <NuxtLink v-for="item in filteredData" :key="item.id_penempatan" :to="`/mentor/siswa/${item.id_penempatan}`"
           class="block bg-white rounded-xl border border-slate-200 p-4 hover:border-slate-300 transition-colors">
           <div class="flex items-center gap-3">
             <div
               class="w-12 h-12 rounded-xl bg-primary-100 flex items-center justify-center text-primary-600 font-semibold">
-              {{item.nama.split(' ').map((n: string) => n[0]).join('').slice(0, 2)}}
+              {{ getInitials(item.siswa?.nama_siswa || 'XX') }}
             </div>
             <div class="flex-1 min-w-0">
-              <p class="font-medium text-slate-900">{{ item.nama }}</p>
-              <p class="text-xs text-slate-500">{{ item.kelas }} • {{ item.nisn }}</p>
+              <p class="font-medium text-slate-900">{{ item.siswa?.nama_siswa || `Siswa #${item.siswa_id}` }}</p>
+              <p class="text-xs text-slate-500">{{ item.siswa?.kelas?.nama_kelas || '-' }} • {{ item.siswa?.nis || '-'
+                }}</p>
             </div>
-            <UBadge :color="item.status === 'Aktif' ? 'success' : 'neutral'" variant="subtle" size="xs">{{ item.status
-              }}</UBadge>
+            <UBadge :color="item.status_penempatan === 'aktif' ? 'success' : 'neutral'" variant="subtle" size="xs">
+              {{ item.status_penempatan === 'aktif' ? 'Aktif' : item.status_penempatan }}
+            </UBadge>
           </div>
 
           <div class="mt-3 grid grid-cols-2 gap-3">
             <div class="bg-slate-50 rounded-lg p-2">
-              <p class="text-xs text-slate-500 mb-1">Kehadiran</p>
-              <div class="flex items-center gap-2">
-                <div class="flex-1 h-2 bg-slate-200 rounded-full">
-                  <div class="h-full rounded-full" :class="item.absensi >= 80 ? 'bg-success-500' : 'bg-error-500'"
-                    :style="{ width: `${item.absensi}%` }" />
-                </div>
-                <span class="text-sm font-medium" :class="item.absensi >= 80 ? 'text-success-600' : 'text-error-600'">{{
-                  item.absensi }}%</span>
-              </div>
+              <p class="text-xs text-slate-500 mb-1">Periode</p>
+              <p class="text-sm font-medium text-slate-900">{{ formatDate(item.tanggal_mulai) }}</p>
             </div>
             <div class="bg-slate-50 rounded-lg p-2">
-              <p class="text-xs text-slate-500 mb-1">Logbook</p>
-              <p class="text-sm font-medium text-slate-900">{{ item.logbook }} entries</p>
+              <p class="text-xs text-slate-500 mb-1">Sampai</p>
+              <p class="text-sm font-medium text-slate-900">{{ formatDate(item.tanggal_selesai) }}</p>
             </div>
           </div>
         </NuxtLink>
@@ -112,47 +118,100 @@
 </template>
 
 <script setup lang="ts">
+import { useMentorApi } from '~/composables/api/use-partner'
+import { usePenempatanApi, type Penempatan } from '~/composables/api/use-internship'
+
 definePageMeta({ layout: 'mentor' })
 
+const mentorApi = useMentorApi()
+const penempatanApi = usePenempatanApi()
+
 const loading = ref(true)
+const error = ref<string | null>(null)
 const search = ref('')
 const currentPage = ref(1)
 const itemsPerPage = 10
 
-const data = ref([
-  { id: 1, nama: 'Budi Santoso', nisn: '0012345678', kelas: 'XII RPL 1', absensi: 95, logbook: 45, status: 'Aktif' },
-  { id: 2, nama: 'Ani Wijaya', nisn: '0012345679', kelas: 'XII RPL 1', absensi: 88, logbook: 42, status: 'Aktif' },
-  { id: 3, nama: 'Deni Pratama', nisn: '0012345680', kelas: 'XII RPL 2', absensi: 72, logbook: 38, status: 'Aktif' },
-  { id: 4, nama: 'Siti Aminah', nisn: '0012345681', kelas: 'XII TKJ 1', absensi: 90, logbook: 44, status: 'Aktif' },
-  { id: 5, nama: 'Rudi Hermawan', nisn: '0012345682', kelas: 'XII TKJ 2', absensi: 85, logbook: 40, status: 'Aktif' }
-])
+const data = ref<Penempatan[]>([])
+const totalItems = ref(0)
 
 const columns = [
   { accessorKey: 'nama', header: 'Siswa' },
   { accessorKey: 'kelas', header: 'Kelas' },
-  { accessorKey: 'absensi', header: 'Kehadiran' },
-  { accessorKey: 'logbook', header: 'Logbook' },
+  { accessorKey: 'periode', header: 'Periode PKL' },
   { accessorKey: 'status', header: 'Status' },
   { accessorKey: 'aksi', header: '' }
 ]
 
-const allFilteredData = computed(() => data.value.filter(d =>
-  !search.value || d.nama.toLowerCase().includes(search.value.toLowerCase())
-))
+// Helper functions
+function getInitials(name: string) {
+  return name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()
+}
 
-const totalItems = computed(() => allFilteredData.value.length)
+function formatDate(dateStr: string) {
+  if (!dateStr) return '-'
+  const date = new Date(dateStr)
+  return date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
+}
+
+// Computed
 const totalPages = computed(() => Math.ceil(totalItems.value / itemsPerPage))
 
 const filteredData = computed(() => {
-  const start = (currentPage.value - 1) * itemsPerPage
-  return allFilteredData.value.slice(start, start + itemsPerPage)
+  if (!search.value) return data.value
+  const searchLower = search.value.toLowerCase()
+  return data.value.filter(d =>
+    d.siswa?.nama_siswa?.toLowerCase().includes(searchLower) ||
+    d.siswa?.nis?.toLowerCase().includes(searchLower)
+  )
 })
 
 watch(search, () => { currentPage.value = 1 })
 
-onMounted(async () => {
-  await new Promise(r => setTimeout(r, 500))
-  loading.value = false
+// Fetch data
+async function fetchData() {
+  loading.value = true
+  error.value = null
+
+  try {
+    // Step 1: Get mentor data to get perusahaan_id
+    const mentorResponse = await mentorApi.getMe()
+
+    if (!mentorResponse.success || !mentorResponse.data?.id_perusahaan) {
+      error.value = 'Gagal mengambil data mentor'
+      loading.value = false
+      return
+    }
+
+    const perusahaanId = mentorResponse.data.id_perusahaan
+
+    // Step 2: Get penempatan data filtered by perusahaan_id
+    const response = await penempatanApi.getAll({
+      page: currentPage.value,
+      limit: itemsPerPage,
+      id_perusahaan: perusahaanId
+    })
+
+    if (response.success) {
+      data.value = response.data
+      totalItems.value = response.pagination?.total || response.data.length
+    } else {
+      error.value = response.message || 'Gagal memuat data siswa'
+    }
+  } catch (e: any) {
+    console.error('Error fetching mentor students:', e)
+    error.value = e.response?.data?.message || 'Gagal memuat data siswa'
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(() => {
+  fetchData()
+})
+
+watch(currentPage, () => {
+  fetchData()
 })
 
 useHead({ title: 'Siswa Bimbingan | Mentor' })

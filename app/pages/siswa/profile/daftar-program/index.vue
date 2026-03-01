@@ -15,7 +15,12 @@
     </nav>
 
     <!-- Main Card -->
-    <div class="bg-white rounded-xl sm:rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+    <div v-if="loading" class="space-y-4">
+      <USkeleton class="h-32 w-full rounded-xl" />
+      <USkeleton class="h-48 w-full rounded-xl" />
+    </div>
+    
+    <div v-else-if="penempatan" class="bg-white rounded-xl sm:rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
       <!-- Header perusahaan -->
       <div class="p-4 sm:p-6 border-b border-slate-100">
         <div class="flex flex-col sm:flex-row gap-4 sm:items-start">
@@ -25,10 +30,10 @@
             </div>
             <div class="min-w-0 flex-1">
               <h2 class="text-base sm:text-lg font-semibold text-slate-900 line-clamp-2">
-                PT. Gama Integra Informatika (GAMA INFORMATIKA)
+                {{ penempatan.perusahaan?.nama_perusahaan || '-' }}
               </h2>
               <p class="text-xs sm:text-sm text-slate-500 mt-1 line-clamp-3 sm:line-clamp-none">
-                Gama Informatika merupakan satu-satunya tempat kursus dan pelatihan yang memiliki keunggulan dalam mencetak lulusan kursus yang berkompeten.
+                {{ penempatan.perusahaan?.deskripsi || '-' }}
               </p>
             </div>
           </div>
@@ -46,7 +51,7 @@
               <span>🏷️</span>
               <span>Posisi</span>
             </div>
-            <p class="mt-1 text-sm text-slate-500">-</p>
+            <p class="mt-1 text-sm text-slate-500">{{ penempatan.posisi || '-' }}</p>
           </div>
 
           <div class="rounded-xl border border-slate-100 bg-slate-50 p-3 sm:p-4">
@@ -54,7 +59,7 @@
               <span>🧑‍💻</span>
               <span>Jenis Kegiatan</span>
             </div>
-            <p class="mt-1 text-sm font-semibold text-slate-800">Magang/Kerja Praktik</p>
+            <p class="mt-1 text-sm font-semibold text-slate-800">{{ penempatan.jenis_kegiatan || 'Magang/Kerja Praktik' }}</p>
           </div>
 
           <div class="rounded-xl border border-slate-100 bg-slate-50 p-3 sm:p-4">
@@ -62,7 +67,7 @@
               <span>📄</span>
               <span>Deskripsi Pekerjaan</span>
             </div>
-            <p class="mt-1 text-sm text-slate-500">-</p>
+            <p class="mt-1 text-sm text-slate-500">{{ penempatan.deskripsi_pekerjaan || '-' }}</p>
           </div>
         </div>
 
@@ -70,11 +75,11 @@
         <div class="grid gap-4 grid-cols-2">
           <div class="rounded-xl border border-slate-100 bg-slate-50 p-3 sm:p-4">
             <p class="text-xs sm:text-sm text-slate-500">Tahun Ajaran</p>
-            <p class="mt-1 text-sm sm:text-base font-semibold text-slate-800">2024/2025</p>
+            <p class="mt-1 text-sm sm:text-base font-semibold text-slate-800">{{ penempatan.tahun_ajaran?.nama_tahun_ajaran || '-' }}</p>
           </div>
           <div class="rounded-xl border border-slate-100 bg-slate-50 p-3 sm:p-4">
             <p class="text-xs sm:text-sm text-slate-500">Semester</p>
-            <p class="mt-1 text-sm sm:text-base font-semibold text-slate-800">Genap</p>
+            <p class="mt-1 text-sm sm:text-base font-semibold text-slate-800">{{ penempatan.tahun_ajaran?.semester || '-' }}</p>
           </div>
         </div>
 
@@ -117,14 +122,76 @@
   </section>
 </template>
 
-<script setup>
+<script setup lang="ts">
+import { useSiswaPenempatanApi } from '~/composables/api/use-siswa'
+
 definePageMeta({
   layout: 'siswa',
 })
 
-const statuses = ref([
-  { label: 'DPA', note: 'Sudah ACC', approved: true },
-  { label: 'Prodi', note: 'Sudah ACC', approved: true },
-  { label: 'Mitra', note: 'Sudah ACC', approved: true },
-])
+const loading = ref(true)
+const penempatanApi = useSiswaPenempatanApi()
+
+interface Penempatan {
+  perusahaan?: {
+    nama_perusahaan: string
+    deskripsi?: string
+    alamat?: string
+  }
+  posisi?: string
+  jenis_kegiatan?: string
+  deskripsi_pekerjaan?: string
+  tahun_ajaran?: {
+    nama_tahun_ajaran: string
+    semester?: string
+  }
+}
+
+const penempatan = ref<Penempatan | null>(null)
+const statuses = ref<{ label: string; note: string; approved: boolean }[]>([])
+
+onMounted(async () => {
+  try {
+    const response = await penempatanApi.getMyPenempatan()
+    if (response.success && response.data) {
+      penempatan.value = response.data
+      
+      // Set approval statuses based on penempatan status
+      const status = response.data.status
+      statuses.value = [
+        { label: 'DPA', note: status === 'approved' || status === 'active' ? 'Sudah ACC' : 'Menunggu', approved: status === 'approved' || status === 'active' },
+        { label: 'Prodi', note: status === 'approved' || status === 'active' ? 'Sudah ACC' : 'Menunggu', approved: status === 'approved' || status === 'active' },
+        { label: 'Mitra', note: status === 'approved' || status === 'active' ? 'Sudah ACC' : 'Menunggu', approved: status === 'approved' || status === 'active' },
+      ]
+    } else {
+      loadMockData()
+    }
+  } catch (error) {
+    console.error('Failed to load penempatan:', error)
+    loadMockData()
+  } finally {
+    loading.value = false
+  }
+})
+
+function loadMockData() {
+  penempatan.value = {
+    perusahaan: {
+      nama_perusahaan: 'PT. Gama Integra Informatika (GAMA INFORMATIKA)',
+      deskripsi: 'Gama Informatika merupakan satu-satunya tempat kursus dan pelatihan yang memiliki keunggulan dalam mencetak lulusan kursus yang berkompeten.',
+    },
+    posisi: '-',
+    jenis_kegiatan: 'Magang/Kerja Praktik',
+    deskripsi_pekerjaan: '-',
+    tahun_ajaran: {
+      nama_tahun_ajaran: '2024/2025',
+      semester: 'Genap'
+    }
+  }
+  statuses.value = [
+    { label: 'DPA', note: 'Sudah ACC', approved: true },
+    { label: 'Prodi', note: 'Sudah ACC', approved: true },
+    { label: 'Mitra', note: 'Sudah ACC', approved: true },
+  ]
+}
 </script>

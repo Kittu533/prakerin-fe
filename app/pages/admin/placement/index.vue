@@ -1,425 +1,446 @@
-<template>
-  <div class="space-y-6">
-    <div class="flex items-center justify-between">
-      <div>
-        <h1 class="text-xl lg:text-2xl font-bold text-slate-900">Penempatan PKL</h1>
-        <p class="text-sm text-slate-500">Kelola penempatan siswa di industri</p>
-      </div>
-      <UButton color="primary" @click="openModal()">
-        <Icon name="lucide:plus" class="w-4 h-4 mr-2" />Tambah Penempatan
-      </UButton>
-    </div>
-
-    <!-- Filter -->
-    <div class="bg-white rounded-xl border border-slate-200 p-4">
-      <div class="flex flex-col sm:flex-row gap-3">
-        <UInput v-model="search" placeholder="Cari siswa atau perusahaan..." class="flex-1">
-          <template #leading><Icon name="lucide:search" class="w-4 h-4 text-slate-400" /></template>
-        </UInput>
-        <USelectMenu v-model="filterStatus" :items="statusOptions" class="w-full sm:w-36" />
-      </div>
-    </div>
-
-    <!-- Stats -->
-    <div class="grid grid-cols-3 gap-4">
-      <div class="bg-white rounded-xl border border-slate-200 p-4 text-center">
-        <p class="text-2xl font-bold text-green-600">{{ stats.aktif }}</p>
-        <p class="text-sm text-slate-500">Aktif</p>
-      </div>
-      <div class="bg-white rounded-xl border border-slate-200 p-4 text-center">
-        <p class="text-2xl font-bold text-blue-600">{{ stats.selesai }}</p>
-        <p class="text-sm text-slate-500">Selesai</p>
-      </div>
-      <div class="bg-white rounded-xl border border-slate-200 p-4 text-center">
-        <p class="text-2xl font-bold text-red-600">{{ stats.dibatalkan }}</p>
-        <p class="text-sm text-slate-500">Dibatalkan</p>
-      </div>
-    </div>
-
-    <!-- Table -->
-    <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
-      <div v-if="loading" class="p-4 space-y-3">
-        <USkeleton v-for="i in 6" :key="i" class="h-14 rounded-lg" />
-      </div>
-      <UTable v-else :data="filteredData" :columns="columns">
-        <template #siswa-cell="{ row }">
-          <div class="flex items-center gap-2">
-            <div class="w-8 h-8 rounded-lg bg-sky-100 flex items-center justify-center text-sky-600 text-xs font-semibold">
-              {{ getInitials(getSiswaName(row.original.siswa_id)) }}
-            </div>
-            <div>
-              <p class="text-sm font-medium text-slate-900">{{ getSiswaName(row.original.siswa_id) }}</p>
-              <p class="text-xs text-slate-500">{{ getSiswaKelas(row.original.siswa_id) }}</p>
-            </div>
-          </div>
-        </template>
-        <template #perusahaan-cell="{ row }">
-          <div>
-            <p class="text-sm font-medium">{{ getPerusahaanName(row.original.perusahaan_id) }}</p>
-          </div>
-        </template>
-        <template #periode-cell="{ row }">
-          <div class="text-sm">
-            <p>{{ formatDate(row.original.tanggal_mulai) }}</p>
-            <p class="text-slate-500">s/d {{ formatDate(row.original.tanggal_selesai) }}</p>
-          </div>
-        </template>
-        <template #guru-cell="{ row }">
-          <span class="text-sm">{{ getGuruName(row.original.guru_pembimbing_id) }}</span>
-        </template>
-        <template #status-cell="{ row }">
-          <UBadge :color="statusColor(row.original.status_penempatan)" variant="subtle" size="xs">
-            {{ statusLabel(row.original.status_penempatan) }}
-          </UBadge>
-        </template>
-        <template #aksi-cell="{ row }">
-          <div class="flex gap-1">
-            <UButton size="xs" color="neutral" variant="ghost" @click="openModal(row.original)">
-              <Icon name="lucide:edit" class="w-4 h-4" />
-            </UButton>
-          </div>
-        </template>
-      </UTable>
-
-      <div v-if="!loading && !filteredData.length" class="py-12 text-center">
-        <Icon name="lucide:building-2" class="w-12 h-12 text-slate-300 mx-auto mb-3" />
-        <p class="text-slate-500">Tidak ada data penempatan</p>
-      </div>
-    </div>
-
-    <!-- Pagination -->
-    <div v-if="totalPages > 1" class="flex justify-center">
-      <UPagination v-model:page="currentPage" :total="totalItems" :items-per-page="itemsPerPage" />
-    </div>
-
-    <!-- Form Modal -->
-    <UModal v-model:open="modalOpen">
-      <template #content>
-        <UCard>
-          <template #header>
-            <div class="flex items-center justify-between">
-              <h3 class="font-semibold text-slate-900">{{ editing ? 'Edit Penempatan' : 'Tambah Penempatan' }}</h3>
-              <UButton variant="ghost" color="neutral" size="xs" @click="modalOpen = false">
-                <Icon name="lucide:x" class="w-4 h-4" />
-              </UButton>
-            </div>
-          </template>
-
-          <div class="space-y-4">
-            <UFormField label="Siswa" required>
-              <USelectMenu 
-                v-model="form.siswa_id" 
-                :items="siswaOptions" 
-                value-key="value"
-                placeholder="Pilih siswa"
-                :disabled="editing"
-              />
-            </UFormField>
-
-            <UFormField label="Perusahaan" required>
-              <USelectMenu 
-                v-model="form.perusahaan_id" 
-                :items="perusahaanOptions" 
-                value-key="value"
-                placeholder="Pilih perusahaan"
-              />
-            </UFormField>
-
-            <UFormField label="Guru Pembimbing" required>
-              <USelectMenu 
-                v-model="form.guru_pembimbing_id" 
-                :items="guruOptions" 
-                value-key="value"
-                placeholder="Pilih guru"
-              />
-            </UFormField>
-
-            <div class="grid grid-cols-2 gap-3">
-              <UFormField label="Tanggal Mulai" required>
-                <UInput v-model="form.tanggal_mulai" type="date" />
-              </UFormField>
-              <UFormField label="Tanggal Selesai" required>
-                <UInput v-model="form.tanggal_selesai" type="date" />
-              </UFormField>
-            </div>
-
-            <UFormField v-if="editing" label="Status">
-              <USelectMenu v-model="form.status_penempatan" :items="['aktif', 'selesai', 'dibatalkan']" />
-            </UFormField>
-          </div>
-
-          <template #footer>
-            <div class="flex gap-3">
-              <UButton variant="outline" color="neutral" class="flex-1" @click="modalOpen = false">Batal</UButton>
-              <UButton color="primary" class="flex-1" :loading="processing" @click="savePenempatan">
-                {{ editing ? 'Simpan' : 'Tambah' }}
-              </UButton>
-            </div>
-          </template>
-        </UCard>
-      </template>
-    </UModal>
-  </div>
-</template>
-
 <script setup lang="ts">
-import { usePenempatanApi, type Penempatan } from '~/composables/api/use-internship';
-import { useSiswaApi, useGuruApi } from '~/composables/api/use-academic';
-import { usePerusahaanApi } from '~/composables/api/use-partner';
+import { ref, onMounted, computed, watch, h } from "vue";
+import {
+    usePenempatanApi,
+    type Penempatan,
+} from "~/composables/api/use-internship";
+import { useSiswaApi, useGuruApi } from "~/composables/api/use-academic";
+import { usePerusahaanApi } from "~/composables/api/use-partner";
+import {
+    getInitials,
+    extractKelasFromLabel,
+    extractNameFromLabel,
+} from "~/utils/string-helpers";
+import { formatDate } from "~/utils/format-date";
+import { getStatusColor, getStatusLabel } from "~/utils/status-helpers";
+import { createColumnHelper, type ColumnDef } from "@tanstack/vue-table";
 
-definePageMeta({ layout: 'admin' });
+definePageMeta({ layout: "admin" });
 
+const router = useRouter();
 const toast = useToast();
 const penempatanApi = usePenempatanApi();
 const siswaApi = useSiswaApi();
 const guruApi = useGuruApi();
 const perusahaanApi = usePerusahaanApi();
 
+// State
 const loading = ref(true);
-const search = ref('');
-const filterStatus = ref('Semua');
-const modalOpen = ref(false);
-const editing = ref(false);
-const currentPage = ref(1);
-const itemsPerPage = 10;
-const processing = ref(false);
-
-const statusOptions = ['Semua', 'Aktif', 'Selesai', 'Dibatalkan'];
+const search = ref("");
+const filterStatus = ref("Semua");
 const data = ref<Penempatan[]>([]);
+
+// Stats
 const stats = reactive({ aktif: 0, selesai: 0, dibatalkan: 0 });
 
-// Options for select
-const siswaOptions = ref<{ label: string; value: number }[]>([]);
-const perusahaanOptions = ref<{ label: string; value: number }[]>([]);
-const guruOptions = ref<{ label: string; value: number }[]>([]);
+// Options
+const siswaOptions = ref<{ label: string; value: string }[]>([]);
+const perusahaanOptions = ref<{ label: string; value: string }[]>([]);
+const guruOptions = ref<{ label: string; value: string }[]>([]);
 
-const form = reactive({
-  id_penempatan: null as number | null,
-  siswa_id: undefined as number | undefined,
-  perusahaan_id: undefined as number | undefined,
-  guru_pembimbing_id: undefined as number | undefined,
-  tahun_ajaran_id: 1,
-  tanggal_mulai: '',
-  tanggal_selesai: '',
-  status_penempatan: 'aktif',
-});
+// Column helper for TanStack Table
+const columnHelper = createColumnHelper<Penempatan>();
 
-const columns = [
-  { accessorKey: 'siswa', header: 'Siswa' },
-  { accessorKey: 'perusahaan', header: 'Perusahaan & Mentor' },
-  { accessorKey: 'periode', header: 'Periode' },
-  { accessorKey: 'guru', header: 'Guru Pembimbing' },
-  { accessorKey: 'status', header: 'Status' },
-  { accessorKey: 'aksi', header: '' },
+// Define columns using TanStack Table format
+const columns: ColumnDef<Penempatan, any>[] = [
+    {
+        id: "no",
+        header: "No",
+        cell: ({ row, table }) => {
+            const index = table
+                .getSortedRowModel()
+                .rows.findIndex((r) => r.id === row.id);
+            const pageSize = table.getState().pagination.pageSize;
+            const pageIndex = table.getState().pagination.pageIndex;
+            return h(
+                "span",
+                {
+                    class: "text-sm text-slate-500 w-6 text-center inline-block",
+                },
+                pageIndex * pageSize + index + 1,
+            );
+        },
+    },
+    {
+        id: "siswa",
+        header: "Siswa",
+        cell: ({ row }) => {
+            const siswaName = getSiswaName(row.original.siswa_id);
+            const kelas = getSiswaKelas(row.original.siswa_id);
+            const initials = getInitials(siswaName);
+            return h("div", { class: "flex items-center gap-2" }, [
+                h(
+                    "div",
+                    {
+                        class: "w-8 h-8 rounded-lg bg-sky-100 flex items-center justify-center text-sky-600 text-xs font-semibold shrink-0",
+                    },
+                    initials,
+                ),
+                h("div", { class: "min-w-0" }, [
+                    h(
+                        "p",
+                        {
+                            class: "text-sm font-medium text-slate-900 truncate",
+                        },
+                        siswaName,
+                    ),
+                    h("p", { class: "text-xs text-slate-500 truncate" }, kelas),
+                ]),
+            ]);
+        },
+    },
+    {
+        id: "perusahaan",
+        header: "Perusahaan",
+        cell: ({ row }) => {
+            const perusahaanName = getPerusahaanName(
+                row.original.perusahaan_id,
+            );
+            return h("div", {}, [
+                h(
+                    "p",
+                    { class: "text-sm font-medium text-slate-900 truncate" },
+                    perusahaanName,
+                ),
+            ]);
+        },
+    },
+    {
+        id: "periode",
+        header: "Periode",
+        cell: ({ row }) => {
+            return h("div", {}, [
+                h(
+                    "p",
+                    { class: "text-sm text-slate-900" },
+                    formatDate(row.original.tanggal_mulai),
+                ),
+                h(
+                    "p",
+                    { class: "text-xs text-slate-500" },
+                    `s/d ${formatDate(row.original.tanggal_selesai)}`,
+                ),
+            ]);
+        },
+    },
+    {
+        id: "guru",
+        header: "Guru Pembimbing",
+        cell: ({ row }) => {
+            return h(
+                "span",
+                { class: "text-sm text-slate-900" },
+                getGuruName(row.original.guru_pembimbing_id),
+            );
+        },
+    },
+    {
+        id: "status",
+        header: "Status",
+        cell: ({ row }) => {
+            const color = getStatusColor(
+                row.original.status_penempatan,
+                "penempatan",
+            );
+            const label = getStatusLabel(
+                row.original.status_penempatan,
+                "penempatan",
+            );
+            return h(
+                "span",
+                {
+                    class: `inline-flex items-center px-2 py-1 rounded-md text-xs font-medium ${
+                        color === "success"
+                            ? "bg-success-50 text-success-700"
+                            : color === "warning"
+                              ? "bg-warning-50 text-warning-700"
+                              : color === "error"
+                                ? "bg-error-50 text-error-700"
+                                : "bg-neutral-100 text-neutral-700"
+                    }`,
+                },
+                label,
+            );
+        },
+    },
+    {
+        id: "aksi",
+        header: "",
+        cell: ({ row }) => {
+            return h("div", { class: "flex items-center gap-1" }, [
+                h(
+                    "button",
+                    {
+                        class: "p-1.5 rounded hover:bg-slate-100 text-slate-600",
+                        onClick: () => navigateToDetail(row.original),
+                    },
+                    h(
+                        "svg",
+                        {
+                            class: "w-4 h-4",
+                            viewBox: "0 0 24 24",
+                            fill: "none",
+                            stroke: "currentColor",
+                            "stroke-width": 2,
+                        },
+                        [
+                            h("path", {
+                                d: "M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z",
+                            }),
+                            h("circle", { cx: "12", cy: "12", r: "3" }),
+                        ],
+                    ),
+                ),
+                h(
+                    "button",
+                    {
+                        class: "p-1.5 rounded hover:bg-primary-50 text-primary-600",
+                        onClick: () => navigateToEdit(row.original),
+                    },
+                    h(
+                        "svg",
+                        {
+                            class: "w-4 h-4",
+                            viewBox: "0 0 24 24",
+                            fill: "none",
+                            stroke: "currentColor",
+                            "stroke-width": 2,
+                        },
+                        [
+                            h("path", {
+                                d: "M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z",
+                            }),
+                        ],
+                    ),
+                ),
+            ]);
+        },
+    },
 ];
 
-// Helpers
-const getInitials = (name: string) => {
-  if (!name || name === '-') return '--';
-  return name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+// Status options
+const statusOptions = ["Semua", "Aktif", "Selesai", "Dibatalkan"];
+
+const statusApiValue: Record<string, string> = {
+    Aktif: "aktif",
+    Selesai: "selesai",
+    Dibatalkan: "dibatalkan",
 };
 
-const formatDate = (date: string) => {
-  if (!date) return '-';
-  return new Date(date).toLocaleDateString('id-ID', { 
-    day: 'numeric', 
-    month: 'short', 
-    year: 'numeric',
-    timeZone: 'Asia/Jakarta'
-  });
-};
+// Filtered data (sorted ASC by created_at or id)
+const filteredData = computed(() => {
+    let result = data.value.filter((d) => {
+        const siswaName = getSiswaName(d.siswa_id).toLowerCase();
+        const perusahaanName = getPerusahaanName(d.perusahaan_id).toLowerCase();
+        const matchSearch =
+            !search.value ||
+            siswaName.includes(search.value.toLowerCase()) ||
+            perusahaanName.includes(search.value.toLowerCase());
+        const matchStatus =
+            filterStatus.value === "Semua" ||
+            d.status_penempatan === statusApiValue[filterStatus.value];
+        return matchSearch && matchStatus;
+    });
 
-// Resolve names from options
+    // Sort ASC by id_penempatan
+    result.sort((a, b) => a.id_penempatan - b.id_penempatan);
+
+    return result;
+});
+
+// Name resolvers
 const getSiswaName = (siswaId: number) => {
-  const siswa = siswaOptions.value.find(s => s.value === siswaId);
-  return siswa?.label?.split(' (')[0] || `Siswa #${siswaId}`;
+    const siswa = siswaOptions.value.find((s) => s.value === siswaId);
+    return siswa ? extractNameFromLabel(siswa.label) : `Siswa #${siswaId}`;
 };
 
 const getSiswaKelas = (siswaId: number) => {
-  const siswa = siswaOptions.value.find(s => s.value === siswaId);
-  const match = siswa?.label?.match(/\(([^)]+)\)/);
-  return match ? match[1] : '-';
+    const siswa = siswaOptions.value.find((s) => s.value === siswaId);
+    return siswa ? extractKelasFromLabel(siswa.label) : "-";
 };
 
 const getPerusahaanName = (perusahaanId: number) => {
-  const perusahaan = perusahaanOptions.value.find(p => p.value === perusahaanId);
-  return perusahaan?.label || `Perusahaan #${perusahaanId}`;
+    const perusahaan = perusahaanOptions.value.find(
+        (p) => p.value === perusahaanId,
+    );
+    return perusahaan?.label || `Perusahaan #${perusahaanId}`;
 };
 
 const getGuruName = (guruId: number) => {
-  const guru = guruOptions.value.find(g => g.value === guruId);
-  return guru?.label || `Guru #${guruId}`;
+    const guru = guruOptions.value.find((g) => g.value === guruId);
+    return guru?.label || `Guru #${guruId}`;
 };
-
-const statusColor = (s: string): 'success' | 'primary' | 'error' | 'neutral' => {
-  const colors: Record<string, 'success' | 'primary' | 'error' | 'neutral'> = { 
-    aktif: 'success', 
-    selesai: 'primary', 
-    dibatalkan: 'error' 
-  };
-  return colors[s] || 'neutral';
-};
-
-const statusLabel = (s: string) => {
-  const labels: Record<string, string> = { aktif: 'Aktif', selesai: 'Selesai', dibatalkan: 'Dibatalkan' };
-  return labels[s] || s;
-};
-
-const statusApiValue = (s: string) => {
-  const values: Record<string, string> = { Aktif: 'aktif', Selesai: 'selesai', Dibatalkan: 'dibatalkan' };
-  return values[s] || '';
-};
-
-// Computed
-const allFilteredData = computed(() => {
-  return data.value.filter(d => {
-    const siswaName = getSiswaName(d.siswa_id).toLowerCase();
-    const perusahaanName = getPerusahaanName(d.perusahaan_id).toLowerCase();
-    const matchSearch = !search.value || 
-      siswaName.includes(search.value.toLowerCase()) ||
-      perusahaanName.includes(search.value.toLowerCase());
-    const matchStatus = filterStatus.value === 'Semua' || 
-      d.status_penempatan === statusApiValue(filterStatus.value);
-    return matchSearch && matchStatus;
-  });
-});
-
-const totalItems = computed(() => allFilteredData.value.length);
-const totalPages = computed(() => Math.ceil(totalItems.value / itemsPerPage));
-
-const filteredData = computed(() => {
-  const start = (currentPage.value - 1) * itemsPerPage;
-  return allFilteredData.value.slice(start, start + itemsPerPage);
-});
-
-watch([search, filterStatus], () => { currentPage.value = 1; });
 
 // Actions
-const openModal = (item?: Penempatan) => {
-  editing.value = !!item;
-  if (item) {
-    Object.assign(form, {
-      id_penempatan: item.id_penempatan,
-      siswa_id: item.siswa_id,
-      perusahaan_id: item.perusahaan_id,
-      guru_pembimbing_id: item.guru_pembimbing_id || undefined,
-      tanggal_mulai: item.tanggal_mulai?.split('T')[0] || '',
-      tanggal_selesai: item.tanggal_selesai?.split('T')[0] || '',
-      status_penempatan: item.status_penempatan,
-    });
-  } else {
-    Object.assign(form, {
-      id_penempatan: null,
-      siswa_id: undefined,
-      perusahaan_id: undefined,
-      guru_pembimbing_id: undefined,
-      tanggal_mulai: '',
-      tanggal_selesai: '',
-      status_penempatan: 'aktif',
-    });
-  }
-  modalOpen.value = true;
+const navigateToCreate = () => {
+    router.push("/admin/placement/create");
 };
 
-const savePenempatan = async () => {
-  if (!form.siswa_id || !form.perusahaan_id || !form.guru_pembimbing_id || !form.tanggal_mulai || !form.tanggal_selesai) {
-    toast.add({ title: 'Lengkapi semua field wajib', color: 'error' });
-    return;
-  }
+const navigateToDetail = (item: Penempatan) => {
+    router.push(`/admin/placement/${item.id_penempatan}`);
+};
 
-  processing.value = true;
-  try {
-    if (editing.value && form.id_penempatan) {
-      const response = await penempatanApi.update(form.id_penempatan, {
-        guru_pembimbing_id: form.guru_pembimbing_id,
-        tanggal_mulai: form.tanggal_mulai,
-        tanggal_selesai: form.tanggal_selesai,
-        status_penempatan: form.status_penempatan,
-      });
-      if (response.success) {
-        toast.add({ title: 'Penempatan diperbarui', color: 'success' });
-        await fetchData();
-      } else {
-        toast.add({ title: response.message || 'Gagal memperbarui', color: 'error' });
-      }
-    } else {
-      const response = await penempatanApi.create({
-        siswa_id: form.siswa_id,
-        perusahaan_id: form.perusahaan_id,
-        guru_pembimbing_id: form.guru_pembimbing_id,
-        tahun_ajaran_id: form.tahun_ajaran_id,
-        tanggal_mulai: form.tanggal_mulai,
-        tanggal_selesai: form.tanggal_selesai,
-      });
-      if (response.success) {
-        toast.add({ title: 'Penempatan ditambahkan', color: 'success' });
-        await fetchData();
-      } else {
-        toast.add({ title: response.message || 'Gagal menambahkan', color: 'error' });
-      }
-    }
-    modalOpen.value = false;
-  } catch (error) {
-    toast.add({ title: 'Terjadi kesalahan', color: 'error' });
-  } finally {
-    processing.value = false;
-  }
+const navigateToEdit = (item: Penempatan) => {
+    router.push(`/admin/placement/${item.id_penempatan}/edit`);
 };
 
 // Fetch data
 const fetchData = async () => {
-  loading.value = true;
-  try {
-    const response = await penempatanApi.getAll({ limit: 100 });
-    if (response.success) {
-      data.value = response.data || [];
-      stats.aktif = data.value.filter(d => d.status_penempatan === 'aktif').length;
-      stats.selesai = data.value.filter(d => d.status_penempatan === 'selesai').length;
-      stats.dibatalkan = data.value.filter(d => d.status_penempatan === 'dibatalkan').length;
+    loading.value = true;
+    try {
+        const response = await penempatanApi.getAll({ limit: 1000 });
+        if (response.success) {
+            data.value = response.data || [];
+            stats.aktif = data.value.filter(
+                (d) => d.status_penempatan === "aktif",
+            ).length;
+            stats.selesai = data.value.filter(
+                (d) => d.status_penempatan === "selesai",
+            ).length;
+            stats.dibatalkan = data.value.filter(
+                (d) => d.status_penempatan === "dibatalkan",
+            ).length;
+        }
+    } catch (error) {
+        console.error("Failed to fetch penempatan:", error);
+        toast.add({ title: "Gagal memuat data", color: "error" });
+    } finally {
+        loading.value = false;
     }
-  } catch (error) {
-    console.error('Failed to fetch penempatan:', error);
-  } finally {
-    loading.value = false;
-  }
 };
 
 const fetchOptions = async () => {
-  try {
-    const [siswaRes, perusahaanRes, guruRes] = await Promise.all([
-      siswaApi.getAll({ limit: 100 }),
-      perusahaanApi.getAll({ limit: 100 }),
-      guruApi.getAll({ limit: 100 }),
-    ]);
+    try {
+        const [siswaRes, perusahaanRes, guruRes] = await Promise.all([
+            siswaApi.getAll({ limit: 1000 }),
+            perusahaanApi.getAll({ limit: 100 }),
+            guruApi.getAll({ limit: 100 }),
+        ]);
 
-    if (siswaRes.success) {
-      siswaOptions.value = (siswaRes.data || []).map(s => ({ 
-        label: `${s.nama_siswa} (${s.kelas?.nama_kelas || '-'})`, 
-        value: s.id_siswa 
-      }));
+        if (siswaRes.success) {
+            siswaOptions.value = (siswaRes.data || []).map((s) => ({
+                label: `${s.nama_siswa} (${s.kelas?.nama_kelas || "-"})`,
+                value: s.id_siswa,
+            }));
+        }
+        if (perusahaanRes.success) {
+            perusahaanOptions.value = (perusahaanRes.data || []).map((p) => ({
+                label: p.nama_perusahaan,
+                value: p.id_perusahaan,
+            }));
+        }
+        if (guruRes.success) {
+            guruOptions.value = (guruRes.data || []).map((g) => ({
+                label: g.nama_guru,
+                value: g.id_guru,
+            }));
+        }
+    } catch (error) {
+        console.error("Failed to fetch options:", error);
     }
-    if (perusahaanRes.success) {
-      perusahaanOptions.value = (perusahaanRes.data || []).map(p => ({ 
-        label: p.nama_perusahaan, 
-        value: p.id_perusahaan 
-      }));
-    }
-    if (guruRes.success) {
-      guruOptions.value = (guruRes.data || []).map(g => ({ 
-        label: g.nama_guru, 
-        value: g.id_guru 
-      }));
-    }
-  } catch (error) {
-    console.error('Failed to fetch options:', error);
-  }
 };
 
 onMounted(async () => {
-  // Fetch options first so names can be resolved
-  await fetchOptions();
-  await fetchData();
+    await fetchOptions();
+    await fetchData();
 });
 
-useHead({ title: 'Penempatan | Admin' });
+useHead({ title: "Penempatan PKL | Admin" });
 </script>
+
+<template>
+    <div class="space-y-6">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-xl lg:text-2xl font-bold text-slate-900">
+                    Penempatan PKL
+                </h1>
+                <p class="text-sm text-slate-500">
+                    Kelola penempatan siswa di industri
+                </p>
+            </div>
+            <UButton icon="lucide:plus" @click="navigateToCreate">
+                Tambah Penempatan
+            </UButton>
+        </div>
+
+        <!-- Stats -->
+        <div v-if="loading" class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <USkeleton v-for="i in 3" :key="i" class="h-20 rounded-xl" />
+        </div>
+        <div v-else class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div
+                class="bg-white rounded-xl border border-slate-200 p-4 text-center"
+            >
+                <p class="text-2xl font-bold text-green-600">
+                    {{ stats.aktif }}
+                </p>
+                <p class="text-sm text-slate-500">Aktif</p>
+            </div>
+            <div
+                class="bg-white rounded-xl border border-slate-200 p-4 text-center"
+            >
+                <p class="text-2xl font-bold text-blue-600">
+                    {{ stats.selesai }}
+                </p>
+                <p class="text-sm text-slate-500">Selesai</p>
+            </div>
+            <div
+                class="bg-white rounded-xl border border-slate-200 p-4 text-center"
+            >
+                <p class="text-2xl font-bold text-red-600">
+                    {{ stats.dibatalkan }}
+                </p>
+                <p class="text-sm text-slate-500">Dibatalkan</p>
+            </div>
+        </div>
+
+        <!-- Table -->
+        <CommonAppDataTable
+            :data="filteredData"
+            :columns="columns"
+            :loading="loading"
+            title="Daftar Penempatan"
+            description="Kelola penempatan siswa di industri"
+            :searchable="false"
+            empty-title="Tidak ada data penempatan"
+            empty-description="Belum ada penempatan siswa di industri"
+            empty-icon="lucide:building-2"
+        >
+            <template #toolbar-left>
+                <UInput
+                    v-model="search"
+                    placeholder="Cari siswa atau perusahaan..."
+                    class="flex-1"
+                >
+                    <template #leading>
+                        <Icon
+                            name="lucide:search"
+                            class="w-4 h-4 text-slate-400"
+                        />
+                    </template>
+                </UInput>
+                <USelectMenu
+                    v-model="filterStatus"
+                    :items="statusOptions"
+                    class="w-full sm:w-40"
+                />
+            </template>
+        </CommonAppDataTable>
+
+        <!-- Empty State -->
+        <div
+            v-if="!loading && data.length === 0"
+            class="p-8 text-center text-slate-500 bg-white rounded-xl border border-slate-200"
+        >
+            <Icon
+                name="lucide:building-2"
+                class="w-12 h-12 mx-auto mb-3 text-slate-300"
+            />
+            <p>Belum ada data penempatan</p>
+            <p class="text-sm mt-2">
+                Klik "Tambah Penempatan" untuk menambah data baru
+            </p>
+        </div>
+    </div>
+</template>

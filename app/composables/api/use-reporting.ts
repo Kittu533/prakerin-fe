@@ -2,22 +2,20 @@
  * Reporting Service API Composable
  * Handles: Dashboard stats, reports
  */
-import { apiFetch } from '~/composables/api-fetch';
+import { apiFetch } from "~/composables/api-fetch";
 
 // =============================================
 // TYPES
 // =============================================
 export interface DashboardStats {
-  totalSiswa: number;
-  totalGuru: number;
-  totalPerusahaan: number;
-  totalMentor: number;
-  pengajuanPending: number;
-  penempatanAktif: number;
-  penempatanSelesai: number;
-  absensiHariIni: number;
-  logbookPending: number;
-  masalahAbsensi: number;
+  total_siswa: number;
+  total_pengajuan_pending: number;
+  total_penempatan_aktif: number;
+  total_penempatan_selesai: number;
+  total_perusahaan: number;
+  total_guru: number;
+  total_mentor: number;
+  masalah_absensi: number;
 }
 
 export interface PenempatanPerJurusan {
@@ -59,97 +57,108 @@ export function useDashboardApi() {
   // Get dashboard stats from /dashboard/stats
   async function getAdminStats() {
     const { data } = await apiFetch<SingleResponse<DashboardStats>>(
-      'ReportingService',
-      '/dashboard/stats',
-      { method: 'GET' },
-      true
+      "ReportingService",
+      "/dashboard/stats",
+      { method: "GET" },
+      true,
     );
     return data;
   }
 
-  // Get dashboard summary (stats + recent activities)
-  async function getDashboardSummary() {
-    const { data } = await apiFetch<SingleResponse<{ stats: any; recentActivities: any[] }>>(
-      'ReportingService',
-      '/dashboard/summary',
-      { method: 'GET' },
-      true
-    );
-    return data;
-  }
-
-  // Get penempatan data with optional filters
-  async function getPenempatanData(params?: { page?: number; limit?: number; tahun_ajaran_id?: number; status?: string }) {
-    const queryParams = new URLSearchParams();
-    if (params?.page) queryParams.append('page', params.page.toString());
-    if (params?.limit) queryParams.append('limit', params.limit.toString());
-    if (params?.tahun_ajaran_id) queryParams.append('tahun_ajaran_id', params.tahun_ajaran_id.toString());
-    if (params?.status) queryParams.append('status', params.status);
-    const query = queryParams.toString() ? `?${queryParams.toString()}` : '';
-    
-    const { data } = await apiFetch<any>(
-      'ReportingService',
-      `/dashboard/penempatan${query}`,
-      { method: 'GET' },
-      true
-    );
-    return data;
-  }
-
-  // Get recent activities
-  async function getRecentActivities(limit?: number) {
-    const query = limit ? `?limit=${limit}` : '';
-    const { data } = await apiFetch<SingleResponse<{ recentActivities: any[] }>>(
-      'ReportingService',
-      `/dashboard/recent${query}`,
-      { method: 'GET' },
-      true
-    );
-    return data;
-  }
-
-  // Legacy functions that redirect to available endpoints
+  // Get penempatan per jurusan
   async function getPenempatanPerJurusan() {
-    // Backend doesn't have this endpoint, return empty for now
-    // or we can compute from penempatan data
-    return { success: true, message: 'Data tidak tersedia', data: [] };
+    const { data } = await apiFetch<SingleResponse<PenempatanPerJurusan[]>>(
+      "ReportingService",
+      "/dashboard/penempatan-per-jurusan",
+      { method: "GET" },
+      true,
+    );
+    return data;
   }
 
-  async function getTrendPengajuan(_tahun?: number) {
-    // Backend doesn't have this endpoint, return empty for now
-    return { success: true, message: 'Data tidak tersedia', data: [] };
+  // Get trend pengajuan per bulan
+  async function getTrendPengajuan() {
+    const { data } = await apiFetch<SingleResponse<TrendPengajuan[]>>(
+      "ReportingService",
+      "/dashboard/trend-pengajuan",
+      { method: "GET" },
+      true,
+    );
+    return data;
   }
 
+  // Get status siswa distribution
   async function getStatusSiswa() {
-    // Backend doesn't have this endpoint, return empty for now
-    return { success: true, message: 'Data tidak tersedia', data: [] };
+    const { data } = await apiFetch<SingleResponse<StatusSiswa[]>>(
+      "ReportingService",
+      "/dashboard/status-siswa",
+      { method: "GET" },
+      true,
+    );
+    return data;
   }
 
-  async function getRecentPengajuan(limit?: number) {
-    // Use recent activities endpoint
-    const result = await getRecentActivities(limit);
-    if (result?.success && result.data?.recentActivities) {
-      // Transform to expected format
-      const transformed = result.data.recentActivities.map((activity: any, idx: number) => ({
-        id: activity.id || idx + 1,
-        siswa: activity.entity_name || 'N/A',
-        jurusan: activity.description || 'N/A',
-        perusahaan: activity.entity_type || 'N/A',
-        tanggal: activity.created_at ? new Date(activity.created_at).toLocaleDateString('id-ID') : 'N/A',
-        status: activity.action || 'N/A'
-      }));
-      return { success: true, message: 'Recent activities', data: transformed };
-    }
-    return { success: true, message: 'No data', data: [] };
+  // Get recent pengajuan
+  async function getRecentPengajuan(limit: number = 5) {
+    const { data } = await apiFetch<SingleResponse<RecentPengajuan[]>>(
+      "ReportingService",
+      `/dashboard/recent-pengajuan?limit=${limit}`,
+      { method: "GET" },
+      true,
+    );
+    return data;
+  }
+
+  // Get complete dashboard summary (all data in one request)
+  async function getDashboardSummary() {
+    const { data } = await apiFetch<
+      SingleResponse<{
+        stats: DashboardStats;
+        penempatanJurusan: PenempatanPerJurusan[];
+        trend: TrendPengajuan[];
+        statusSiswa: StatusSiswa[];
+        recentPengajuan: RecentPengajuan[];
+      }>
+    >("ReportingService", "/dashboard/summary", { method: "GET" }, true);
+    return data;
+  }
+
+  // Legacy functions for backward compatibility
+  async function getPenempatanData(params?: {
+    page?: number;
+    limit?: number;
+    tahun_ajaran_id?: number;
+    status?: string;
+  }) {
+    const queryParams = new URLSearchParams();
+    if (params?.page) queryParams.append("page", params.page.toString());
+    if (params?.limit) queryParams.append("limit", params.limit.toString());
+    if (params?.tahun_ajaran_id)
+      queryParams.append("tahun_ajaran_id", params.tahun_ajaran_id.toString());
+    if (params?.status) queryParams.append("status", params.status);
+    const query = queryParams.toString() ? `?${queryParams.toString()}` : "";
+
+    const { data } = await apiFetch<any>(
+      "ReportingService",
+      `/dashboard/penempatan${query}`,
+      { method: "GET" },
+      true,
+    );
+    return data;
+  }
+
+  async function getRecentActivities(limit?: number) {
+    // Redirect to recent pengajuan
+    return getRecentPengajuan(limit || 5);
   }
 
   // Guru dashboard
   async function getGuruStats(idGuru: number) {
     const { data } = await apiFetch<SingleResponse<any>>(
-      'ReportingService',
+      "ReportingService",
       `/dashboard/guru/${idGuru}/stats`,
-      { method: 'GET' },
-      true
+      { method: "GET" },
+      true,
     );
     return data;
   }
@@ -157,10 +166,10 @@ export function useDashboardApi() {
   // Siswa dashboard
   async function getSiswaStats(idSiswa: number) {
     const { data } = await apiFetch<SingleResponse<any>>(
-      'ReportingService',
+      "ReportingService",
       `/dashboard/siswa/${idSiswa}/stats`,
-      { method: 'GET' },
-      true
+      { method: "GET" },
+      true,
     );
     return data;
   }
@@ -168,25 +177,25 @@ export function useDashboardApi() {
   // Mentor dashboard
   async function getMentorStats(idMentor: number) {
     const { data } = await apiFetch<SingleResponse<any>>(
-      'ReportingService',
+      "ReportingService",
       `/dashboard/mentor/${idMentor}/stats`,
-      { method: 'GET' },
-      true
+      { method: "GET" },
+      true,
     );
     return data;
   }
 
-  return { 
-    getAdminStats, 
+  return {
+    getAdminStats,
     getDashboardSummary,
     getPenempatanData,
     getRecentActivities,
-    getPenempatanPerJurusan, 
-    getTrendPengajuan, 
-    getStatusSiswa, 
+    getPenempatanPerJurusan,
+    getTrendPengajuan,
+    getStatusSiswa,
     getRecentPengajuan,
     getGuruStats,
     getSiswaStats,
-    getMentorStats
+    getMentorStats,
   };
 }

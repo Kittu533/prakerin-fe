@@ -1,287 +1,297 @@
 <template>
-  <div class="space-y-6">
-    <!-- Header -->
-    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-      <div>
-        <h1 class="text-2xl font-bold text-slate-900">Siswa Bimbingan</h1>
-        <p class="text-sm text-slate-500 mt-1">Kelola dan pantau siswa PKL bimbingan Anda</p>
-      </div>
-      <UButton color="primary" disabled>
-        <Icon name="lucide:download" class="w-4 h-4 mr-2" />
-        Export Data
-      </UButton>
-    </div>
-
-    <!-- Filters -->
-    <div class="bg-white rounded-xl border border-slate-200 p-4">
-      <div class="flex flex-col sm:flex-row gap-3">
-        <UInput v-model="search" placeholder="Cari nama siswa..." class="flex-1">
-          <template #leading>
-            <Icon name="lucide:search" class="w-4 h-4 text-slate-400" />
-          </template>
-        </UInput>
-        <USelectMenu v-model="filterKelas" :options="kelasOptions" placeholder="Filter Kelas" class="w-full sm:w-40" />
-        <USelectMenu v-model="filterStatus" :options="statusOptions" placeholder="Filter Status"
-          class="w-full sm:w-40" />
-      </div>
-    </div>
-
-    <!-- Table -->
-    <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
-      <div v-if="loading" class="divide-y divide-slate-100">
-        <div v-for="i in 5" :key="i" class="flex items-center gap-4 px-6 py-4">
-          <USkeleton class="w-10 h-10 rounded-xl" />
-          <div class="flex-1 space-y-2">
-            <USkeleton class="h-4 w-40" />
-            <USkeleton class="h-3 w-24" />
-          </div>
-          <USkeleton class="h-4 w-24 hidden sm:block" />
-          <USkeleton class="h-4 w-32 hidden md:block" />
-          <USkeleton class="h-6 w-16 rounded-full" />
-          <USkeleton class="w-8 h-8 rounded-lg" />
+    <div class="space-y-6">
+        <!-- Header -->
+        <div
+            class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+        >
+            <div>
+                <h1 class="text-xl lg:text-2xl font-bold text-slate-900">
+                    Siswa Bimbingan
+                </h1>
+                <p class="text-sm text-slate-500 mt-1">
+                    Kelola dan pantau siswa PKL bimbingan Anda
+                </p>
+            </div>
+            <UButton color="primary" disabled>
+                <Icon name="lucide:download" class="w-4 h-4 mr-2" />
+                Export Data
+            </UButton>
         </div>
-      </div>
 
-      <div v-else class="overflow-x-auto">
-        <table class="w-full min-w-[600px]">
-          <thead class="bg-slate-50 border-b border-slate-200">
-            <tr>
-              <th
-                class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase sticky left-0 bg-slate-50 z-10 min-w-[180px]">
-                Siswa</th>
-              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase whitespace-nowrap">Kelas
-              </th>
-              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase whitespace-nowrap">Industri
-              </th>
-              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase whitespace-nowrap">Kehadiran
-              </th>
-              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase whitespace-nowrap">Status
-              </th>
-              <th class="px-4 py-3 w-12"></th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-slate-100">
-            <tr v-for="siswa in paginatedStudents" :key="siswa.id" class="hover:bg-slate-50 transition-colors">
-              <td class="px-4 py-4 sticky left-0 bg-white z-10">
-                <div class="flex items-center gap-3">
-                  <div
-                    class="w-10 h-10 rounded-xl bg-sky-100 text-sky-700 flex items-center justify-center font-semibold text-sm shrink-0">
-                    {{ siswa.inisial }}
-                  </div>
-                  <div class="min-w-0">
-                    <p class="font-medium text-slate-900 truncate">{{ siswa.nama }}</p>
-                    <p class="text-xs text-slate-500">{{ siswa.nis }}</p>
-                  </div>
-                </div>
-              </td>
-              <td class="px-4 py-4 text-sm text-slate-600 whitespace-nowrap">{{ siswa.kelas }}</td>
-              <td class="px-4 py-4 text-sm text-slate-600 whitespace-nowrap max-w-[200px] truncate">{{ siswa.industri }}
-              </td>
-              <td class="px-4 py-4">
-                <div class="flex items-center gap-2">
-                  <div class="w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                    <div class="h-full rounded-full" :class="siswa.kehadiran >= 80 ? 'bg-green-500' : 'bg-red-500'"
-                      :style="{ width: `${siswa.kehadiran}%` }" />
-                  </div>
-                  <span class="text-sm font-medium whitespace-nowrap"
-                    :class="siswa.kehadiran >= 80 ? 'text-green-600' : 'text-red-600'">{{ siswa.kehadiran }}%</span>
-                </div>
-              </td>
-              <td class="px-4 py-4">
-                <UBadge :color="getStatusColor(siswa.status)" variant="subtle" size="xs">{{ siswa.status }}</UBadge>
-              </td>
-              <td class="px-4 py-4">
-                <UButton icon="i-lucide-eye" color="neutral" variant="ghost" size="xs"
-                  @click="navigateTo(`/guru/siswa-bimbingan/${encodeWithSlug(siswa.id, siswa.nama)}`)" />
-              </td>
-            </tr>
-          </tbody>
-        </table>
-
-        <div v-if="!paginatedStudents.length" class="py-12 text-center">
-          <Icon name="lucide:users" class="w-12 h-12 text-slate-300 mx-auto mb-3" />
-          <p class="text-slate-500">Tidak ada data siswa</p>
+        <!-- Stats -->
+        <div class="grid grid-cols-4 gap-3">
+            <div
+                class="bg-white rounded-xl p-4 border border-slate-200 text-center"
+            >
+                <p class="text-2xl font-bold text-slate-900">
+                    {{ stats.totalSiswa }}
+                </p>
+                <p class="text-xs text-slate-500">Total Siswa</p>
+            </div>
+            <div
+                class="bg-white rounded-xl p-4 border border-slate-200 text-center"
+            >
+                <p class="text-2xl font-bold text-green-600">
+                    {{ stats.aktif }}
+                </p>
+                <p class="text-xs text-slate-500">Aktif PKL</p>
+            </div>
+            <div
+                class="bg-white rounded-xl p-4 border border-slate-200 text-center"
+            >
+                <p class="text-2xl font-bold text-blue-600">
+                    {{ stats.selesai }}
+                </p>
+                <p class="text-xs text-slate-500">Selesai</p>
+            </div>
+            <div
+                class="bg-white rounded-xl p-4 border border-slate-200 text-center"
+            >
+                <p class="text-2xl font-bold text-slate-500">
+                    {{ stats.belowTarget }}
+                </p>
+                <p class="text-xs text-slate-500">Kehadiran < 80%</p>
+            </div>
         </div>
-      </div>
-    </div>
 
-    <!-- Pagination -->
-    <div v-if="totalPages > 1" class="flex justify-center">
-      <UPagination v-model:page="currentPage" :total="totalItems" :items-per-page="itemsPerPage" />
+        <!-- AppDataTable -->
+        <AppDataTable
+            :data="filteredStudents"
+            :columns="columns"
+            title="Daftar Siswa Bimbingan"
+            description="Siswa yang sedang Anda bimbing selama PKL"
+            :loading="loading"
+            :searchable="true"
+            search-placeholder="Cari nama siswa..."
+            empty-title="Tidak ada siswa bimbingan"
+            empty-description="Belum ada siswa yang ditugaskan kepada Anda"
+            empty-icon="lucide:users"
+        >
+            <template #toolbar-right>
+                <USelectMenu
+                    v-model="filterStatus"
+                    :items="statusOptions"
+                    placeholder="Filter Status"
+                    class="w-full sm:w-36"
+                />
+            </template>
+        </AppDataTable>
     </div>
-  </div>
 </template>
 
 <script setup lang="ts">
-import { usePenempatanApi } from '~/composables/api/use-internship'
-import { useSiswaApi } from '~/composables/api/use-academic'
-import { usePerusahaanApi } from '~/composables/api/use-partner'
-import { encodeWithSlug } from '~/composables/use-id-encoder'
+import { h, resolveComponent } from "vue";
+import { createColumnHelper, type ColumnDef } from "@tanstack/vue-table";
+import AppDataTable from "~/components/common/AppDataTable.vue";
+import { usePenempatanApi } from "~/composables/api/use-internship";
 
-definePageMeta({ layout: 'guru' })
+definePageMeta({ layout: "guru" });
 
-const { getAll: getPenempatan } = usePenempatanApi()
-const { getAll: getAllSiswa } = useSiswaApi()
-const { getAll: getAllPerusahaan } = usePerusahaanApi()
+const toast = useToast();
+const columnHelper = createColumnHelper<any>();
+const Icon = resolveComponent("Icon");
 
-const loading = ref(true)
-const search = ref('')
-const filterKelas = ref<string | null>(null)
-const filterStatus = ref<string | null>(null)
-const currentPage = ref(1)
-const itemsPerPage = 10
+// API
+const { getMyStudents } = usePenempatanApi();
 
-const kelasOptions = ref<string[]>([])
-const statusOptions = ['Aktif', 'Selesai', 'Dibatalkan']
+// State
+const loading = ref(true);
+const filterStatus = ref<string | null>(null);
+const students = ref<any[]>([]);
+const stats = reactive({ totalSiswa: 0, aktif: 0, selesai: 0, belowTarget: 0 });
 
-const students = ref<any[]>([])
-const stats = reactive({ totalSiswa: 0 })
+const statusOptions = ["Aktif", "Selesai", "Dibatalkan"];
+
+// Filter students
+const filteredStudents = computed(() => {
+    if (!filterStatus.value) return students.value;
+    return students.value.filter((s) => s.status === filterStatus.value);
+});
 
 // Helper function to get initials
 function getInitials(name: string): string {
-  return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+    return name
+        .split(" ")
+        .map((n) => n[0])
+        .join("")
+        .toUpperCase()
+        .slice(0, 2);
 }
 
-const filteredStudents = computed(() => {
-  return students.value.filter(s => {
-    const matchSearch = !search.value || s.nama.toLowerCase().includes(search.value.toLowerCase())
-    const matchKelas = !filterKelas.value || s.kelas === filterKelas.value
-    const matchStatus = !filterStatus.value || s.status === filterStatus.value
-    return matchSearch && matchKelas && matchStatus
-  })
-})
-
-const totalItems = computed(() => filteredStudents.value.length)
-const totalPages = computed(() => Math.ceil(totalItems.value / itemsPerPage))
-
-const paginatedStudents = computed(() => {
-  const start = (currentPage.value - 1) * itemsPerPage
-  return filteredStudents.value.slice(start, start + itemsPerPage)
-})
-
-watch([search, filterKelas, filterStatus], () => { currentPage.value = 1 })
+// Generate URL-friendly ID from UUID — use full UUID as the path segment
+function generateUrlId(id: string, _nama: string): string {
+    return id;
+}
 
 const getStatusColor = (status: string) => {
-  const colors: Record<string, string> = { Aktif: 'success', Selesai: 'primary', Dibatalkan: 'error' }
-  return colors[status] || 'neutral'
-}
+    const colors: Record<string, string> = {
+        Aktif: "bg-green-100 text-green-800",
+        Selesai: "bg-blue-100 text-blue-800",
+        Dibatalkan: "bg-red-100 text-red-800",
+    };
+    return colors[status] || "bg-gray-100 text-gray-800";
+};
 
-async function fetchData() {
-  try {
-    // Fetch penempatan data
-    const penempatanRes = await getPenempatan({ limit: 100, status: 'aktif' })
-    console.log('Penempatan response:', penempatanRes)
-    
-    if (penempatanRes?.data && Array.isArray(penempatanRes.data)) {
-      // Check if data is already populated
-      const isPopulated = penempatanRes.data.length > 0 && penempatanRes.data[0].siswa !== undefined
-      
-      if (isPopulated) {
-        // Data already has siswa/perusahaan populated
-        students.value = penempatanRes.data.map((p: any) => ({
-          id: p.id_penempatan,
-          nama: p.siswa?.nama_siswa || 'Unknown',
-          inisial: getInitials(p.siswa?.nama_siswa || 'U'),
-          nis: p.siswa?.nis || '-',
-          kelas: p.siswa?.kelas?.nama_kelas || '-',
-          industri: p.perusahaan?.nama_perusahaan || '-',
-          kehadiran: p.kehadiran_persen || 85,
-          status: p.status_penempatan === 'aktif' ? 'Aktif' : 
-                  p.status_penempatan === 'selesai' ? 'Selesai' : 'Dibatalkan'
-        }))
-      } else {
-        // Data is not populated - need to fetch siswa/perusahaan separately
-        console.log('Data not populated, fetching siswa and perusahaan...')
-        
-        try {
-          // Fetch all siswa and perusahaan data in parallel
-          const [siswaRes, perusahaanRes] = await Promise.all([
-            getAllSiswa({ limit: 1000 }).catch(err => {
-              console.warn('Failed to fetch siswa (permission?)', err)
-              return { data: [] }
-            }),
-            getAllPerusahaan({ limit: 1000 }).catch(err => {
-              console.warn('Failed to fetch perusahaan (permission?)', err)
-              return { data: [] }
-            })
-          ])
-          
-          console.log('Siswa response:', siswaRes)
-          console.log('Perusahaan response:', perusahaanRes)
-          
-          // Create lookup maps
-          const siswaMap = new Map()
-          const perusahaanMap = new Map()
-          
-          if (siswaRes?.data) {
-            siswaRes.data.forEach((s: any) => {
-              siswaMap.set(s.id_siswa, s)
-            })
-          }
-          
-          if (perusahaanRes?.data) {
-            perusahaanRes.data.forEach((p: any) => {
-              perusahaanMap.set(p.id_perusahaan, p)
-            })
-          }
-          
-          console.log('Created maps - siswa:', siswaMap.size, 'perusahaan:', perusahaanMap.size)
-          
-          // Map penempatan with looked-up data
-          students.value = penempatanRes.data.map((p: any) => {
-            const siswa = siswaMap.get(p.siswa_id)
-            const perusahaan = perusahaanMap.get(p.perusahaan_id)
-            
-            console.log(`Mapping penempatan ${p.id_penempatan}: siswa_id=${p.siswa_id}, perusahaan_id=${p.perusahaan_id}`, { siswa, perusahaan })
-            
-            return {
-              id: p.id_penempatan,
-              nama: siswa?.nama_siswa || `Siswa ID: ${p.siswa_id}`,
-              inisial: getInitials(siswa?.nama_siswa || 'SX'),
-              nis: siswa?.nis || '-',
-              kelas: siswa?.kelas?.nama_kelas || '-',
-              industri: perusahaan?.nama_perusahaan || `Perusahaan ID: ${p.perusahaan_id}`,
-              kehadiran: p.kehadiran_persen || 85,
-              status: p.status_penempatan === 'aktif' ? 'Aktif' : 
-                      p.status_penempatan === 'selesai' ? 'Selesai' : 'Dibatalkan'
-            }
-          })
-        } catch (err) {
-          console.error('Error fetching siswa/perusahaan data', err)
-          // Fallback: just show IDs
-          students.value = penempatanRes.data.map((p: any) => ({
-            id: p.id_penempatan,
-            nama: `Siswa ID: ${p.siswa_id}`,
-            inisial: 'SX',
-            nis: '-',
-            kelas: '-',
-            industri: `Perusahaan ID: ${p.perusahaan_id}`,
-            kehadiran: p.kehadiran_persen || 85,
-            status: p.status_penempatan === 'aktif' ? 'Aktif' : 
-                    p.status_penempatan === 'selesai' ? 'Selesai' : 'Dibatalkan'
-          }))
+// Define columns for AppDataTable
+const columns: ColumnDef<any, any>[] = [
+    columnHelper.accessor("nama", {
+        id: "nama",
+        header: () => "Siswa",
+        cell: (info) => {
+            const row = info.row.original;
+            return h("div", { class: "flex items-center gap-3" }, [
+                h(
+                    "div",
+                    {
+                        class: "w-10 h-10 rounded-xl bg-sky-100 text-sky-700 flex items-center justify-center font-semibold text-sm shrink-0",
+                    },
+                    row.inisial,
+                ),
+                h("div", { class: "min-w-0" }, [
+                    h(
+                        "p",
+                        { class: "font-medium text-slate-900 truncate" },
+                        row.nama,
+                    ),
+                    h("p", { class: "text-xs text-slate-500" }, row.nis),
+                ]),
+            ]);
+        },
+    }),
+    columnHelper.accessor("kelas", {
+        id: "kelas",
+        header: () => "Kelas",
+        cell: (info) => info.getValue(),
+    }),
+    columnHelper.accessor("industri", {
+        id: "industri",
+        header: () => "Industri",
+        cell: (info) => {
+            const val = info.getValue() as string;
+            return h(
+                "span",
+                {
+                    class: "text-sm text-slate-600 truncate max-w-[200px] block",
+                },
+                val,
+            );
+        },
+    }),
+    columnHelper.accessor("kehadiran", {
+        id: "kehadiran",
+        header: () => "Kehadiran",
+        cell: (info) => {
+            const percent = info.getValue() as number;
+            const color = percent >= 80 ? "bg-green-500" : "bg-red-500";
+            const textColor = percent >= 80 ? "text-green-600" : "text-red-600";
+            return h("div", { class: "flex items-center gap-2" }, [
+                h(
+                    "div",
+                    {
+                        class: "w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden",
+                    },
+                    [
+                        h("div", {
+                            class: `h-full rounded-full ${color}`,
+                            style: { width: `${percent}%` },
+                        }),
+                    ],
+                ),
+                h(
+                    "span",
+                    {
+                        class: `text-sm font-medium whitespace-nowrap ${textColor}`,
+                    },
+                    `${percent}%`,
+                ),
+            ]);
+        },
+    }),
+    columnHelper.accessor("status", {
+        id: "status",
+        header: () => "Status",
+        cell: (info) => {
+            const status = info.getValue() as string;
+            const color = getStatusColor(status);
+            return h(
+                "span",
+                {
+                    class: `inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${color}`,
+                },
+                status,
+            );
+        },
+    }),
+    columnHelper.accessor("aksi", {
+        id: "aksi",
+        header: () => "Aksi",
+        cell: (info) => {
+            const row = info.row.original;
+            return h(
+                "button",
+                {
+                    class: "p-1.5 rounded-lg hover:bg-slate-100 text-slate-600 transition-colors",
+                    onClick: () =>
+                        navigateTo(
+                            `/guru/siswa-bimbingan/${generateUrlId(row.id, row.nama)}`,
+                        ),
+                },
+                h(Icon, {
+                    name: "lucide:eye",
+                    class: "w-4 h-4",
+                }),
+            );
+        },
+    }),
+];
+
+// Load data
+async function loadData() {
+    loading.value = true;
+
+    try {
+        const res = await getMyStudents({ limit: 100 });
+
+        if (res?.success && res?.data) {
+            students.value = res.data.map((p: any) => ({
+                id: p.id_penempatan,
+                nama: p.siswa?.nama_siswa || "Unknown",
+                inisial: getInitials(p.siswa?.nama_siswa || "U"),
+                nis: p.siswa?.nis || "-",
+                kelas: p.siswa?.kelas?.nama_kelas || "-",
+                industri: p.perusahaan?.nama_perusahaan || "-",
+                kehadiran: p.stats?.kehadiran || 0,
+                status:
+                    p.status_penempatan === "aktif"
+                        ? "Aktif"
+                        : p.status_penempatan === "selesai"
+                          ? "Selesai"
+                          : "Dibatalkan",
+            }));
+
+            // Calculate stats
+            stats.totalSiswa = students.value.length;
+            stats.aktif = students.value.filter(
+                (s) => s.status === "Aktif",
+            ).length;
+            stats.selesai = students.value.filter(
+                (s) => s.status === "Selesai",
+            ).length;
+            stats.belowTarget = students.value.filter(
+                (s) => s.kehadiran < 80,
+            ).length;
         }
-      }
-      
-      // Extract unique kelas for filter options
-      const uniqueKelas = [...new Set(students.value.map(s => s.kelas).filter(k => k !== '-'))]
-      kelasOptions.value = uniqueKelas as string[]
-      
-      // Get total from meta or pagination
-      stats.totalSiswa = penempatanRes.meta?.total || penempatanRes.pagination?.total || students.value.length
+    } catch (err) {
+        console.error("Failed to load students:", err);
+        toast.add({ title: "Gagal memuat data siswa", color: "error" });
+    } finally {
+        loading.value = false;
     }
-  } catch (error) {
-    console.error('Failed to fetch data:', error)
-    // Fallback to empty
-    students.value = []
-  } finally {
-    loading.value = false
-  }
 }
 
 onMounted(() => {
-  fetchData()
-})
+    loadData();
+});
 
-useHead({ title: 'Siswa Bimbingan | Guru PKL' })
+useHead({ title: "Siswa Bimbingan | Guru PKL" });
 </script>

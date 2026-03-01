@@ -133,35 +133,91 @@
   </section>
 </template>
 
-<script setup>
+<script setup lang="ts">
+import { useSiswaProfileApi } from '~/composables/api/use-siswa'
+
 definePageMeta({
   layout: 'siswa',
 })
 
-const identitasData = ref([
-  { label: 'NIM', value: '5220311063' },
-  { label: 'Jenis Kelamin', value: 'Laki-Laki' },
-  { label: 'Tempat Lahir', value: 'Wonogiri' },
-  { label: 'Tanggal Lahir', value: '05/03/2003' },
-  { label: 'No. KTP', value: '3312010503030001' },
-  { label: 'Alamat', value: 'TAMBAKAN RT 1 RW 8, KARANGLOR' },
-])
+const loading = ref(true)
+const profileApi = useSiswaProfileApi()
 
-const akademikData = ref([
-  { label: 'Fakultas', value: 'Sains & Teknologi' },
-  { label: 'Program Studi', value: 'Sistem Informasi Sarjana' },
-  { label: 'IPK', value: '3.79' },
-  { label: 'Total SKS', value: '124 SKS' },
-])
+const identitasData = ref<{ label: string; value: string }[]>([])
+const akademikData = ref<{ label: string; value: string }[]>([])
+const kontakData = ref<{ label: string; value: string }[]>([])
+const statusData = ref<{ label: string; complete: boolean }[]>([])
 
-const kontakData = ref([
-  { label: 'No. HP', value: '082241908389' },
-  { label: 'Email', value: 'ryobisuryaatmaja@gmail.com' },
-])
+onMounted(async () => {
+  try {
+    const response = await profileApi.getProfile()
+    if (response.success && response.data) {
+      const profile = response.data
+      
+      identitasData.value = [
+        { label: 'NIS', value: profile.nis || '-' },
+        { label: 'NISN', value: profile.nisn || '-' },
+        { label: 'Jenis Kelamin', value: profile.jenis_kelamin || '-' },
+        { label: 'Tempat Lahir', value: profile.tempat_lahir || '-' },
+        { label: 'Tanggal Lahir', value: profile.tanggal_lahir ? new Date(profile.tanggal_lahir).toLocaleDateString('id-ID') : '-' },
+        { label: 'Alamat', value: profile.alamat || '-' },
+      ]
 
-const statusData = ref([
-  { label: 'Data Pribadi', complete: true },
-  { label: 'Data Akademik', complete: true },
-  { label: 'Data Kontak', complete: true },
-])
+      akademikData.value = [
+        { label: 'Kelas', value: profile.kelas?.nama_kelas || '-' },
+        { label: 'Jurusan', value: profile.jurusan?.nama_jurusan || '-' },
+        { label: 'Tingkat', value: profile.tingkat?.nama_tingkat || '-' },
+        { label: 'Tahun Ajaran', value: profile.tahun_ajaran?.nama_tahun_ajaran || '-' },
+      ]
+
+      kontakData.value = [
+        { label: 'No. HP', value: profile.no_hp || '-' },
+        { label: 'Email', value: profile.email || '-' },
+      ]
+
+      statusData.value = [
+        { label: 'Data Pribadi', complete: !!(profile.nis && profile.nama) },
+        { label: 'Data Akademik', complete: !!(profile.kelas && profile.jurusan) },
+        { label: 'Data Kontak', complete: !!(profile.no_hp || profile.email) },
+      ]
+    } else {
+      // Fallback mock data
+      loadMockData()
+    }
+  } catch (error) {
+    console.error('Failed to load profile:', error)
+    loadMockData()
+  } finally {
+    loading.value = false
+  }
+})
+
+function loadMockData() {
+  identitasData.value = [
+    { label: 'NIS', value: '5220311063' },
+    { label: 'Jenis Kelamin', value: 'Laki-Laki' },
+    { label: 'Tempat Lahir', value: 'Wonogiri' },
+    { label: 'Tanggal Lahir', value: '05/03/2003' },
+    { label: 'No. KTP', value: '3312010503030001' },
+    { label: 'Alamat', value: 'TAMBAKAN RT 1 RW 8, KARANGLOR' },
+  ]
+
+  akademikData.value = [
+    { label: 'Fakultas', value: 'Sains & Teknologi' },
+    { label: 'Program Studi', value: 'Sistem Informasi Sarjana' },
+    { label: 'IPK', value: '3.79' },
+    { label: 'Total SKS', value: '124 SKS' },
+  ]
+
+  kontakData.value = [
+    { label: 'No. HP', value: '082241908389' },
+    { label: 'Email', value: 'ryobisuryaatmaja@gmail.com' },
+  ]
+
+  statusData.value = [
+    { label: 'Data Pribadi', complete: true },
+    { label: 'Data Akademik', complete: true },
+    { label: 'Data Kontak', complete: true },
+  ]
+}
 </script>

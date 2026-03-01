@@ -2,13 +2,13 @@
  * Guru Dashboard API Composable
  * Handles guru-specific API calls for dashboard and student supervision
  */
-import { apiFetch } from '~/composables/api-fetch';
+import { apiFetch } from "~/composables/api-fetch";
 
 // =============================================
 // TYPES
 // =============================================
 export interface GuruProfile {
-  id_guru: number;
+  id_guru: string;
   nip: string;
   nama_guru: string;
   email?: string;
@@ -16,9 +16,9 @@ export interface GuruProfile {
 }
 
 export interface SiswaBimbingan {
-  id_penempatan: number;
+  id_penempatan: string;
   siswa: {
-    id_siswa: number;
+    id_siswa: string;
     nama_siswa: string;
     nis: string;
     foto?: string;
@@ -28,10 +28,10 @@ export interface SiswaBimbingan {
     };
   };
   perusahaan: {
-    id_perusahaan: number;
+    id_perusahaan: string;
     nama_perusahaan: string;
   };
-  status_penempatan: 'aktif' | 'selesai' | 'dibatalkan';
+  status_penempatan: "aktif" | "selesai" | "dibatalkan";
   tanggal_mulai: string;
   tanggal_selesai: string;
   // Computed fields from backend
@@ -76,10 +76,10 @@ export function useGuruApi() {
    */
   async function getProfile() {
     const { data } = await apiFetch<SingleResponse<GuruProfile>>(
-      'IdentityService',
-      '/auth/me',
-      { method: 'GET' },
-      true
+      "IdentityService",
+      "/auth/me",
+      { method: "GET" },
+      true,
     );
     return data;
   }
@@ -91,20 +91,18 @@ export function useGuruApi() {
   async function getSiswaBimbingan(params?: {
     page?: number;
     limit?: number;
-    status?: 'aktif' | 'selesai' | 'dibatalkan';
-    search?: string;
+    status_penempatan?: "aktif" | "selesai" | "dibatalkan";
   }) {
     const query = new URLSearchParams();
-    if (params?.page) query.append('page', String(params.page));
-    if (params?.limit) query.append('limit', String(params.limit));
-    if (params?.status) query.append('status', params.status);
-    if (params?.search) query.append('search', params.search);
+    if (params?.page) query.append("page", String(params.page));
+    if (params?.limit) query.append("limit", String(params.limit));
+    if (params?.status_penempatan) query.append("status_penempatan", params.status_penempatan);
 
     const { data } = await apiFetch<PaginatedResponse<SiswaBimbingan>>(
-      'PlacementService',
-      `/penempatan/my-students?${query.toString()}`,
-      { method: 'GET' },
-      true
+      "PlacementService",
+      `/penempatan/guru/me?${query.toString()}`,
+      { method: "GET" },
+      true,
     );
     return data;
   }
@@ -114,10 +112,10 @@ export function useGuruApi() {
    */
   async function getDashboardStats() {
     const { data } = await apiFetch<SingleResponse<GuruDashboardStats>>(
-      'PlacementService',
-      '/monitoring/guru/stats',
-      { method: 'GET' },
-      true
+      "PlacementService",
+      "/monitoring/guru/stats",
+      { method: "GET" },
+      true,
     );
     return data;
   }
@@ -133,17 +131,20 @@ export function useGuruApi() {
     tanggal_selesai?: string;
   }) {
     const query = new URLSearchParams();
-    if (params?.page) query.append('page', String(params.page));
-    if (params?.limit) query.append('limit', String(params.limit));
-    if (params?.validasi_guru !== undefined) query.append('validasi_guru', String(params.validasi_guru));
-    if (params?.tanggal_mulai) query.append('tanggal_mulai', params.tanggal_mulai);
-    if (params?.tanggal_selesai) query.append('tanggal_selesai', params.tanggal_selesai);
+    if (params?.page) query.append("page", String(params.page));
+    if (params?.limit) query.append("limit", String(params.limit));
+    if (params?.validasi_guru !== undefined)
+      query.append("validasi_guru", String(params.validasi_guru));
+    if (params?.tanggal_mulai)
+      query.append("tanggal_mulai", params.tanggal_mulai);
+    if (params?.tanggal_selesai)
+      query.append("tanggal_selesai", params.tanggal_selesai);
 
     const { data } = await apiFetch<PaginatedResponse<any>>(
-      'PlacementService',
+      "PlacementService",
       `/absensi/my-students?${query.toString()}`,
-      { method: 'GET' },
-      true
+      { method: "GET" },
+      true,
     );
     return data;
   }
@@ -154,18 +155,18 @@ export function useGuruApi() {
   async function getLogbookSiswa(params?: {
     page?: number;
     limit?: number;
-    status?: 'pending' | 'approved' | 'revision';
+    status?: "pending" | "approved" | "revision";
   }) {
     const query = new URLSearchParams();
-    if (params?.page) query.append('page', String(params.page));
-    if (params?.limit) query.append('limit', String(params.limit));
-    if (params?.status) query.append('status', params.status);
+    if (params?.page) query.append("page", String(params.page));
+    if (params?.limit) query.append("limit", String(params.limit));
+    if (params?.status) query.append("status", params.status);
 
     const { data } = await apiFetch<PaginatedResponse<any>>(
-      'PlacementService',
+      "PlacementService",
       `/logbook/my-students?${query.toString()}`,
-      { method: 'GET' },
-      true
+      { method: "GET" },
+      true,
     );
     return data;
   }
@@ -173,20 +174,17 @@ export function useGuruApi() {
   /**
    * Get penilaian for guru's students
    */
-  async function getPenilaianSiswa(params?: {
-    page?: number;
-    limit?: number;
-  }) {
+  async function getPenilaianSiswa(params?: { page?: number; limit?: number }) {
     const query = new URLSearchParams();
-    if (params?.page) query.append('page', String(params.page));
-    if (params?.limit) query.append('limit', String(params.limit));
-    query.append('penilai_type', 'guru');
+    if (params?.page) query.append("page", String(params.page));
+    if (params?.limit) query.append("limit", String(params.limit));
+    query.append("penilai_type", "guru");
 
     const { data } = await apiFetch<PaginatedResponse<any>>(
-      'PlacementService',
+      "PlacementService",
       `/penilaian/my-students?${query.toString()}`,
-      { method: 'GET' },
-      true
+      { method: "GET" },
+      true,
     );
     return data;
   }
@@ -194,12 +192,12 @@ export function useGuruApi() {
   /**
    * Get detail siswa bimbingan by penempatan ID
    */
-  async function getDetailSiswaBimbingan(idPenempatan: number) {
+  async function getDetailSiswaBimbingan(idPenempatan: string) {
     const { data } = await apiFetch<SingleResponse<SiswaBimbingan>>(
-      'PlacementService',
+      "PlacementService",
       `/penempatan/${idPenempatan}`,
-      { method: 'GET' },
-      true
+      { method: "GET" },
+      true,
     );
     return data;
   }
@@ -207,21 +205,26 @@ export function useGuruApi() {
   /**
    * Get logbook list for specific penempatan
    */
-  async function getLogbookByPenempatan(idPenempatan: number, params?: {
-    page?: number;
-    limit?: number;
-    status?: 'pending' | 'approved' | 'revision';
-  }) {
+  async function getLogbookByPenempatan(
+    idPenempatan: string,
+    params?: {
+      page?: number;
+      limit?: number;
+      status_persetujuan?: "menunggu" | "disetujui" | "ditolak";
+    },
+  ) {
     const query = new URLSearchParams();
-    if (params?.page) query.append('page', String(params.page));
-    if (params?.limit) query.append('limit', String(params.limit));
-    if (params?.status) query.append('status', params.status);
+    query.append("id_penempatan", idPenempatan);
+    if (params?.page) query.append("page", String(params.page));
+    if (params?.limit) query.append("limit", String(params.limit));
+    if (params?.status_persetujuan)
+      query.append("status_persetujuan", params.status_persetujuan);
 
     const { data } = await apiFetch<PaginatedResponse<any>>(
-      'PlacementService',
-      `/logbook/penempatan/${idPenempatan}?${query.toString()}`,
-      { method: 'GET' },
-      true
+      "PlacementService",
+      `/logbook?${query.toString()}`,
+      { method: "GET" },
+      true,
     );
     return data;
   }
@@ -229,25 +232,30 @@ export function useGuruApi() {
   /**
    * Get absensi list for specific penempatan
    */
-  async function getAbsensiByPenempatan(idPenempatan: number, params?: {
-    page?: number;
-    limit?: number;
-    status?: string;
-    tanggal_mulai?: string;
-    tanggal_selesai?: string;
-  }) {
+  async function getAbsensiByPenempatan(
+    idPenempatan: string,
+    params?: {
+      page?: number;
+      limit?: number;
+      status_absensi?: string;
+      start_date?: string;
+      end_date?: string;
+    },
+  ) {
     const query = new URLSearchParams();
-    if (params?.page) query.append('page', String(params.page));
-    if (params?.limit) query.append('limit', String(params.limit));
-    if (params?.status) query.append('status', params.status);
-    if (params?.tanggal_mulai) query.append('tanggal_mulai', params.tanggal_mulai);
-    if (params?.tanggal_selesai) query.append('tanggal_selesai', params.tanggal_selesai);
+    query.append("id_penempatan", idPenempatan);
+    if (params?.page) query.append("page", String(params.page));
+    if (params?.limit) query.append("limit", String(params.limit));
+    if (params?.status_absensi)
+      query.append("status_absensi", params.status_absensi);
+    if (params?.start_date) query.append("start_date", params.start_date);
+    if (params?.end_date) query.append("end_date", params.end_date);
 
     const { data } = await apiFetch<PaginatedResponse<any>>(
-      'PlacementService',
-      `/absensi/penempatan/${idPenempatan}?${query.toString()}`,
-      { method: 'GET' },
-      true
+      "PlacementService",
+      `/absensi?${query.toString()}`,
+      { method: "GET" },
+      true,
     );
     return data;
   }
@@ -255,18 +263,20 @@ export function useGuruApi() {
   /**
    * Get stats for specific penempatan (kehadiran, logbook count, etc)
    */
-  async function getStatsByPenempatan(idPenempatan: number) {
-    const { data } = await apiFetch<SingleResponse<{
-      kehadiran_persen: number;
-      total_logbook: number;
-      total_hari_pkl: number;
-      logbook_pending: number;
-      logbook_approved: number;
-    }>>(
-      'PlacementService',
+  async function getStatsByPenempatan(idPenempatan: string) {
+    const { data } = await apiFetch<
+      SingleResponse<{
+        kehadiran_persen: number;
+        total_logbook: number;
+        total_hari_pkl: number;
+        logbook_pending: number;
+        logbook_approved: number;
+      }>
+    >(
+      "PlacementService",
       `/monitoring/penempatan/${idPenempatan}`,
-      { method: 'GET' },
-      true
+      { method: "GET" },
+      true,
     );
     return data;
   }
@@ -285,4 +295,3 @@ export function useGuruApi() {
     getStatsByPenempatan,
   };
 }
-

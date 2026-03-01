@@ -118,7 +118,7 @@
                 <span class="text-sm text-slate-500">{{ item.siswa.map(s => s.nama.split(' ')[0]).join(', ') }}</span>
               </div>
 
-              <UButton size="sm" variant="soft" color="primary" @click="viewDetail(item.id, item.industri)">
+              <UButton size="sm" variant="soft" color="primary" @click="viewDetail(item.id)">
                 <Icon name="lucide:eye" class="w-4 h-4 mr-1" />
                 Lihat Detail
               </UButton>
@@ -136,16 +136,11 @@
 </template>
 
 <script setup lang="ts">
-import { usePenempatanApi } from '~/composables/api/use-internship'
-import { useSiswaApi } from '~/composables/api/use-academic'
-import { usePerusahaanApi } from '~/composables/api/use-partner'
-import { encodeWithSlug } from '~/composables/use-id-encoder'
+import { useGuruApi } from '~/composables/api/use-guru'
 
 definePageMeta({ layout: 'guru' })
 
-const { getAll: getPenempatan } = usePenempatanApi()
-const { getAll: getAllSiswa } = useSiswaApi()
-const { getAll: getAllPerusahaan } = usePerusahaanApi()
+const guruApi = useGuruApi()
 
 const loading = ref(true)
 const search = ref('')
@@ -170,102 +165,79 @@ const filteredData = computed(() => {
   })
 })
 
-const viewDetail = (id: number, name: string) => navigateTo(`/guru/penempatan/${encodeWithSlug(id, name)}`)
+// Navigate to perusahaan detail — use raw UUID (no encoding needed for UUIDs)
+const viewDetail = (idPerusahaan: string) => navigateTo(`/guru/penempatan/${idPerusahaan}`)
 
 async function fetchData() {
   loading.value = true
   try {
-    // Fetch all penempatan data
-    const penempatanRes = await getPenempatan({ limit: 100 })
-    console.log('Penempatan response:', penempatanRes)
+    // Fetch only the current guru's penempatan (my-students endpoint)
+    const res = await guruApi.getSiswaBimbingan({ limit: 100 })
 
-    if (!penempatanRes?.data?.length) {
+    if (!res?.data?.length) {
       data.value = []
+      stats.totalIndustri = 0
+      stats.totalSiswa = 0
+      stats.aktif = 0
+      stats.selesai = 0
       return
     }
 
-    // Fetch siswa and perusahaan data
-    const [siswaRes, perusahaanRes] = await Promise.all([
-      getAllSiswa({ limit: 1000 }).catch(err => {
-        console.warn('Failed to fetch siswa:', err)
-        return { data: [] }
-      }),
-      getAllPerusahaan({ limit: 1000 }).catch(err => {
-        console.warn('Failed to fetch perusahaan:', err)
-        return { data: [] }
-      })
-    ])
+    // Group penempatan by perusahaan (nested data already available)
+    const groupMap = new Map<string, any>()
 
-    // Create lookup maps
-    const siswaMap = new Map()
-    const perusahaanMap = new Map()
+    for (const pen of res.data) {
+      const perusahaan = pen.perusahaan
+      if (!perusahaan) continue
 
-    if (siswaRes?.data) {
-      siswaRes.data.forEach((s: any) => siswaMap.set(s.id_siswa, s))
-    }
-    if (perusahaanRes?.data) {
-      perusahaanRes.data.forEach((p: any) => perusahaanMap.set(p.id_perusahaan, p))
-    }
-
-    // Group penempatan by perusahaan
-    const groupedByPerusahaan = new Map<number, any[]>()
-    
-    for (const pen of penempatanRes.data) {
-      const perusahaanId = pen.perusahaan_id
-      if (!groupedByPerusahaan.has(perusahaanId)) {
-        groupedByPerusahaan.set(perusahaanId, [])
+      const key = perusahaan.id_perusahaan
+      if (!groupMap.has(key)) {
+        groupMap.set(key, {
+          id: key,
+          industri: perusahaan.nama_perusahaan || '-',
+          alamat: perusahaan.alamat || '-',
+          mentor: perusahaan.mentor?.[0]?.nama_mentor || null,
+          siswaAktif: 0,
+          siswaSelesai: 0,
+          siswa: []
+        })
       }
-      groupedByPerusahaan.get(perusahaanId)!.push(pen)
+
+      const group = groupMap.get(key)!
+      const siswa = pen.siswa
+
+      if (pen.status_penempatan === 'aktif') group.siswaAktif++
+      else group.siswaSelesai++
+
+      group.siswa.push({
+        id: siswa?.id_siswa || pen.id_penempatan,
+        penempatanId: pen.id_penempatan,
+        nama: siswa?.nama_siswa || '-',
+        inisial: getInitials(siswa?.nama_siswa || 'XX'),
+        kelas: siswa?.kelas?.nama_kelas || '-',
+        nis: siswa?.nis || '-',
+        status: pen.status_penempatan
+      })
     }
 
-    // Transform to display format
     const displayData: any[] = []
     let totalAktif = 0
     let totalSelesai = 0
-    let totalSiswa = 0
 
-    for (const [perusahaanId, placements] of groupedByPerusahaan) {
-      const perusahaan = perusahaanMap.get(perusahaanId)
-      
-      // Determine status based on majority of placements
-      const aktifCount = placements.filter((p: any) => p.status_penempatan === 'aktif').length
-      const selesaiCount = placements.filter((p: any) => p.status_penempatan === 'selesai').length
-      const status = aktifCount >= selesaiCount ? 'Aktif' : 'Selesai'
-
-      totalAktif += aktifCount
-      totalSelesai += selesaiCount
-      totalSiswa += placements.length
-
-      // Get siswa data for this perusahaan
-      const siswaList = placements.map((p: any) => {
-        const siswa = siswaMap.get(p.siswa_id)
-        return {
-          id: p.siswa_id,
-          nama: siswa?.nama_siswa || `Siswa (ID: ${p.siswa_id})`,
-          inisial: getInitials(siswa?.nama_siswa || 'XX'),
-          penempatanId: p.id_penempatan
-        }
-      })
-
-      displayData.push({
-        id: perusahaanId,
-        industri: perusahaan?.nama_perusahaan || `Perusahaan (ID: ${perusahaanId})`,
-        alamat: perusahaan?.alamat || '-',
-        mentor: perusahaan?.mentor?.nama_mentor || null,
-        status,
-        siswa: siswaList
-      })
+    for (const group of groupMap.values()) {
+      group.status = group.siswaAktif > 0 ? 'Aktif' : 'Selesai'
+      totalAktif += group.siswaAktif
+      totalSelesai += group.siswaSelesai
+      displayData.push(group)
     }
 
     data.value = displayData
-    
-    // Update stats
     stats.totalIndustri = displayData.length
-    stats.totalSiswa = totalSiswa
+    stats.totalSiswa = res.data.length
     stats.aktif = totalAktif
     stats.selesai = totalSelesai
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Failed to fetch penempatan data:', error)
     data.value = []
   } finally {

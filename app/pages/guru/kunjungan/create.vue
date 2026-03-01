@@ -119,24 +119,21 @@
 </template>
 
 <script setup lang="ts">
-import { useMonitoringApi, usePenempatanApi } from '~/composables/api/use-internship'
-import { useSiswaApi } from '~/composables/api/use-academic'
-import { usePerusahaanApi } from '~/composables/api/use-partner'
+import { useGuruApi } from '~/composables/api/use-guru'
+import { useMonitoringApi } from '~/composables/api/use-internship'
 
 definePageMeta({ layout: 'guru' })
 
 const toast = useToast()
+const guruApi = useGuruApi()
 const { create: createMonitoring } = useMonitoringApi()
-const { getAll: getAllPenempatan } = usePenempatanApi()
-const { getAll: getAllSiswa } = useSiswaApi()
-const { getAll: getAllPerusahaan } = usePerusahaanApi()
 
 const submitting = ref(false)
 const loadingSiswa = ref(true)
 const fileInput = ref<HTMLInputElement | null>(null)
 
 const form = reactive({
-  id_penempatan: null as number | null,
+  id_penempatan: null as string | null,
   tanggal: '',
   hasil_monitoring: '',
   kondisi: '',
@@ -144,13 +141,13 @@ const form = reactive({
 })
 
 interface SiswaOption {
-  value: number
+  value: string
   label: string
   perusahaan: string
 }
 
 const siswaOptions = ref<SiswaOption[]>([])
-const selectedOption = ref<number | null>(null)
+const selectedOption = ref<string | null>(null)
 
 // Sync selectedOption to form.id_penempatan
 watch(selectedOption, (val) => {
@@ -189,47 +186,18 @@ const handleUpload = (e: Event) => {
 async function loadSiswaOptions() {
   loadingSiswa.value = true
   try {
-    // Fetch all data in parallel (3 requests total, optimized)
-    const [penempatanRes, siswaRes, perusahaanRes] = await Promise.all([
-      getAllPenempatan({ limit: 100 }),
-      getAllSiswa({ limit: 1000 }),
-      getAllPerusahaan({ limit: 1000 })
-    ])
+    // Only fetch the current guru's students (1 API call)
+    const res = await guruApi.getSiswaBimbingan({ limit: 100 })
 
-    console.log('Penempatan:', penempatanRes)
-    console.log('Siswa:', siswaRes)
-    console.log('Perusahaan:', perusahaanRes)
-
-    // Create lookup maps
-    const siswaMap = new Map<number, any>()
-    const perusahaanMap = new Map<number, any>()
-
-    if (siswaRes?.data) {
-      for (const s of siswaRes.data) {
-        siswaMap.set(s.id_siswa, s)
-      }
-    }
-    if (perusahaanRes?.data) {
-      for (const p of perusahaanRes.data) {
-        perusahaanMap.set(p.id_perusahaan, p)
-      }
-    }
-
-    // Build options from penempatan data
-    if (penempatanRes?.data) {
-      siswaOptions.value = penempatanRes.data.map((p: any) => {
-        const siswa = siswaMap.get(p.siswa_id)
-        const perusahaan = perusahaanMap.get(p.perusahaan_id)
-
-        return {
+    if (res?.data) {
+      siswaOptions.value = res.data
+        .filter((p: any) => p.status_penempatan === 'aktif')
+        .map((p: any) => ({
           value: p.id_penempatan,
-          label: siswa?.nama_siswa || `Siswa #${p.siswa_id}`,
-          perusahaan: perusahaan?.nama_perusahaan || `Perusahaan #${p.perusahaan_id}`
-        }
-      })
+          label: p.siswa?.nama_siswa || '-',
+          perusahaan: p.perusahaan?.nama_perusahaan || '-'
+        }))
     }
-
-    console.log('Options built:', siswaOptions.value)
   } catch (error) {
     console.error('Failed to load siswa options:', error)
     toast.add({ title: 'Gagal memuat data siswa', color: 'error' })
@@ -239,12 +207,9 @@ async function loadSiswaOptions() {
 }
 
 const submit = async () => {
-  // Handle case where id_penempatan might be object or number
   const penempatanId = typeof form.id_penempatan === 'object' && form.id_penempatan !== null
     ? (form.id_penempatan as any).value 
     : form.id_penempatan
-
-  console.log('Submitting with id_penempatan:', penempatanId, 'original:', form.id_penempatan)
 
   if (!penempatanId || !form.tanggal || !form.hasil_monitoring) {
     toast.add({ title: 'Lengkapi semua field wajib', color: 'error' })
@@ -258,7 +223,7 @@ const submit = async () => {
       : form.hasil_monitoring
 
     await createMonitoring({
-      id_penempatan: Number(penempatanId),
+      id_penempatan: String(penempatanId),
       tanggal_monitoring: form.tanggal,
       hasil_monitoring: hasilMonitoring,
       foto_monitoring: form.foto_monitoring || undefined

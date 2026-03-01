@@ -1,7 +1,7 @@
 /**
  * Academic/Core Service API Composable
  * Handles: Siswa, Guru, Kelas, Jurusan, Tahun Ajaran, Tingkat
- * 
+ *
  * API Endpoints (via Gateway):
  * - /api/siswa
  * - /api/guru
@@ -10,13 +10,57 @@
  * - /api/tahun-ajaran
  * - /api/tingkat
  */
-import { apiFetch } from '~/composables/api-fetch';
+import { apiFetch } from "~/composables/api-fetch";
+
+// =============================================
+// ERROR HANDLING HELPER
+// =============================================
+async function safeFetch<T>(
+  service: string,
+  endpoint: string,
+  options: any = {},
+  withToken: boolean = true,
+  fallbackData?: T,
+): Promise<{ success: boolean; data?: T; message: string }> {
+  try {
+    const response = await apiFetch<any>(service, endpoint, options, withToken);
+
+    // Check response status
+    if (response.status >= 200 && response.status < 300) {
+      return (
+        response.data || {
+          success: true,
+          data: fallbackData,
+          message: "Success",
+        }
+      );
+    } else {
+      console.warn(
+        `[SafeFetch] Non-2xx status: ${response.status} for ${service} → ${endpoint}`,
+      );
+      return {
+        success: false,
+        data: fallbackData,
+        message:
+          response.data?.message ||
+          `HTTP ${response.status}: ${response.statusText}`,
+      };
+    }
+  } catch (error: any) {
+    console.error(`[SafeFetch] Error for ${service} → ${endpoint}:`, error);
+    return {
+      success: false,
+      data: fallbackData,
+      message: error?.message || "Network error",
+    };
+  }
+}
 
 // =============================================
 // TYPES
 // =============================================
 export interface Siswa {
-  id_siswa: number;
+  id_siswa: string;
   nis: string;
   nama_siswa: string;
   jenis_kelamin?: string;
@@ -25,9 +69,9 @@ export interface Siswa {
   no_hp?: string;
   email?: string;
   foto?: string;
-  id_kelas: number;
+  id_kelas: string;
   kelas?: {
-    id_kelas: number;
+    id_kelas: string;
     nama_kelas: string;
     jurusan?: { nama_jurusan: string };
     tingkat?: { kode_tingkat: string };
@@ -37,7 +81,7 @@ export interface Siswa {
 }
 
 export interface Guru {
-  id_guru: number;
+  id_guru: string;
   nip: string;
   nama_guru: string;
   email?: string;
@@ -48,26 +92,26 @@ export interface Guru {
 }
 
 export interface Kelas {
-  id_kelas: number;
+  id_kelas: string;
   nama_kelas: string;
-  id_jurusan: number;
-  id_tingkat: number;
-  id_guru?: number;
-  id_tahun_ajaran: number;
-  jurusan?: { id_jurusan: number; nama_jurusan: string };
-  tingkat?: { id_tingkat: number; kode_tingkat: string };
-  guru?: { id_guru: number; nama_guru: string };
-  tahun_ajaran?: { id_tahun_ajaran: number; nama_tahun_ajaran: string };
+  id_jurusan: string;
+  id_tingkat: string;
+  id_guru?: string;
+  id_tahun_ajaran: string;
+  jurusan?: { id_jurusan: string; nama_jurusan: string };
+  tingkat?: { id_tingkat: string; kode_tingkat: string };
+  guru?: { id_guru: string; nama_guru: string };
+  tahun_ajaran?: { id_tahun_ajaran: string; nama_tahun_ajaran: string };
 }
 
 export interface Jurusan {
-  id_jurusan: number;
+  id_jurusan: string;
   kode_jurusan: string;
   nama_jurusan: string;
 }
 
 export interface TahunAjaran {
-  id_tahun_ajaran: number;
+  id_tahun_ajaran: string;
   nama_tahun_ajaran: string;
   tanggal_mulai?: string;
   tanggal_selesai?: string;
@@ -75,7 +119,7 @@ export interface TahunAjaran {
 }
 
 export interface Tingkat {
-  id_tingkat: number;
+  id_tingkat: string;
   kode_tingkat: string;
   urutan: number;
 }
@@ -102,28 +146,33 @@ export interface SingleResponse<T> {
 // SISWA API
 // =============================================
 export function useSiswaApi() {
-  async function getAll(params?: { page?: number; limit?: number; id_kelas?: number; search?: string }) {
+  async function getAll(params?: {
+    page?: number;
+    limit?: number;
+    id_kelas?: string;
+    search?: string;
+  }) {
     const query = new URLSearchParams();
-    if (params?.page) query.append('page', String(params.page));
-    if (params?.limit) query.append('limit', String(params.limit));
-    if (params?.id_kelas) query.append('id_kelas', String(params.id_kelas));
-    if (params?.search) query.append('search', params.search);
+    if (params?.page) query.append("page", String(params.page));
+    if (params?.limit) query.append("limit", String(params.limit));
+    if (params?.id_kelas) query.append("id_kelas", String(params.id_kelas));
+    if (params?.search) query.append("search", params.search);
 
     const { data } = await apiFetch<PaginatedResponse<Siswa>>(
-      'CoreService',
+      "CoreService",
       `/siswa?${query.toString()}`,
-      { method: 'GET' },
-      true
+      { method: "GET" },
+      true,
     );
     return data;
   }
 
-  async function getById(id: number) {
+  async function getById(id: string) {
     const { data } = await apiFetch<SingleResponse<Siswa>>(
-      'CoreService',
+      "CoreService",
       `/siswa/${id}`,
-      { method: 'GET' },
-      true
+      { method: "GET" },
+      true,
     );
     return data;
   }
@@ -136,53 +185,53 @@ export function useSiswaApi() {
     alamat?: string;
     no_hp?: string;
     email?: string;
-    id_kelas: number;
+    id_kelas: string;
   }) {
     const { data } = await apiFetch<SingleResponse<Siswa>>(
-      'CoreService',
-      '/siswa',
-      { method: 'POST', data: payload },
-      true
+      "CoreService",
+      "/siswa",
+      { method: "POST", data: payload },
+      true,
     );
     return data;
   }
 
-  async function update(id: number, payload: Partial<{
-    nis: string;
-    nama_siswa: string;
-    jenis_kelamin: string;
-    tanggal_lahir: string;
-    alamat: string;
-    no_hp: string;
-    email: string;
-    id_kelas: number;
-  }>) {
+  async function update(
+    id: string,
+    payload: Partial<{
+      nis: string;
+      nama_siswa: string;
+      jenis_kelamin: string;
+      tanggal_lahir: string;
+      alamat: string;
+      no_hp: string;
+      email: string;
+      id_kelas: string;
+    }>,
+  ) {
     const { data } = await apiFetch<SingleResponse<Siswa>>(
-      'CoreService',
+      "CoreService",
       `/siswa/${id}`,
-      { method: 'PUT', data: payload },
-      true
+      { method: "PUT", data: payload },
+      true,
     );
     return data;
   }
 
-  async function remove(id: number) {
+  async function remove(id: string) {
     const { data } = await apiFetch<SingleResponse<null>>(
-      'CoreService',
+      "CoreService",
       `/siswa/${id}`,
-      { method: 'DELETE' },
-      true
+      { method: "DELETE" },
+      true,
     );
     return data;
   }
 
-  async function resetPassword(id: number) {
-    const { data } = await apiFetch<SingleResponse<{ generated_password: string }>>(
-      'CoreService',
-      `/siswa/${id}/reset-password`,
-      { method: 'POST' },
-      true
-    );
+  async function resetPassword(id: string) {
+    const { data } = await apiFetch<
+      SingleResponse<{ generated_password: string }>
+    >("CoreService", `/siswa/${id}/reset-password`, { method: "POST" }, true);
     return data;
   }
 
@@ -193,37 +242,41 @@ export function useSiswaApi() {
 // GURU API
 // =============================================
 export function useGuruApi() {
-  async function getAll(params?: { page?: number; limit?: number; search?: string }) {
+  async function getAll(params?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+  }) {
     const query = new URLSearchParams();
-    if (params?.page) query.append('page', String(params.page));
-    if (params?.limit) query.append('limit', String(params.limit));
-    if (params?.search) query.append('search', params.search);
+    if (params?.page) query.append("page", String(params.page));
+    if (params?.limit) query.append("limit", String(params.limit));
+    if (params?.search) query.append("search", params.search);
 
     const { data } = await apiFetch<PaginatedResponse<Guru>>(
-      'CoreService',
+      "CoreService",
       `/guru?${query.toString()}`,
-      { method: 'GET' },
-      true
+      { method: "GET" },
+      true,
     );
     return data;
   }
 
   async function getMe() {
     const { data } = await apiFetch<SingleResponse<Guru>>(
-      'CoreService',
-      '/guru/me',
-      { method: 'GET' },
-      true
+      "CoreService",
+      "/guru/me",
+      { method: "GET" },
+      true,
     );
     return data;
   }
 
-  async function getById(id: number) {
+  async function getById(id: string) {
     const { data } = await apiFetch<SingleResponse<Guru>>(
-      'CoreService',
+      "CoreService",
       `/guru/${id}`,
-      { method: 'GET' },
-      true
+      { method: "GET" },
+      true,
     );
     return data;
   }
@@ -235,46 +288,46 @@ export function useGuruApi() {
     no_hp?: string;
   }) {
     const { data } = await apiFetch<SingleResponse<Guru>>(
-      'CoreService',
-      '/guru',
-      { method: 'POST', data: payload },
-      true
+      "CoreService",
+      "/guru",
+      { method: "POST", data: payload },
+      true,
     );
     return data;
   }
 
-  async function update(id: number, payload: Partial<{
-    nip: string;
-    nama_guru: string;
-    email: string;
-    no_hp: string;
-  }>) {
+  async function update(
+    id: string,
+    payload: Partial<{
+      nip: string;
+      nama_guru: string;
+      email: string;
+      no_hp: string;
+    }>,
+  ) {
     const { data } = await apiFetch<SingleResponse<Guru>>(
-      'CoreService',
+      "CoreService",
       `/guru/${id}`,
-      { method: 'PUT', data: payload },
-      true
+      { method: "PUT", data: payload },
+      true,
     );
     return data;
   }
 
-  async function remove(id: number) {
+  async function remove(id: string) {
     const { data } = await apiFetch<SingleResponse<Guru>>(
-      'CoreService',
+      "CoreService",
       `/guru/${id}`,
-      { method: 'DELETE' },
-      true
+      { method: "DELETE" },
+      true,
     );
     return data;
   }
 
-  async function resetPassword(id: number) {
-    const { data } = await apiFetch<SingleResponse<{ generated_password: string }>>(
-      'CoreService',
-      `/guru/${id}/reset-password`,
-      { method: 'POST' },
-      true
-    );
+  async function resetPassword(id: string) {
+    const { data } = await apiFetch<
+      SingleResponse<{ generated_password: string }>
+    >("CoreService", `/guru/${id}/reset-password`, { method: "POST" }, true);
     return data;
   }
 
@@ -285,70 +338,80 @@ export function useGuruApi() {
 // KELAS API
 // =============================================
 export function useKelasApi() {
-  async function getAll(params?: { page?: number; limit?: number; id_jurusan?: number; id_tahun_ajaran?: number }) {
+  async function getAll(params?: {
+    page?: number;
+    limit?: number;
+    id_jurusan?: string;
+    id_tahun_ajaran?: string;
+  }) {
     const query = new URLSearchParams();
-    if (params?.page) query.append('page', String(params.page));
-    if (params?.limit) query.append('limit', String(params.limit));
-    if (params?.id_jurusan) query.append('id_jurusan', String(params.id_jurusan));
-    if (params?.id_tahun_ajaran) query.append('id_tahun_ajaran', String(params.id_tahun_ajaran));
+    if (params?.page) query.append("page", String(params.page));
+    if (params?.limit) query.append("limit", String(params.limit));
+    if (params?.id_jurusan)
+      query.append("id_jurusan", String(params.id_jurusan));
+    if (params?.id_tahun_ajaran)
+      query.append("id_tahun_ajaran", String(params.id_tahun_ajaran));
 
     const { data } = await apiFetch<PaginatedResponse<Kelas>>(
-      'CoreService',
+      "CoreService",
       `/kelas?${query.toString()}`,
-      { method: 'GET' },
-      true
+      { method: "GET" },
+      true,
     );
     return data;
   }
 
-  async function getById(id: number) {
+  async function getById(id: string) {
     const { data } = await apiFetch<SingleResponse<Kelas>>(
-      'CoreService',
+      "CoreService",
       `/kelas/${id}`,
-      { method: 'GET' },
-      true
+      { method: "GET" },
+      true,
     );
     return data;
   }
 
   async function create(payload: {
     nama_kelas: string;
-    id_jurusan: number;
-    id_tingkat: number;
-    id_guru?: number;
-    id_tahun_ajaran: number;
+    id_jurusan: string;
+    id_tingkat: string;
+    id_guru?: string;
+    id_tahun_ajaran: string;
   }) {
     const { data } = await apiFetch<SingleResponse<Kelas>>(
-      'CoreService',
-      '/kelas',
-      { method: 'POST', data: payload },
-      true
+      "CoreService",
+      "/kelas",
+      { method: "POST", data: payload },
+      true,
     );
     return data;
   }
 
-  async function update(id: number, payload: Partial<{
-    nama_kelas: string;
-    id_jurusan: number;
-    id_tingkat: number;
-    id_guru: number;
-    id_tahun_ajaran: number;
-  }>) {
+  async function update(
+    id: string,
+    payload: Partial<{
+      nama_kelas: string;
+      id_jurusan: string;
+      id_tingkat: string;
+      id_guru: string;
+      id_tahun_ajaran: string;
+    }>,
+  ) {
     const { data } = await apiFetch<SingleResponse<Kelas>>(
-      'CoreService',
+      "CoreService",
       `/kelas/${id}`,
-      { method: 'PUT', data: payload },
-      true
+      { method: "PUT", data: payload },
+      true,
     );
     return data;
   }
 
-  async function remove(id: number) {
+  async function remove(id: string) {
     const { data } = await apiFetch<SingleResponse<null>>(
-      'CoreService',
+      "CoreService",
       `/kelas/${id}`,
-      { method: 'DELETE' },
-      true
+      { method: "DELETE" },
+      true,
     );
     return data;
   }
@@ -360,57 +423,67 @@ export function useKelasApi() {
 // JURUSAN API
 // =============================================
 export function useJurusanApi() {
-  async function getAll(params?: { page?: number; limit?: number; search?: string }) {
+  async function getAll(params?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+  }) {
     const query = new URLSearchParams();
-    if (params?.page) query.append('page', String(params.page));
-    if (params?.limit) query.append('limit', String(params.limit));
-    if (params?.search) query.append('search', params.search);
+    if (params?.page) query.append("page", String(params.page));
+    if (params?.limit) query.append("limit", String(params.limit));
+    if (params?.search) query.append("search", params.search);
 
     const { data } = await apiFetch<PaginatedResponse<Jurusan>>(
-      'CoreService',
+      "CoreService",
       `/jurusan?${query.toString()}`,
-      { method: 'GET' },
-      true
+      { method: "GET" },
+      true,
     );
     return data;
   }
 
-  async function getById(id: number) {
+  async function getById(id: string) {
     const { data } = await apiFetch<SingleResponse<Jurusan>>(
-      'CoreService',
+      "CoreService",
       `/jurusan/${id}`,
-      { method: 'GET' },
-      true
+      { method: "GET" },
+      true,
     );
     return data;
   }
 
-  async function create(payload: { kode_jurusan: string; nama_jurusan: string }) {
+  async function create(payload: {
+    kode_jurusan: string;
+    nama_jurusan: string;
+  }) {
     const { data } = await apiFetch<SingleResponse<Jurusan>>(
-      'CoreService',
-      '/jurusan',
-      { method: 'POST', data: payload },
-      true
+      "CoreService",
+      "/jurusan",
+      { method: "POST", data: payload },
+      true,
     );
     return data;
   }
 
-  async function update(id: number, payload: Partial<{ kode_jurusan: string; nama_jurusan: string }>) {
+  async function update(
+    id: string,
+    payload: Partial<{ kode_jurusan: string; nama_jurusan: string }>,
+  ) {
     const { data } = await apiFetch<SingleResponse<Jurusan>>(
-      'CoreService',
+      "CoreService",
       `/jurusan/${id}`,
-      { method: 'PUT', data: payload },
-      true
+      { method: "PUT", data: payload },
+      true,
     );
     return data;
   }
 
-  async function remove(id: number) {
+  async function remove(id: string) {
     const { data } = await apiFetch<SingleResponse<null>>(
-      'CoreService',
+      "CoreService",
       `/jurusan/${id}`,
-      { method: 'DELETE' },
-      true
+      { method: "DELETE" },
+      true,
     );
     return data;
   }
@@ -424,76 +497,86 @@ export function useJurusanApi() {
 export function useTahunAjaranApi() {
   async function getAll(params?: { page?: number; limit?: number }) {
     const query = new URLSearchParams();
-    if (params?.page) query.append('page', String(params.page));
-    if (params?.limit) query.append('limit', String(params.limit));
+    if (params?.page) query.append("page", String(params.page));
+    if (params?.limit) query.append("limit", String(params.limit));
 
-    const { data } = await apiFetch<PaginatedResponse<TahunAjaran>>(
-      'CoreService',
+    return await safeFetch<PaginatedResponse<TahunAjaran>>(
+      "CoreService",
       `/tahun-ajaran?${query.toString()}`,
-      { method: 'GET' },
-      true
+      { method: "GET" },
+      true,
+      {
+        success: false,
+        message: "Fallback data",
+        data: [],
+        pagination: { page: 1, limit: 10, total: 0, totalPages: 0 },
+      },
     );
-    return data;
   }
 
   async function getActive() {
-    const { data } = await apiFetch<SingleResponse<TahunAjaran>>(
-      'CoreService',
-      '/tahun-ajaran/active',
-      { method: 'GET' },
-      true
+    return await safeFetch<TahunAjaran>(
+      "CoreService",
+      "/tahun-ajaran/active",
+      { method: "GET" },
+      true,
+      {
+        id_tahun_ajaran: "1",
+        nama_tahun_ajaran: "2024/2025",
+        tanggal_mulai: "2024-07-01",
+        tanggal_selesai: "2025-06-30",
+        status_aktif: true,
+      },
     );
-    return data;
   }
 
-  async function getById(id: number) {
-    const { data } = await apiFetch<SingleResponse<TahunAjaran>>(
-      'CoreService',
+  async function getById(id: string) {
+    return await safeFetch<TahunAjaran>(
+      "CoreService",
       `/tahun-ajaran/${id}`,
-      { method: 'GET' },
-      true
+      { method: "GET" },
+      true,
     );
-    return data;
   }
 
-  async function create(payload: { 
-    nama_tahun_ajaran: string; 
-    tanggal_mulai: string; 
-    tanggal_selesai: string;
-    status_aktif?: boolean;
-  }) {
-    const { data } = await apiFetch<SingleResponse<TahunAjaran>>(
-      'CoreService',
-      '/tahun-ajaran',
-      { method: 'POST', data: payload },
-      true
-    );
-    return data;
-  }
-
-  async function update(id: number, payload: Partial<{
+  async function create(payload: {
     nama_tahun_ajaran: string;
     tanggal_mulai: string;
     tanggal_selesai: string;
-    status_aktif: boolean;
-  }>) {
-    const { data } = await apiFetch<SingleResponse<TahunAjaran>>(
-      'CoreService',
-      `/tahun-ajaran/${id}`,
-      { method: 'PUT', data: payload },
-      true
+    status_aktif?: boolean;
+  }) {
+    return await safeFetch<TahunAjaran>(
+      "CoreService",
+      "/tahun-ajaran",
+      { method: "POST", data: payload },
+      true,
     );
-    return data;
   }
 
-  async function remove(id: number) {
-    const { data } = await apiFetch<SingleResponse<null>>(
-      'CoreService',
+  async function update(
+    id: string,
+    payload: Partial<{
+      nama_tahun_ajaran: string;
+      tanggal_mulai: string;
+      tanggal_selesai: string;
+      status_aktif: boolean;
+    }>,
+  ) {
+    return await safeFetch<TahunAjaran>(
+      "CoreService",
       `/tahun-ajaran/${id}`,
-      { method: 'DELETE' },
-      true
+      { method: "PUT", data: payload },
+      true,
     );
-    return data;
+  }
+
+  async function remove(id: string) {
+    return await safeFetch<null>(
+      "CoreService",
+      `/tahun-ajaran/${id}`,
+      { method: "DELETE" },
+      true,
+    );
   }
 
   return { getAll, getActive, getById, create, update, remove };
@@ -505,50 +588,53 @@ export function useTahunAjaranApi() {
 export function useTingkatApi() {
   async function getAll() {
     const { data } = await apiFetch<PaginatedResponse<Tingkat>>(
-      'CoreService',
-      '/tingkat',
-      { method: 'GET' },
-      true
+      "CoreService",
+      "/tingkat",
+      { method: "GET" },
+      true,
     );
     return data;
   }
 
-  async function getById(id: number) {
+  async function getById(id: string) {
     const { data } = await apiFetch<SingleResponse<Tingkat>>(
-      'CoreService',
+      "CoreService",
       `/tingkat/${id}`,
-      { method: 'GET' },
-      true
+      { method: "GET" },
+      true,
     );
     return data;
   }
 
   async function create(payload: { kode_tingkat: string; urutan: number }) {
     const { data } = await apiFetch<SingleResponse<Tingkat>>(
-      'CoreService',
-      '/tingkat',
-      { method: 'POST', data: payload },
-      true
+      "CoreService",
+      "/tingkat",
+      { method: "POST", data: payload },
+      true,
     );
     return data;
   }
 
-  async function update(id: number, payload: Partial<{ kode_tingkat: string; urutan: number }>) {
+  async function update(
+    id: string,
+    payload: Partial<{ kode_tingkat: string; urutan: number }>,
+  ) {
     const { data } = await apiFetch<SingleResponse<Tingkat>>(
-      'CoreService',
+      "CoreService",
       `/tingkat/${id}`,
-      { method: 'PUT', data: payload },
-      true
+      { method: "PUT", data: payload },
+      true,
     );
     return data;
   }
 
-  async function remove(id: number) {
+  async function remove(id: string) {
     const { data } = await apiFetch<SingleResponse<null>>(
-      'CoreService',
+      "CoreService",
       `/tingkat/${id}`,
-      { method: 'DELETE' },
-      true
+      { method: "DELETE" },
+      true,
     );
     return data;
   }

@@ -267,16 +267,13 @@
 </template>
 
 <script setup lang="ts">
-import { usePenempatanApi, useLogbookApi } from '~/composables/api/use-internship'
-import { useSiswaApi } from '~/composables/api/use-academic'
-import { usePerusahaanApi } from '~/composables/api/use-partner'
+import { useGuruApi } from '~/composables/api/use-guru'
+import { useLogbookApi } from '~/composables/api/use-internship'
 
 definePageMeta({ layout: 'guru' })
 
-const { getAll: getPenempatan } = usePenempatanApi()
+const guruApi = useGuruApi()
 const { getAll: getLogbooks, approve: approveLogbook, requestRevision } = useLogbookApi()
-const { getAll: getAllSiswa } = useSiswaApi()
-const { getAll: getAllPerusahaan } = usePerusahaanApi()
 
 const toast = useToast()
 const loading = ref(true)
@@ -299,7 +296,6 @@ const stats = reactive({ pending: 0, approved: 0, revision: 0, total: 0 })
 const siswaList = ref<any[]>([])
 const logbooks = ref<any[]>([])
 
-// Helper function to get initials
 function getInitials(name: string): string {
   return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
 }
@@ -327,8 +323,12 @@ const startIndex = computed(() => (currentPage.value - 1) * itemsPerPage.value)
 const endIndex = computed(() => Math.min(startIndex.value + itemsPerPage.value, totalItems.value))
 const paginatedLogbooks = computed(() => filteredLogbooks.value.slice(startIndex.value, endIndex.value))
 
-// Reset page when filter changes
 watch([search, filterStatus, itemsPerPage], () => { currentPage.value = 1 })
+
+function mapStatus(raw: string): string {
+  const map: Record<string, string> = { menunggu: 'Pending', disetujui: 'Disetujui', ditolak: 'Revisi' }
+  return map[raw] || raw
+}
 
 const selectSiswa = async (siswa: any) => {
   selectedSiswa.value = siswa
@@ -336,18 +336,30 @@ const selectSiswa = async (siswa: any) => {
   currentPage.value = 1
 
   try {
-    // Fetch logbooks for this student's penempatan
     const res = await getLogbooks({ id_penempatan: siswa.id_penempatan, limit: 100 })
     if (res?.data) {
       logbooks.value = res.data.map((l: any) => ({
         id: l.id_logbook,
-        kegiatan: l.kegiatan || '-',
-        deskripsi: l.deskripsi || '-',
+        kegiatan: l.judul_kegiatan || '-',
+        deskripsi: l.isi_kegiatan || '-',
         tanggal: new Date(l.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }),
         jamMulai: l.jam_mulai || '-',
         jamSelesai: l.jam_selesai || '-',
-        status: l.status === 'pending' ? 'Pending' : l.status === 'approved' ? 'Disetujui' : 'Revisi'
+        status: mapStatus(l.status_persetujuan),
+        catatan: l.catatan_pembimbing || ''
       }))
+
+      // Update stats for selected student
+      const counts = { pending: 0, approved: 0, revision: 0 }
+      for (const l of logbooks.value) {
+        if (l.status === 'Pending') counts.pending++
+        else if (l.status === 'Disetujui') counts.approved++
+        else if (l.status === 'Revisi') counts.revision++
+      }
+      stats.pending = counts.pending
+      stats.approved = counts.approved
+      stats.revision = counts.revision
+      stats.total = logbooks.value.length
     }
   } catch (e) {
     console.warn('Failed to fetch logbooks:', e)
@@ -363,6 +375,7 @@ const backToList = () => {
   search.value = ''
   filterStatus.value = null
   currentPage.value = 1
+  recalcOverallStats()
 }
 
 const getStatusColor = (status: string) => {
@@ -379,7 +392,7 @@ const getStatusBg = (status: string) => {
   return bgs[status] || 'bg-slate-100 text-slate-600'
 }
 
-const approve = async (id: number) => {
+const approve = async (id: string) => {
   try {
     await approveLogbook(id)
     const item = logbooks.value.find(d => d.id === id)
@@ -421,59 +434,49 @@ const submitRevision = async () => {
   }
 }
 
+function recalcOverallStats() {
+  let p = 0, a = 0, r = 0
+  for (const siswa of siswaList.value) {
+    p += siswa.countPending
+    a += siswa.countApproved
+    r += siswa.countRevision
+  }
+  stats.pending = p
+  stats.approved = a
+  stats.revision = r
+  stats.total = p + a + r
+}
+
 async function fetchData() {
   try {
-    // Fetch penempatan, siswa, and perusahaan in parallel (optimized)
-    const [penempatanRes, siswaRes, perusahaanRes] = await Promise.all([
-      getPenempatan({ limit: 100 }),
-      getAllSiswa({ limit: 1000 }),
-      getAllPerusahaan({ limit: 1000 })
-    ])
+    const res = await guruApi.getSiswaBimbingan({ limit: 100 })
 
-    // Create lookup maps
-    const siswaMap = new Map<number, any>()
-    const perusahaanMap = new Map<number, any>()
+    if (res?.data) {
+      siswaList.value = res.data
+        .filter((p: any) => p.status_penempatan === 'aktif')
+        .map((p: any) => {
+          const logbookArr = p.logbook || []
+          const countPending = logbookArr.filter((l: any) => l.status_persetujuan === 'menunggu').length
+          const countApproved = logbookArr.filter((l: any) => l.status_persetujuan === 'disetujui').length
+          const countRevision = logbookArr.filter((l: any) => l.status_persetujuan === 'ditolak').length
 
-    if (siswaRes?.data) {
-      for (const s of siswaRes.data) {
-        siswaMap.set(s.id_siswa, s)
-      }
+          return {
+            id: p.siswa?.id_siswa || p.id_penempatan,
+            id_penempatan: p.id_penempatan,
+            nama: p.siswa?.nama_siswa || '-',
+            inisial: getInitials(p.siswa?.nama_siswa || 'XX'),
+            kelas: p.siswa?.kelas?.nama_kelas || '-',
+            industri: p.perusahaan?.nama_perusahaan || '-',
+            pending: countPending,
+            countPending,
+            countApproved,
+            countRevision,
+            totalLogbook: logbookArr.length
+          }
+        })
+
+      recalcOverallStats()
     }
-    if (perusahaanRes?.data) {
-      for (const p of perusahaanRes.data) {
-        perusahaanMap.set(p.id_perusahaan, p)
-      }
-    }
-
-    // Transform penempatan with resolved names
-    if (penempatanRes?.data) {
-      siswaList.value = penempatanRes.data.map((p: any) => {
-        const siswa = siswaMap.get(p.siswa_id)
-        const perusahaan = perusahaanMap.get(p.perusahaan_id)
-
-        return {
-          id: p.siswa_id,
-          id_penempatan: p.id_penempatan,
-          nama: siswa?.nama_siswa || `Siswa #${p.siswa_id}`,
-          inisial: getInitials(siswa?.nama_siswa || 'XX'),
-          kelas: siswa?.kelas?.nama_kelas || 'N/A',
-          industri: perusahaan?.nama_perusahaan || `Perusahaan #${p.perusahaan_id}`,
-          pending: 0
-        }
-      })
-    }
-
-    // Get logbook counts by status_persetujuan
-    const pendingRes = await getLogbooks({ status_persetujuan: 'menunggu', limit: 1 })
-    stats.pending = pendingRes?.meta?.total || 0
-    
-    const approvedRes = await getLogbooks({ status_persetujuan: 'disetujui', limit: 1 })
-    stats.approved = approvedRes?.meta?.total || 0
-    
-    const revisionRes = await getLogbooks({ status_persetujuan: 'ditolak', limit: 1 })
-    stats.revision = revisionRes?.meta?.total || 0
-    
-    stats.total = stats.pending + stats.approved + stats.revision
   } catch (e) {
     console.warn('Failed to fetch data:', e)
   } finally {

@@ -125,9 +125,7 @@
               <UBadge :color="siswa.status === 'aktif' ? 'success' : 'primary'" variant="subtle" size="xs">
                 {{ siswa.status === 'aktif' ? 'Aktif' : 'Selesai' }}
               </UBadge>
-              <UButton size="xs" variant="ghost" color="neutral" @click="navigateTo(`/guru/siswa-bimbingan/${encodeWithSlug(siswa.penempatanId, siswa.nama)}`)">
-                <Icon name="lucide:eye" class="w-4 h-4" />
-              </UButton>
+              <UButton size="xs" variant="ghost" color="neutral" icon="i-lucide-eye" @click="navigateTo(`/guru/siswa-bimbingan/${siswa.penempatanId}`)" />
             </div>
           </div>
         </div>
@@ -137,16 +135,13 @@
 </template>
 
 <script setup lang="ts">
-import { usePenempatanApi } from '~/composables/api/use-internship'
-import { useSiswaApi } from '~/composables/api/use-academic'
+import { useGuruApi } from '~/composables/api/use-guru'
 import { usePerusahaanApi } from '~/composables/api/use-partner'
-import { decodeFromUrl, encodeWithSlug } from '~/composables/use-id-encoder'
 
 definePageMeta({ layout: 'guru' })
 
 const route = useRoute()
-const { getAll: getPenempatan } = usePenempatanApi()
-const { getById: getSiswaById } = useSiswaApi()
+const guruApi = useGuruApi()
 const { getById: getPerusahaanById } = usePerusahaanApi()
 
 const loading = ref(true)
@@ -157,16 +152,12 @@ const siswaList = ref<any[]>([])
 const penempatanAktif = ref(0)
 const penempatanSelesai = ref(0)
 
-// Get perusahaan ID from route params (decoded from obfuscated URL)
+// UUID passed directly in the URL — read as-is
 const idPerusahaan = computed(() => {
   const param = route.params.id
-  if (typeof param === 'string') {
-    return decodeFromUrl(param)
-  }
-  return null
+  return typeof param === 'string' && param ? param : null
 })
 
-// Helper function to get initials
 function getInitials(name: string): string {
   return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
 }
@@ -187,66 +178,35 @@ async function fetchData() {
   error.value = null
 
   try {
-    // Step 1: Fetch perusahaan details
-    const perusahaanRes = await getPerusahaanById(idPerusahaan.value)
-    perusahaan.value = perusahaanRes.data
-    console.log('Perusahaan:', perusahaan.value)
+    // Fetch perusahaan details and guru's penempatan list in parallel
+    const [perusahaanRes, siswaBimbinganRes] = await Promise.all([
+      getPerusahaanById(idPerusahaan.value),
+      guruApi.getSiswaBimbingan({ limit: 100 })
+    ])
 
-    // Step 2: Fetch all penempatan for this perusahaan
-    const penempatanRes = await getPenempatan({ 
-      id_perusahaan: idPerusahaan.value, 
-      limit: 100 
-    })
-    console.log('Penempatan:', penempatanRes)
+    perusahaan.value = perusahaanRes?.data ?? null
 
-    if (!penempatanRes?.data?.length) {
-      siswaList.value = []
-      return
-    }
+    // Filter penempatan for this specific perusahaan
+    const placements = (siswaBimbinganRes?.data ?? []).filter(
+      (p: any) => p.perusahaan?.id_perusahaan === idPerusahaan.value
+    )
 
-    // Count active/completed placements
-    penempatanAktif.value = penempatanRes.data.filter((p: any) => p.status_penempatan === 'aktif').length
-    penempatanSelesai.value = penempatanRes.data.filter((p: any) => p.status_penempatan === 'selesai').length
+    penempatanAktif.value = placements.filter((p: any) => p.status_penempatan === 'aktif').length
+    penempatanSelesai.value = placements.filter((p: any) => p.status_penempatan === 'selesai').length
 
-    // Step 3: Fetch siswa details for each penempatan
-    const siswaPromises = penempatanRes.data.map(async (pen: any) => {
-      try {
-        const siswaRes = await getSiswaById(pen.siswa_id)
-        const siswa = siswaRes.data
-        
-        // Calculate kehadiran from embedded absensi if available
-        let kehadiran = 0
-        if (pen.absensi?.length) {
-          const hadirCount = pen.absensi.filter((a: any) => a.status === 'hadir').length
-          kehadiran = Math.round((hadirCount / pen.absensi.length) * 100)
-        }
-
-        return {
-          id: pen.siswa_id,
-          penempatanId: pen.id_penempatan,
-          nama: siswa?.nama_siswa || `Siswa (ID: ${pen.siswa_id})`,
-          inisial: getInitials(siswa?.nama_siswa || 'XX'),
-          kelas: siswa?.kelas?.nama_kelas || '-',
-          nis: siswa?.nis || '-',
-          kehadiran,
-          status: pen.status_penempatan
-        }
-      } catch (err) {
-        console.warn(`Failed to fetch siswa ${pen.siswa_id}:`, err)
-        return {
-          id: pen.siswa_id,
-          penempatanId: pen.id_penempatan,
-          nama: `Siswa (ID: ${pen.siswa_id})`,
-          inisial: 'XX',
-          kelas: '-',
-          nis: '-',
-          kehadiran: 0,
-          status: pen.status_penempatan
-        }
+    siswaList.value = placements.map((pen: any) => {
+      const siswa = pen.siswa
+      return {
+        id: pen.id_penempatan,
+        penempatanId: pen.id_penempatan,
+        nama: siswa?.nama_siswa || '-',
+        inisial: getInitials(siswa?.nama_siswa || 'XX'),
+        kelas: siswa?.kelas?.nama_kelas || '-',
+        nis: siswa?.nis || '-',
+        kehadiran: pen.stats?.kehadiran ?? 0,
+        status: pen.status_penempatan
       }
     })
-
-    siswaList.value = await Promise.all(siswaPromises)
 
   } catch (err: any) {
     console.error('Error loading data:', err)

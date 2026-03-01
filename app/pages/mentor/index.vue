@@ -5,14 +5,14 @@
       <div class="flex items-center justify-between">
         <div>
           <p class="text-sky-100 text-sm">{{ currentDate }}</p>
-          <h1 class="text-2xl lg:text-3xl font-bold mt-1">Halo, Pak Joko! 👋</h1>
-          <p class="text-sky-100 text-sm mt-1">Mentor Industri • PT. Telkom Indonesia</p>
+          <h1 class="text-2xl lg:text-3xl font-bold mt-1">Halo, {{ mentorName }}! 👋</h1>
+          <p class="text-sky-100 text-sm mt-1">Mentor Industri • {{ companyName }}</p>
         </div>
         <div class="hidden sm:flex w-16 h-16 rounded-2xl bg-white/20 items-center justify-center text-2xl font-bold">
-          JK
+          {{ mentorInitials }}
         </div>
       </div>
-      
+
       <!-- Quick Summary in Header -->
       <div class="mt-4 grid grid-cols-3 gap-3">
         <div class="bg-white/10 backdrop-blur rounded-xl p-3 text-center">
@@ -35,23 +35,23 @@
       <USkeleton v-for="i in 4" :key="i" class="h-28 rounded-xl" />
     </div>
     <div v-else class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-      <div 
-        v-for="stat in stats" 
-        :key="stat.label" 
-        class="bg-white rounded-xl border border-slate-200 p-5 hover:shadow-md hover:border-slate-300 transition-all cursor-pointer group"
-      >
+      <div v-for="stat in stats" :key="stat.label"
+        class="bg-white rounded-xl border border-slate-200 p-5 hover:shadow-md hover:border-slate-300 transition-all cursor-pointer group">
         <div class="flex items-start justify-between">
           <div>
             <p class="text-sm text-slate-500 mb-1">{{ stat.label }}</p>
             <p class="text-3xl font-bold text-slate-900">{{ stat.value }}</p>
           </div>
-          <div class="w-12 h-12 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform" :class="stat.bg">
+          <div class="w-12 h-12 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform"
+            :class="stat.bg">
             <Icon :name="stat.icon" class="w-6 h-6" :class="stat.color" />
           </div>
         </div>
         <div class="mt-3 flex items-center gap-1" v-if="stat.trend">
-          <Icon :name="stat.trend > 0 ? 'lucide:trending-up' : 'lucide:trending-down'" class="w-4 h-4" :class="stat.trend > 0 ? 'text-success-500' : 'text-error-500'" />
-          <span class="text-xs" :class="stat.trend > 0 ? 'text-success-600' : 'text-error-600'">{{ Math.abs(stat.trend) }}% dari minggu lalu</span>
+          <Icon :name="stat.trend > 0 ? 'lucide:trending-up' : 'lucide:trending-down'" class="w-4 h-4"
+            :class="stat.trend > 0 ? 'text-success-500' : 'text-error-500'" />
+          <span class="text-xs" :class="stat.trend > 0 ? 'text-success-600' : 'text-error-600'">{{ Math.abs(stat.trend)
+          }}% dari minggu lalu</span>
         </div>
       </div>
     </div>
@@ -101,14 +101,17 @@
             <div class="w-2 h-2 bg-amber-500 rounded-full animate-pulse"></div>
             <h3 class="font-semibold text-slate-900">Menunggu Verifikasi</h3>
           </div>
-          <UButton variant="ghost" color="primary" size="xs" to="/mentor/absensi" trailing-icon="i-lucide-arrow-right">Lihat Semua</UButton>
+          <UButton variant="ghost" color="primary" size="xs" to="/mentor/absensi" trailing-icon="i-lucide-arrow-right">
+            Lihat Semua</UButton>
         </div>
         <div v-if="loading" class="p-5 space-y-3">
           <USkeleton v-for="i in 3" :key="i" class="h-16 rounded-lg" />
         </div>
         <div v-else class="divide-y divide-slate-100">
-          <div v-for="item in pendingItems" :key="item.id" class="flex items-center gap-3 px-5 py-3 hover:bg-slate-50 transition-colors cursor-pointer">
-            <div class="w-10 h-10 rounded-xl flex items-center justify-center" :class="item.type === 'absensi' ? 'bg-warning-100 text-warning-600' : 'bg-primary-100 text-primary-600'">
+          <div v-for="item in pendingItems" :key="item.id"
+            class="flex items-center gap-3 px-5 py-3 hover:bg-slate-50 transition-colors cursor-pointer">
+            <div class="w-10 h-10 rounded-xl flex items-center justify-center"
+              :class="item.type === 'absensi' ? 'bg-warning-100 text-warning-600' : 'bg-primary-100 text-primary-600'">
               <Icon :name="item.type === 'absensi' ? 'lucide:calendar-check' : 'lucide:book-open'" class="w-5 h-5" />
             </div>
             <div class="flex-1 min-w-0">
@@ -131,15 +134,18 @@
       <div class="bg-white rounded-xl border border-slate-200">
         <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100">
           <h3 class="font-semibold text-slate-900">Siswa Bimbingan</h3>
-          <UButton variant="ghost" color="primary" size="xs" to="/mentor/siswa" trailing-icon="i-lucide-arrow-right">Lihat Semua</UButton>
+          <UButton variant="ghost" color="primary" size="xs" to="/mentor/siswa" trailing-icon="i-lucide-arrow-right">
+            Lihat Semua</UButton>
         </div>
         <div v-if="loading" class="p-5 space-y-3">
           <USkeleton v-for="i in 4" :key="i" class="h-14 rounded-lg" />
         </div>
         <div v-else class="divide-y divide-slate-100">
-          <div v-for="siswa in siswaList" :key="siswa.id" class="flex items-center gap-3 px-5 py-3 hover:bg-slate-50 transition-colors cursor-pointer">
-            <div class="w-10 h-10 rounded-xl bg-sky-500 flex items-center justify-center text-white text-sm font-semibold">
-              {{ siswa.nama.split(' ').map((n: string) => n[0]).join('').slice(0, 2) }}
+          <div v-for="siswa in siswaList" :key="siswa.id"
+            class="flex items-center gap-3 px-5 py-3 hover:bg-slate-50 transition-colors cursor-pointer">
+            <div
+              class="w-10 h-10 rounded-xl bg-sky-500 flex items-center justify-center text-white text-sm font-semibold">
+              {{siswa.nama.split(' ').map((n: string) => n[0]).join('').slice(0, 2)}}
             </div>
             <div class="flex-1 min-w-0">
               <p class="text-sm font-medium text-slate-900">{{ siswa.nama }}</p>
@@ -148,9 +154,12 @@
             <div class="text-right">
               <div class="flex items-center gap-1">
                 <div class="w-16 h-2 bg-slate-200 rounded-full overflow-hidden">
-                  <div class="h-full rounded-full transition-all" :class="siswa.absensi >= 80 ? 'bg-success-500' : 'bg-error-500'" :style="{ width: `${siswa.absensi}%` }"></div>
+                  <div class="h-full rounded-full transition-all"
+                    :class="siswa.absensi >= 80 ? 'bg-success-500' : 'bg-error-500'"
+                    :style="{ width: `${siswa.absensi}%` }"></div>
                 </div>
-                <span class="text-sm font-medium" :class="siswa.absensi >= 80 ? 'text-success-600' : 'text-error-600'">{{ siswa.absensi }}%</span>
+                <span class="text-sm font-medium"
+                  :class="siswa.absensi >= 80 ? 'text-success-600' : 'text-error-600'">{{ siswa.absensi }}%</span>
               </div>
             </div>
           </div>
@@ -164,8 +173,10 @@
         <h3 class="font-semibold text-slate-900">Aksi Cepat</h3>
       </div>
       <div class="p-4 grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <NuxtLink to="/mentor/absensi" class="flex flex-col items-center gap-3 p-4 rounded-xl border-2 border-transparent hover:border-warning-200 hover:bg-warning-50/50 transition-all group">
-          <div class="w-14 h-14 rounded-xl bg-warning-100 flex items-center justify-center group-hover:scale-110 transition-transform">
+        <NuxtLink to="/mentor/absensi"
+          class="flex flex-col items-center gap-3 p-4 rounded-xl border-2 border-transparent hover:border-warning-200 hover:bg-warning-50/50 transition-all group">
+          <div
+            class="w-14 h-14 rounded-xl bg-warning-100 flex items-center justify-center group-hover:scale-110 transition-transform">
             <Icon name="lucide:calendar-check" class="w-7 h-7 text-warning-600" />
           </div>
           <div class="text-center">
@@ -173,8 +184,10 @@
             <p class="text-xs text-slate-500">8 pending</p>
           </div>
         </NuxtLink>
-        <NuxtLink to="/mentor/logbook" class="flex flex-col items-center gap-3 p-4 rounded-xl border-2 border-transparent hover:border-primary-200 hover:bg-primary-50/50 transition-all group">
-          <div class="w-14 h-14 rounded-xl bg-primary-100 flex items-center justify-center group-hover:scale-110 transition-transform">
+        <NuxtLink to="/mentor/logbook"
+          class="flex flex-col items-center gap-3 p-4 rounded-xl border-2 border-transparent hover:border-primary-200 hover:bg-primary-50/50 transition-all group">
+          <div
+            class="w-14 h-14 rounded-xl bg-primary-100 flex items-center justify-center group-hover:scale-110 transition-transform">
             <Icon name="lucide:book-open" class="w-7 h-7 text-primary-600" />
           </div>
           <div class="text-center">
@@ -182,8 +195,10 @@
             <p class="text-xs text-slate-500">12 pending</p>
           </div>
         </NuxtLink>
-        <NuxtLink to="/mentor/penilaian" class="flex flex-col items-center gap-3 p-4 rounded-xl border-2 border-transparent hover:border-success-200 hover:bg-success-50/50 transition-all group">
-          <div class="w-14 h-14 rounded-xl bg-success-100 flex items-center justify-center group-hover:scale-110 transition-transform">
+        <NuxtLink to="/mentor/penilaian"
+          class="flex flex-col items-center gap-3 p-4 rounded-xl border-2 border-transparent hover:border-success-200 hover:bg-success-50/50 transition-all group">
+          <div
+            class="w-14 h-14 rounded-xl bg-success-100 flex items-center justify-center group-hover:scale-110 transition-transform">
             <Icon name="lucide:star" class="w-7 h-7 text-success-600" />
           </div>
           <div class="text-center">
@@ -191,8 +206,10 @@
             <p class="text-xs text-slate-500">2 belum dinilai</p>
           </div>
         </NuxtLink>
-        <NuxtLink to="/mentor/siswa" class="flex flex-col items-center gap-3 p-4 rounded-xl border-2 border-transparent hover:border-slate-300 hover:bg-slate-50 transition-all group">
-          <div class="w-14 h-14 rounded-xl bg-slate-100 flex items-center justify-center group-hover:scale-110 transition-transform">
+        <NuxtLink to="/mentor/siswa"
+          class="flex flex-col items-center gap-3 p-4 rounded-xl border-2 border-transparent hover:border-slate-300 hover:bg-slate-50 transition-all group">
+          <div
+            class="w-14 h-14 rounded-xl bg-slate-100 flex items-center justify-center group-hover:scale-110 transition-transform">
             <Icon name="lucide:users" class="w-7 h-7 text-slate-600" />
           </div>
           <div class="text-center">
@@ -206,9 +223,24 @@
 </template>
 
 <script setup lang="ts">
+import { useAuth } from '~/composables/auth/use-auth'
+import { useMentorApi, type Mentor } from '~/composables/api/use-partner'
+
 definePageMeta({ layout: 'mentor' })
 
+const { user } = useAuth()
+const mentorApi = useMentorApi()
+
 const loading = ref(true)
+const mentorProfile = ref<Mentor | null>(null)
+
+// Computed properties for display
+const mentorName = computed(() => mentorProfile.value?.nama_mentor || user.value?.identifier || 'Mentor')
+const companyName = computed(() => mentorProfile.value?.perusahaan?.nama_perusahaan || 'Perusahaan')
+const mentorInitials = computed(() => {
+  const name = mentorProfile.value?.nama_mentor || user.value?.identifier || 'M'
+  return name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()
+})
 
 const currentDate = computed(() => {
   return new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
@@ -270,7 +302,18 @@ const verificationChartSeries = [
 ]
 
 onMounted(async () => {
-  await new Promise(r => setTimeout(r, 600))
+  // Fetch mentor profile
+  try {
+    const response = await mentorApi.getMe()
+    if (response.success) {
+      mentorProfile.value = response.data
+    }
+  } catch (error) {
+    console.error('Failed to fetch mentor profile:', error)
+  }
+
+  // Simulate loading for stats/data
+  await new Promise(r => setTimeout(r, 400))
   loading.value = false
 })
 

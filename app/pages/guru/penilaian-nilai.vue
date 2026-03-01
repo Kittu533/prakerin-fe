@@ -235,16 +235,13 @@
 </template>
 
 <script setup lang="ts">
-import { usePenempatanApi, usePenilaianApi } from '~/composables/api/use-internship'
-import { useSiswaApi } from '~/composables/api/use-academic'
-import { usePerusahaanApi } from '~/composables/api/use-partner'
+import { useGuruApi } from '~/composables/api/use-guru'
+import { usePenilaianApi } from '~/composables/api/use-internship'
 
 definePageMeta({ layout: 'guru' })
 
-const { getAll: getPenempatan } = usePenempatanApi()
-const { getAll: getPenilaian, upsert: upsertPenilaian } = usePenilaianApi()
-const { getAll: getAllSiswa } = useSiswaApi()
-const { getAll: getAllPerusahaan } = usePerusahaanApi()
+const guruApi = useGuruApi()
+const { upsert: upsertPenilaian } = usePenilaianApi()
 
 const toast = useToast()
 const loading = ref(true)
@@ -318,7 +315,6 @@ const submitGrade = async () => {
         catatan_penilaian: gradeForm.catatan_penilaian
       }
 
-      // Use upsert method from composable
       await upsertPenilaian(selectedSiswa.value.id_penempatan, payload)
 
       const wasUngraded = !selectedSiswa.value.nilai
@@ -347,53 +343,26 @@ const submitGrade = async () => {
 
 async function fetchData() {
   try {
-    // Fetch penempatan, siswa, perusahaan, and penilaian in parallel
-    const [penempatanRes, siswaRes, perusahaanRes, penilaianRes] = await Promise.all([
-      getPenempatan({ limit: 100 }),
-      getAllSiswa({ limit: 1000 }),
-      getAllPerusahaan({ limit: 1000 }),
-      getPenilaian()
-    ])
+    const res = await guruApi.getSiswaBimbingan({ limit: 100 })
 
-    // Create lookup maps
-    const siswaMap = new Map<number, any>()
-    const perusahaanMap = new Map<number, any>()
-    const penilaianMap = new Map<number, any>()
+    if (res?.data) {
+      siswaList.value = res.data
+        .filter((p: any) => p.status_penempatan === 'aktif')
+        .map((p: any) => {
+          const penilaian = p.penilaian || null
+          const nilaiAkhir = penilaian?.nilai_akhir ? Math.round(Number(penilaian.nilai_akhir)) : null
 
-    if (siswaRes?.data) {
-      for (const s of siswaRes.data) {
-        siswaMap.set(s.id_siswa, s)
-      }
-    }
-    if (perusahaanRes?.data) {
-      for (const p of perusahaanRes.data) {
-        perusahaanMap.set(p.id_perusahaan, p)
-      }
-    }
-    if (penilaianRes?.data) {
-      for (const pn of penilaianRes.data) {
-        penilaianMap.set(pn.id_penempatan, pn)
-      }
-    }
-
-    // Transform penempatan with resolved names and grades
-    if (penempatanRes?.data) {
-      siswaList.value = penempatanRes.data.map((p: any) => {
-        const siswa = siswaMap.get(p.siswa_id)
-        const perusahaan = perusahaanMap.get(p.perusahaan_id)
-        const penilaian = penilaianMap.get(p.id_penempatan)
-
-        return {
-          id: p.siswa_id,
-          id_penempatan: p.id_penempatan,
-          nama: siswa?.nama_siswa || `Siswa #${p.siswa_id}`,
-          inisial: getInitials(siswa?.nama_siswa || 'XX'),
-          kelas: siswa?.kelas?.nama_kelas || 'N/A',
-          industri: perusahaan?.nama_perusahaan || `Perusahaan #${p.perusahaan_id}`,
-          nilai: penilaian?.nilai_akhir ? Math.round(penilaian.nilai_akhir) : null,
-          nilaiDetail: penilaian || null
-        }
-      })
+          return {
+            id: p.siswa?.id_siswa || p.id_penempatan,
+            id_penempatan: p.id_penempatan,
+            nama: p.siswa?.nama_siswa || '-',
+            inisial: getInitials(p.siswa?.nama_siswa || 'XX'),
+            kelas: p.siswa?.kelas?.nama_kelas || '-',
+            industri: p.perusahaan?.nama_perusahaan || '-',
+            nilai: nilaiAkhir,
+            nilaiDetail: penilaian
+          }
+        })
     }
 
     // Calculate stats

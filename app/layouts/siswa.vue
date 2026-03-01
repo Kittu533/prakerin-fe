@@ -36,10 +36,10 @@
               <!-- User (Desktop) -->
               <NuxtLink to="/siswa/profil" class="hidden sm:flex items-center gap-2 p-1.5 rounded-lg hover:bg-slate-100 transition-colors">
                 <div class="w-8 h-8 rounded-lg bg-sky-500 flex items-center justify-center text-white font-semibold text-sm">
-                  RS
+                  {{ userInitials || 'S' }}
                 </div>
                 <div class="text-left">
-                  <p class="text-sm font-medium text-slate-900">Ryobi</p>
+                  <p class="text-sm font-medium text-slate-900">{{ userName || 'Siswa' }}</p>
                 </div>
               </NuxtLink>
             </div>
@@ -78,9 +78,39 @@
 </template>
 
 <script setup lang="ts">
+import { useSiswaProfileApi } from '~/composables/api/use-siswa'
+import { useAuth } from '~/composables/auth/use-auth'
+
 const route = useRoute()
+const toast = useToast()
+const profileApi = useSiswaProfileApi()
+const { logout: authLogout } = useAuth()
 
 const hasNotification = ref(true)
+
+// Profile state
+const userName = ref('')
+const userInitials = ref('')
+const userClass = ref('')
+
+// Fetch profile on mount
+onMounted(async () => {
+  try {
+    const res = await profileApi.getMyProfile()
+    if (res.success && res.data) {
+      userName.value = res.data.nama_siswa || 'Siswa'
+      userInitials.value = res.data.nama_siswa
+        ? res.data.nama_siswa.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()
+        : 'S'
+      userClass.value = res.data.kelas?.nama_kelas || ''
+    }
+  } catch (e) {
+    console.error('[SiswaLayout] Failed to load profile:', e)
+  }
+})
+
+// Provide profile data to sidebar
+provide('siswaProfile', { userName, userInitials, userClass })
 
 const pageTitle = computed(() => {
   const titles: Record<string, string> = {
@@ -90,7 +120,8 @@ const pageTitle = computed(() => {
     '/siswa/dokumen': 'Dokumen PKL',
     '/siswa/laporan': 'Laporan Akhir',
     '/siswa/nilai': 'Nilai PKL',
-    '/siswa/profil': 'Profil Saya'
+    '/siswa/profil': 'Profil Saya',
+    '/siswa/ubah-password': 'Ubah Password'
   }
   
   if (titles[route.path]) return titles[route.path]
