@@ -1,234 +1,494 @@
 <template>
-  <div class="space-y-6">
-    <div>
-      <h1 class="text-xl lg:text-2xl font-bold text-slate-900">Verifikasi Absensi</h1>
-      <p class="text-sm text-slate-500">Verifikasi kehadiran siswa PKL</p>
-    </div>
+    <div class="space-y-6">
+        <div>
+            <h1 class="text-xl lg:text-2xl font-bold text-slate-900">
+                Verifikasi Absensi
+            </h1>
+            <p class="text-sm text-slate-500">
+                Verifikasi kehadiran siswa PKL di perusahaan Anda
+            </p>
+        </div>
 
-    <!-- Filter -->
-    <div class="bg-white rounded-xl border border-slate-200 p-4">
-      <div class="flex flex-col sm:flex-row gap-3">
-        <UInput v-model="search" placeholder="Cari siswa..." class="flex-1">
-          <template #leading>
-            <Icon name="lucide:search" class="w-4 h-4 text-slate-400" />
-          </template>
-        </UInput>
-        <USelectMenu v-model="filterStatus" :items="['Semua', 'Pending', 'Disetujui', 'Ditolak']"
-          class="w-full sm:w-32" />
-        <UInput v-model="filterDate" type="date" class="w-full sm:w-40" />
-      </div>
-    </div>
+        <!-- Error State -->
+        <div
+            v-if="error"
+            class="bg-red-50 border border-red-200 rounded-xl p-4 text-center"
+        >
+            <Icon
+                name="lucide:alert-circle"
+                class="w-8 h-8 text-red-400 mx-auto mb-2"
+            />
+            <p class="text-red-600">{{ error }}</p>
+            <UButton
+                color="primary"
+                variant="soft"
+                size="sm"
+                class="mt-2"
+                @click="fetchData"
+                >Coba Lagi</UButton
+            >
+        </div>
 
-    <!-- Stats -->
-    <div class="grid grid-cols-3 gap-4">
-      <div class="bg-white rounded-xl border border-slate-200 p-4 text-center">
-        <p class="text-2xl font-bold text-warning-600">{{ stats.pending }}</p>
-        <p class="text-sm text-slate-500">Pending</p>
-      </div>
-      <div class="bg-white rounded-xl border border-slate-200 p-4 text-center">
-        <p class="text-2xl font-bold text-success-600">{{ stats.approved }}</p>
-        <p class="text-sm text-slate-500">Disetujui</p>
-      </div>
-      <div class="bg-white rounded-xl border border-slate-200 p-4 text-center">
-        <p class="text-2xl font-bold text-error-600">{{ stats.rejected }}</p>
-        <p class="text-sm text-slate-500">Ditolak</p>
-      </div>
-    </div>
-
-    <!-- Table (Desktop) -->
-    <div class="hidden lg:block bg-white rounded-xl border border-slate-200 overflow-hidden">
-      <div v-if="loading" class="p-4 space-y-3">
-        <USkeleton v-for="i in 6" :key="i" class="h-14 rounded-lg" />
-      </div>
-      <UTable v-else :data="filteredData" :columns="columns">
-        <template #siswa-cell="{ row }">
-          <div class="flex items-center gap-2">
+        <!-- Stats -->
+        <div v-else class="grid grid-cols-3 gap-4">
             <div
-              class="w-8 h-8 rounded-lg bg-primary-100 flex items-center justify-center text-primary-600 text-xs font-semibold">
-              {{row.original.siswa.split(' ').map((n: string) => n[0]).join('').slice(0, 2)}}
+                class="bg-white rounded-xl border border-slate-200 p-4 text-center"
+            >
+                <p class="text-2xl font-bold text-warning-600">
+                    {{ stats.pending }}
+                </p>
+                <p class="text-sm text-slate-500">Pending</p>
             </div>
-            <span class="text-sm font-medium text-slate-900">{{ row.original.siswa }}</span>
-          </div>
-        </template>
-        <template #status-cell="{ row }">
-          <UBadge :color="statusColor(row.original.status)" variant="subtle" size="xs">{{ row.original.status }}
-          </UBadge>
-        </template>
-        <template #aksi-cell="{ row }">
-          <div v-if="row.original.status === 'Pending'" class="flex gap-1">
-            <UButton size="xs" color="success" variant="ghost" @click="approve(row.original)">
-              <Icon name="lucide:check" class="w-4 h-4" />
-            </UButton>
-            <UButton size="xs" color="error" variant="ghost" @click="openReject(row.original)">
-              <Icon name="lucide:x" class="w-4 h-4" />
-            </UButton>
-          </div>
-          <span v-else class="text-xs text-slate-400">-</span>
-        </template>
-      </UTable>
-    </div>
-
-    <!-- Card List (Mobile) -->
-    <div class="lg:hidden space-y-3">
-      <template v-if="loading">
-        <div v-for="i in 6" :key="i" class="bg-white rounded-xl border border-slate-200 p-4">
-          <USkeleton class="h-4 w-3/4 mb-2" />
-          <USkeleton class="h-3 w-1/2" />
-        </div>
-      </template>
-      <template v-else>
-        <div v-for="item in filteredData" :key="item.id" class="bg-white rounded-xl border border-slate-200 p-4">
-          <div class="flex items-center justify-between mb-3">
-            <div class="flex items-center gap-3">
-              <div
-                class="w-10 h-10 rounded-xl bg-primary-100 flex items-center justify-center text-primary-600 font-semibold">
-                {{item.siswa.split(' ').map((n: string) => n[0]).join('').slice(0, 2)}}
-              </div>
-              <div>
-                <p class="font-medium text-slate-900">{{ item.siswa }}</p>
-                <p class="text-xs text-slate-500">{{ item.tanggal }}</p>
-              </div>
+            <div
+                class="bg-white rounded-xl border border-slate-200 p-4 text-center"
+            >
+                <p class="text-2xl font-bold text-success-600">
+                    {{ stats.approved }}
+                </p>
+                <p class="text-sm text-slate-500">Disetujui</p>
             </div>
-            <UBadge :color="statusColor(item.status)" variant="subtle" size="xs">{{ item.status }}</UBadge>
-          </div>
-
-          <div class="flex items-center justify-between">
-            <div class="flex gap-4 text-sm">
-              <div>
-                <p class="text-xs text-slate-500">Check In</p>
-                <p class="font-medium text-slate-900">{{ item.checkIn }}</p>
-              </div>
-              <div>
-                <p class="text-xs text-slate-500">Check Out</p>
-                <p class="font-medium text-slate-900">{{ item.checkOut || '-' }}</p>
-              </div>
+            <div
+                class="bg-white rounded-xl border border-slate-200 p-4 text-center"
+            >
+                <p class="text-2xl font-bold text-error-600">
+                    {{ stats.rejected }}
+                </p>
+                <p class="text-sm text-slate-500">Ditolak</p>
             </div>
-            <div v-if="item.status === 'Pending'" class="flex gap-2">
-              <UButton size="sm" color="success" variant="soft" @click="approve(item)">
-                <Icon name="lucide:check" class="w-4 h-4" />
-              </UButton>
-              <UButton size="sm" color="error" variant="soft" @click="openReject(item)">
-                <Icon name="lucide:x" class="w-4 h-4" />
-              </UButton>
-            </div>
-          </div>
         </div>
 
-        <div v-if="!filteredData.length" class="bg-white rounded-xl border border-slate-200 py-12 text-center">
-          <Icon name="lucide:calendar-check" class="w-12 h-12 text-slate-300 mx-auto mb-3" />
-          <p class="text-slate-500">Tidak ada data absensi</p>
-        </div>
-      </template>
-    </div>
+        <!-- Data Table -->
+        <CommonAppDataTable
+            v-if="!error"
+            :data="data"
+            :columns="columns"
+            :loading="loading"
+            :searchable="true"
+            search-placeholder="Cari nama siswa atau NIS..."
+            empty-title="Tidak ada data absensi"
+            empty-description="Belum ada data absensi siswa"
+            empty-icon="lucide:calendar-check"
+            page-size="10"
+        >
+            <template #toolbar-right>
+                <USelectMenu
+                    v-model="filterStatus"
+                    :items="statusOptions"
+                    value-attribute="value"
+                    option-attribute="label"
+                    size="sm"
+                    class="w-32"
+                />
+            </template>
+        </CommonAppDataTable>
 
-    <!-- Pagination -->
-    <div v-if="totalPages > 1" class="flex justify-center">
-      <UPagination v-model:page="currentPage" :total="totalItems" :items-per-page="itemsPerPage" />
+        <!-- Reject Modal -->
+        <UModal v-model:open="rejectModal">
+            <template #content>
+                <UCard>
+                    <template #header>
+                        <h3 class="font-semibold text-slate-900">
+                            Tolak Absensi
+                        </h3>
+                    </template>
+                    <div class="space-y-4">
+                        <UFormField label="Siswa" required>
+                            <p class="text-sm text-slate-700">
+                                {{
+                                    selectedItem?.penempatan?.siswa?.nama_siswa
+                                }}
+                            </p>
+                        </UFormField>
+                        <UFormField label="Tanggal" required>
+                            <p class="text-sm text-slate-700">
+                                {{ formatDate(selectedItem?.tanggal) }}
+                            </p>
+                        </UFormField>
+                        <UFormField label="Alasan Penolakan" required>
+                            <UTextarea
+                                v-model="rejectReason"
+                                placeholder="Masukkan alasan penolakan..."
+                                :rows="3"
+                            />
+                        </UFormField>
+                    </div>
+                    <template #footer>
+                        <div class="flex gap-3">
+                            <UButton
+                                variant="outline"
+                                color="neutral"
+                                class="flex-1"
+                                @click="rejectModal = false"
+                                >Batal</UButton
+                            >
+                            <UButton
+                                color="error"
+                                class="flex-1"
+                                :disabled="!rejectReason"
+                                @click="confirmReject"
+                                >Tolak</UButton
+                            >
+                        </div>
+                    </template>
+                </UCard>
+            </template>
+        </UModal>
     </div>
-
-    <!-- Reject Modal -->
-    <UModal v-model:open="rejectModal">
-      <template #content>
-        <UCard>
-          <template #header>
-            <h3 class="font-semibold text-slate-900">Tolak Absensi</h3>
-          </template>
-          <UFormField label="Alasan Penolakan" required>
-            <UTextarea v-model="rejectReason" placeholder="Masukkan alasan..." :rows="3" />
-          </UFormField>
-          <template #footer>
-            <div class="flex gap-3">
-              <UButton variant="outline" color="neutral" class="flex-1" @click="rejectModal = false">Batal</UButton>
-              <UButton color="error" class="flex-1" @click="reject">Tolak</UButton>
-            </div>
-          </template>
-        </UCard>
-      </template>
-    </UModal>
-  </div>
 </template>
 
 <script setup lang="ts">
-definePageMeta({ layout: 'mentor' })
+import { h } from "vue";
+import { createColumnHelper, type ColumnDef } from "@tanstack/vue-table";
+import { apiFetch } from "~/composables/api-fetch";
 
-const toast = useToast()
-const loading = ref(true)
-const search = ref('')
-const filterStatus = ref('Semua')
-const filterDate = ref('')
-const rejectModal = ref(false)
-const rejectReason = ref('')
-const selectedItem = ref<any>(null)
-const currentPage = ref(1)
-const itemsPerPage = 10
+definePageMeta({ layout: "mentor" });
 
-const stats = reactive({ pending: 8, approved: 45, rejected: 2 })
+const toast = useToast();
 
-const data = ref([
-  { id: 1, siswa: 'Budi Santoso', tanggal: '16 Des 2024', checkIn: '07:45', checkOut: '16:30', status: 'Pending' },
-  { id: 2, siswa: 'Ani Wijaya', tanggal: '16 Des 2024', checkIn: '07:30', checkOut: '16:00', status: 'Pending' },
-  { id: 3, siswa: 'Deni Pratama', tanggal: '16 Des 2024', checkIn: '08:15', checkOut: '-', status: 'Pending' },
-  { id: 4, siswa: 'Budi Santoso', tanggal: '15 Des 2024', checkIn: '07:50', checkOut: '16:15', status: 'Disetujui' },
-  { id: 5, siswa: 'Ani Wijaya', tanggal: '15 Des 2024', checkIn: '07:35', checkOut: '16:00', status: 'Disetujui' },
-  { id: 6, siswa: 'Siti Aminah', tanggal: '14 Des 2024', checkIn: '09:00', checkOut: '15:00', status: 'Ditolak' }
-])
+const loading = ref(true);
+const error = ref<string | null>(null);
+const data = ref<any[]>([]);
+const filterStatus = ref("all");
+const rejectModal = ref(false);
+const rejectReason = ref("");
+const selectedItem = ref<any>(null);
 
-const columns = [
-  { accessorKey: 'siswa', header: 'Siswa' },
-  { accessorKey: 'tanggal', header: 'Tanggal' },
-  { accessorKey: 'checkIn', header: 'Check In' },
-  { accessorKey: 'checkOut', header: 'Check Out' },
-  { accessorKey: 'status', header: 'Status' },
-  { accessorKey: 'aksi', header: '' }
-]
+const stats = reactive({ pending: 0, approved: 0, rejected: 0 });
 
-const allFilteredData = computed(() => data.value.filter(d => {
-  const matchSearch = !search.value || d.siswa.toLowerCase().includes(search.value.toLowerCase())
-  const matchStatus = filterStatus.value === 'Semua' || d.status === filterStatus.value
-  return matchSearch && matchStatus
-}))
+const statusOptions = [
+    { label: "Semua", value: "all" },
+    { label: "Pending", value: "pending" },
+    { label: "Disetujui", value: "hadir" },
+    { label: "Ditolak", value: "tidak_hadir" },
+];
 
-const totalItems = computed(() => allFilteredData.value.length)
-const totalPages = computed(() => Math.ceil(totalItems.value / itemsPerPage))
+const columnHelper = createColumnHelper<any>();
 
+// Helper functions
+function formatDate(dateStr: string) {
+    if (!dateStr) return "-";
+    const date = new Date(dateStr);
+    return date.toLocaleDateString("id-ID", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+    });
+}
+
+function formatTime(timeStr: string | Date) {
+    if (!timeStr) return "-";
+    const date = typeof timeStr === "string" ? new Date(timeStr) : timeStr;
+    return date.toLocaleTimeString("id-ID", {
+        hour: "2-digit",
+        minute: "2-digit",
+    });
+}
+
+function getInitials(name: string) {
+    return name
+        .split(" ")
+        .map((n: string) => n[0])
+        .join("")
+        .slice(0, 2)
+        .toUpperCase();
+}
+
+function getStatusBadge(status: string) {
+    const statusConfig: Record<string, { color: string; label: string }> = {
+        pending: { color: "warning", label: "Pending" },
+        hadir: { color: "success", label: "Disetujui" },
+        tidak_hadir: { color: "error", label: "Ditolak" },
+        izin: { color: "neutral", label: "Izin" },
+        sakit: { color: "neutral", label: "Sakit" },
+    };
+    const config = statusConfig[status] || { color: "neutral", label: status };
+    return h(
+        "span",
+        {
+            class: `inline-flex items-center px-2 py-1 rounded-md text-xs font-medium ${
+                config.color === "success"
+                    ? "bg-green-100 text-green-700"
+                    : config.color === "warning"
+                      ? "bg-yellow-100 text-yellow-700"
+                      : config.color === "error"
+                        ? "bg-red-100 text-red-700"
+                        : "bg-gray-100 text-gray-700"
+            }`,
+        },
+        config.label,
+    );
+}
+
+const columns: ColumnDef<any, any>[] = [
+    columnHelper.accessor("penempatan.siswa.nama_siswa", {
+        id: "siswa",
+        header: "Siswa",
+        cell: (info) => {
+            const siswa = info.row.original.penempatan?.siswa;
+            const namaSiswa = siswa?.nama_siswa || "-";
+            const nis = siswa?.nis || "-";
+            const initials = getInitials(namaSiswa);
+
+            return h("div", { class: "flex items-center gap-3" }, [
+                h(
+                    "div",
+                    {
+                        class: "w-10 h-10 rounded-lg bg-primary-100 flex items-center justify-center text-primary-600 text-sm font-semibold",
+                    },
+                    initials,
+                ),
+                h("div", { class: "min-w-0" }, [
+                    h(
+                        "p",
+                        {
+                            class: "text-sm font-medium text-slate-900 truncate",
+                        },
+                        namaSiswa,
+                    ),
+                    h("p", { class: "text-xs text-slate-500 truncate" }, nis),
+                ]),
+            ]);
+        },
+    }),
+    columnHelper.accessor("tanggal", {
+        id: "tanggal",
+        header: "Tanggal",
+        cell: (info) => {
+            return h(
+                "span",
+                { class: "text-sm text-slate-700" },
+                formatDate(info.getValue() as string),
+            );
+        },
+    }),
+    columnHelper.accessor("waktu_masuk", {
+        id: "waktu_masuk",
+        header: "Check In",
+        cell: (info) => {
+            return h(
+                "span",
+                { class: "text-sm text-slate-700" },
+                formatTime(info.getValue() as string),
+            );
+        },
+    }),
+    columnHelper.accessor("waktu_keluar", {
+        id: "waktu_keluar",
+        header: "Check Out",
+        cell: (info) => {
+            return h(
+                "span",
+                { class: "text-sm text-slate-700" },
+                formatTime(info.getValue() as string),
+            );
+        },
+    }),
+    columnHelper.accessor("status_absensi", {
+        id: "status",
+        header: "Status",
+        cell: (info) => getStatusBadge(info.getValue() as string),
+    }),
+    columnHelper.display({
+        id: "aksi",
+        header: "",
+        cell: (info) => {
+            const row = info.row.original;
+            const status = row.status_absensi;
+
+            if (status !== "pending") {
+                return h("span", { class: "text-xs text-slate-400" }, "-");
+            }
+
+            return h("div", { class: "flex gap-1" }, [
+                h(
+                    "button",
+                    {
+                        onClick: () => approve(row),
+                        class: "p-1.5 rounded-lg text-green-600 hover:bg-green-50 transition-colors",
+                    },
+                    [
+                        h(
+                            "svg",
+                            {
+                                xmlns: "http://www.w3.org/2000/svg",
+                                width: "16",
+                                height: "16",
+                                viewBox: "0 0 24 24",
+                                fill: "none",
+                                stroke: "currentColor",
+                                "stroke-width": "2",
+                                "stroke-linecap": "round",
+                                "stroke-linejoin": "round",
+                            },
+                            [h("path", { d: "M20 6 9 17l-5-5" })],
+                        ),
+                    ],
+                ),
+                h(
+                    "button",
+                    {
+                        onClick: () => openReject(row),
+                        class: "p-1.5 rounded-lg text-red-600 hover:bg-red-50 transition-colors",
+                    },
+                    [
+                        h(
+                            "svg",
+                            {
+                                xmlns: "http://www.w3.org/2000/svg",
+                                width: "16",
+                                height: "16",
+                                viewBox: "0 0 24 24",
+                                fill: "none",
+                                stroke: "currentColor",
+                                "stroke-width": "2",
+                                "stroke-linecap": "round",
+                                "stroke-linejoin": "round",
+                            },
+                            [
+                                h("path", { d: "M18 6 6 18" }),
+                                h("path", { d: "M6 6l12 12" }),
+                            ],
+                        ),
+                    ],
+                ),
+            ]);
+        },
+    }),
+];
+
+// Computed filtered data
 const filteredData = computed(() => {
-  const start = (currentPage.value - 1) * itemsPerPage
-  return allFilteredData.value.slice(start, start + itemsPerPage)
-})
+    if (filterStatus.value === "all") return data.value;
+    return data.value.filter((d) => d.status_absensi === filterStatus.value);
+});
 
-watch([search, filterStatus], () => { currentPage.value = 1 })
-
-const statusColor = (s: string) => ({ Pending: 'warning', Disetujui: 'success', Ditolak: 'error' })[s] || 'neutral'
-
-const approve = (item: any) => {
-  item.status = 'Disetujui'
-  stats.pending--
-  stats.approved++
-  toast.add({ title: 'Absensi disetujui', color: 'success' })
+// Update stats
+function updateStats() {
+    stats.pending = data.value.filter(
+        (d) => d.status_absensi === "pending",
+    ).length;
+    stats.approved = data.value.filter(
+        (d) => d.status_absensi === "hadir",
+    ).length;
+    stats.rejected = data.value.filter(
+        (d) => d.status_absensi === "tidak_hadir",
+    ).length;
 }
 
-const openReject = (item: any) => {
-  selectedItem.value = item
-  rejectReason.value = ''
-  rejectModal.value = true
+// Fetch data
+async function fetchData() {
+    loading.value = true;
+    error.value = null;
+
+    try {
+        const response = await apiFetch<any>(
+            "PlacementService",
+            "/absensi/mentor/me",
+        );
+
+        if (response.data.success) {
+            data.value = response.data.data || [];
+            updateStats();
+        } else {
+            error.value = response.data.message || "Gagal memuat data absensi";
+        }
+    } catch (e: any) {
+        console.error("Error fetching absensi:", e);
+        error.value = e.response?.data?.message || "Gagal memuat data absensi";
+        toast.add({
+            title: "Error",
+            description: error.value,
+            color: "red",
+        });
+    } finally {
+        loading.value = false;
+    }
 }
 
-const reject = () => {
-  if (!rejectReason.value) {
-    toast.add({ title: 'Masukkan alasan', color: 'error' })
-    return
-  }
-  selectedItem.value.status = 'Ditolak'
-  stats.pending--
-  stats.rejected++
-  rejectModal.value = false
-  toast.add({ title: 'Absensi ditolak', color: 'error' })
+// Approve absensi
+async function approve(item: any) {
+    try {
+        const response = await apiFetch<any>(
+            "PlacementService",
+            `/absensi/${item.id_absensi}`,
+            {
+                method: "PUT",
+                data: { status_absensi: "hadir" },
+            },
+        );
+
+        if (response.data.success) {
+            item.status_absensi = "hadir";
+            updateStats();
+            toast.add({
+                title: "Berhasil",
+                description: "Absensi disetujui",
+                color: "success",
+            });
+        }
+    } catch (e: any) {
+        toast.add({
+            title: "Error",
+            description:
+                e.response?.data?.message || "Gagal menyetujui absensi",
+            color: "red",
+        });
+    }
 }
 
-onMounted(async () => {
-  await new Promise(r => setTimeout(r, 500))
-  loading.value = false
-})
+// Open reject modal
+function openReject(item: any) {
+    selectedItem.value = item;
+    rejectReason.value = "";
+    rejectModal.value = true;
+}
 
-useHead({ title: 'Verifikasi Absensi | Mentor' })
+// Confirm reject
+async function confirmReject() {
+    if (!rejectReason.value) {
+        toast.add({
+            title: "Error",
+            description: "Masukkan alasan penolakan",
+            color: "error",
+        });
+        return;
+    }
+
+    try {
+        const response = await apiFetch<any>(
+            "PlacementService",
+            `/absensi/${selectedItem.value.id_absensi}`,
+            {
+                method: "PUT",
+                data: {
+                    status_absensi: "tidak_hadir",
+                    keterangan: rejectReason.value,
+                },
+            },
+        );
+
+        if (response.data.success) {
+            selectedItem.value.status_absensi = "tidak_hadir";
+            updateStats();
+            rejectModal.value = false;
+            toast.add({
+                title: "Berhasil",
+                description: "Absensi ditolak",
+                color: "success",
+            });
+        }
+    } catch (e: any) {
+        toast.add({
+            title: "Error",
+            description: e.response?.data?.message || "Gagal menolak absensi",
+            color: "red",
+        });
+    }
+}
+
+onMounted(() => {
+    fetchData();
+});
+
+useHead({ title: "Verifikasi Absensi | Mentor" });
 </script>

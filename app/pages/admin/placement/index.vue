@@ -5,6 +5,7 @@ import {
     type Penempatan,
 } from "~/composables/api/use-internship";
 import { useSiswaApi, useGuruApi } from "~/composables/api/use-academic";
+import { usePeriodePKLApi } from "~/composables/api/use-periode-pkl";
 import { usePerusahaanApi } from "~/composables/api/use-partner";
 import {
     getInitials,
@@ -23,11 +24,14 @@ const penempatanApi = usePenempatanApi();
 const siswaApi = useSiswaApi();
 const guruApi = useGuruApi();
 const perusahaanApi = usePerusahaanApi();
+const periodePKLApi = usePeriodePKLApi();
 
 // State
 const loading = ref(true);
 const search = ref("");
 const filterStatus = ref("Semua");
+const filterPeriode = ref<string | null>(null);
+
 const data = ref<Penempatan[]>([]);
 
 // Stats
@@ -37,6 +41,11 @@ const stats = reactive({ aktif: 0, selesai: 0, dibatalkan: 0 });
 const siswaOptions = ref<{ label: string; value: string }[]>([]);
 const perusahaanOptions = ref<{ label: string; value: string }[]>([]);
 const guruOptions = ref<{ label: string; value: string }[]>([]);
+
+const periodeOptions = ref<{ label: string; value: string }[]>([]);
+
+// Exporting state
+const exporting = ref(false);
 
 // Column helper for TanStack Table
 const columnHelper = createColumnHelper<Penempatan>();
@@ -239,7 +248,12 @@ const filteredData = computed(() => {
         const matchStatus =
             filterStatus.value === "Semua" ||
             d.status_penempatan === statusApiValue[filterStatus.value];
-        return matchSearch && matchStatus;
+
+        // Filter by periode
+        const matchPeriode =
+            !filterPeriode.value || d.id_periode_pkl === filterPeriode.value;
+
+        return matchSearch && matchStatus && matchPeriode;
     });
 
     // Sort ASC by id_penempatan
@@ -311,11 +325,13 @@ const fetchData = async () => {
 
 const fetchOptions = async () => {
     try {
-        const [siswaRes, perusahaanRes, guruRes] = await Promise.all([
-            siswaApi.getAll({ limit: 1000 }),
-            perusahaanApi.getAll({ limit: 100 }),
-            guruApi.getAll({ limit: 100 }),
-        ]);
+        const [siswaRes, perusahaanRes, guruRes, periodeRes] =
+            await Promise.all([
+                siswaApi.getAll({ limit: 1000 }),
+                perusahaanApi.getAll({ limit: 100 }),
+                guruApi.getAll({ limit: 100 }),
+                periodePKLApi.getAll({ limit: 100 }),
+            ]);
 
         if (siswaRes.success) {
             siswaOptions.value = (siswaRes.data || []).map((s) => ({
@@ -335,8 +351,124 @@ const fetchOptions = async () => {
                 value: g.id_guru,
             }));
         }
+        if (periodeRes.success) {
+            periodeOptions.value = (periodeRes.data || []).map((p) => ({
+                label: p.nama_periode,
+                value: p.id_periode_pkl,
+            }));
+            console.log("Periode options loaded:", periodeOptions.value);
+        } else {
+            console.error(
+                "Failed to load periode options:",
+                periodeRes.message,
+            );
+        }
     } catch (error) {
         console.error("Failed to fetch options:", error);
+    }
+};
+
+// Export to CSV
+const exportToCSV = () => {
+    exporting.value = true;
+    try {
+        // Define CSV headers
+        const headers = [
+            "No",
+            "Nama Siswa",
+            "Kelas",
+            "NIS",
+            "Perusahaan",
+            "Bidang Usaha",
+            "Guru Pembimbing",
+            "Periode PKL",
+            "Tanggal Mulai",
+            "Tanggal Selesai",
+            "Status",
+        ];
+
+        // Build CSV data
+        const csvData = filteredData.value.map((d, index) => {
+            const siswa = siswaOptions.value.find(
+                (s) => s.value === d.siswa_id,
+            );
+            const perusahaan = perusahaanOptions.value.find(
+                (p) => p.value === d.perusahaan_id,
+            );
+            const guru = guruOptions.value.find(
+                (g) => g.value === d.guru_pembimbing_id,
+            );
+            const periode = periodeOptions.value.find(
+                (p) => p.value === d.id_periode_pkl,
+            );
+
+            return [
+                index + 1,
+                siswa ? extractNameFromLabel(siswa.label) : `-`,
+                siswa ? extractKelasFromLabel(siswa.label) : `-`,
+                siswa?.nis || `-`,
+                perusahaan?.label || `-`,
+                perusahaan?.bidang_usaha || `-`,
+                guru?.label || `-`,
+                periode?.label || formatDate(d.tanggal_mulai),
+                formatDate(d.tanggal_mulai),
+                formatDate(d.tanggal_selesai),
+                getStatusLabel(d.status_penempatan, "penempatan"),
+            ];
+        });
+
+        // Add headers row
+        csvData.unshift(headers);
+
+        // Convert to CSV string
+        const csvString = csvData
+            .map((row) =>
+                row
+                    .map((cell) => {
+                        // Escape quotes and wrap in quotes
+                        const cellString = String(cell ?? "");
+                        if (
+                            cellString.includes(",") ||
+                            cellString.includes('"') ||
+                            cellString.includes("\n")
+                        ) {
+                            return `"${cellString.replace(/"/g, '""')}"`;
+                        }
+                        return cellString;
+                    })
+                    .join(","),
+            )
+            .join("\n");
+
+        // Create blob and download
+        const blob = new Blob([csvString], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.setAttribute("href", url);
+        link.setAttribute(
+            "download",
+            `penempatan-pkl-${new Date().toISOString().split("T")[0]}.csv`,
+        );
+        link.style.visibility = "hidden";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+
+        toast.add({
+            title: "Export berhasil",
+            description: `${filteredData.value.length} data berhasil diexport ke CSV`,
+            color: "success",
+        });
+    } catch (error) {
+        console.error("Export error:", error);
+        toast.add({
+            title: "Export gagal",
+            description: "Terjadi kesalahan saat export data",
+            color: "error",
+        });
+    } finally {
+        exporting.value = false;
     }
 };
 
@@ -423,8 +555,40 @@ useHead({ title: "Penempatan PKL | Admin" });
                 <USelectMenu
                     v-model="filterStatus"
                     :items="statusOptions"
-                    class="w-full sm:w-40"
+                    placeholder="Status"
+                    class="w-full sm:w-36"
                 />
+                <USelectMenu
+                    v-model="filterPeriode"
+                    :items="periodeOptions"
+                    placeholder="Periode PKL"
+                    class="w-full sm:w-40"
+                >
+                    <template #label>
+                        <Icon
+                            name="lucide:calendar"
+                            class="w-4 h-4 text-slate-400 mr-1"
+                        />
+                        {{
+                            filterPeriode
+                                ? periodeOptions.find(
+                                      (p) => p.value === filterPeriode,
+                                  )?.label
+                                : "Semua Periode"
+                        }}
+                    </template>
+                </USelectMenu>
+            </template>
+            <template #toolbar-right>
+                <UButton
+                    icon="lucide:download"
+                    variant="outline"
+                    :loading="exporting"
+                    :disabled="filteredData.length === 0"
+                    @click="exportToCSV"
+                >
+                    Export CSV
+                </UButton>
             </template>
         </CommonAppDataTable>
 

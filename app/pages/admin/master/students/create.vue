@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, reactive, onMounted } from "vue";
+import { ref, reactive, onMounted, computed } from "vue";
 import { useSiswaApi, useKelasApi } from "~/composables/api/use-academic";
 
 definePageMeta({ layout: "admin" });
@@ -24,7 +24,7 @@ const form = reactive({
     no_hp: "",
     email: "",
     foto: "",
-    id_kelas: undefined as number | undefined,
+    id_kelas: "" as string | undefined,
 });
 
 const jenisKelaminOptions = [
@@ -32,7 +32,24 @@ const jenisKelaminOptions = [
     { label: "Perempuan", value: "P" },
 ];
 
+// Transform kelas data untuk select menu
+const kelasOptions = computed(() => {
+    return allKelas.value.map((k) => ({
+        label: k.nama_kelas,
+        value: k.id_kelas,
+    }));
+});
+
 async function handleSubmit() {
+    // Debug: log form data
+    console.log("Form data:", form);
+    console.log(
+        "id_kelas value:",
+        form.id_kelas,
+        "type:",
+        typeof form.id_kelas,
+    );
+
     // Validasi
     if (!form.nis || !form.nama_siswa || !form.id_kelas || !form.email) {
         toast.add({
@@ -216,25 +233,12 @@ useHead({ title: "Tambah Siswa | Admin" });
                                 </label>
                                 <USelectMenu
                                     v-model="form.id_kelas"
-                                    :items="allKelas"
-                                    value-key="id_kelas"
+                                    :items="kelasOptions"
+                                    value-key="value"
                                     placeholder="Pilih kelas"
                                     size="lg"
                                     class="w-full"
-                                >
-                                    <template #label>
-                                        {{
-                                            allKelas.find(
-                                                (k) =>
-                                                    k.id_kelas ===
-                                                    form.id_kelas,
-                                            )?.nama_kelas || "Pilih Kelas"
-                                        }}
-                                    </template>
-                                    <template #item="{ item }">
-                                        {{ item.nama_kelas }}
-                                    </template>
-                                </USelectMenu>
+                                />
                             </div>
                         </div>
 

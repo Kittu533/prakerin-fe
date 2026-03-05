@@ -126,6 +126,15 @@
 
             <!-- STATE: FORM PENGAJUAN (BELUM MENGHAJUAN) -->
             <template v-else>
+                <!-- Hidden file input for document upload -->
+                <input
+                    ref="fileInput"
+                    type="file"
+                    class="hidden"
+                    accept=".pdf,image/jpeg,image/png,image/jpg"
+                    @change="handleFileUpload"
+                />
+
                 <SiswaInternshipApplicationForm
                     :step="step"
                     :mode="mode"
@@ -240,17 +249,27 @@ const canProceedValue = computed(() => {
         if (mode.value === "mitra") return !!selectedCompanyId.value;
         // Mandiri validation
         return (
-            !!mandiriForm.nama_perusahaan &&
-            mandiriForm.alamat.length >= 20 &&
-            !!mandiriForm.bidang_usaha &&
-            !!mandiriForm.kota &&
-            !!mandiriForm.nama_pic &&
-            !!mandiriForm.no_hp_pic &&
-            !!mandiriForm.dokumen_pendukung
+            !!mandiriForm.nama_perusahaan?.trim() &&
+            mandiriForm.alamat?.length >= 20 &&
+            !!mandiriForm.bidang_usaha?.trim() &&
+            !!mandiriForm.kota?.trim() &&
+            !!mandiriForm.nama_pic?.trim() &&
+            !!mandiriForm.no_hp_pic?.trim() &&
+            !!mandiriForm.dokumen_pendukung?.trim()
         );
     }
     return true;
 });
+
+// Debug: log form changes
+watch(
+    mandiriForm,
+    (newVal) => {
+        console.log("mandiriForm changed:", newVal);
+        console.log("canProceedValue:", canProceedValue.value);
+    },
+    { deep: true },
+);
 
 // METHODS
 function selectMode(m: "mitra" | "mandiri") {
@@ -369,9 +388,12 @@ async function submitApplication() {
         if (response?.success) {
             toast.add({
                 title: "Pengajuan berhasil dikirim!",
-                description: "Tunggu informasi selanjutnya dari admin.",
+                description:
+                    "Menunggu konfirmasi dari admin. Pantau status secara berkala.",
                 color: "success",
             });
+            // Reset form and reload data
+            resetForm();
             await loadData();
         } else {
             throw new Error(response?.message || "Gagal mengirim pengajuan");
