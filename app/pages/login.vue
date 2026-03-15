@@ -39,6 +39,10 @@
               placeholder="Masukkan email, NIS, atau NIP"
               class="w-full px-4 py-3 border text-gray-900 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
               required
+              :disabled="isLoading"
+              autocomplete="username"
+              data-lpignore="true"
+              data-form-type="other"
             />
           </div>
 
@@ -47,14 +51,31 @@
             <label for="password" class="block text-sm font-medium text-gray-700 mb-2">
               Password
             </label>
-            <input
-              type="password"
-              id="password"
-              v-model="form.password"
-              placeholder="Masukkan password"
-              class="w-full px-4 py-3 border text-gray-900 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-              required
-            />
+            <div class="relative">
+              <input
+                :type="showPassword ? 'text' : 'password'"
+                id="password"
+                v-model="form.password"
+                placeholder="Masukkan password"
+                class="w-full px-4 py-3 pr-12 border text-gray-900 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                required
+                :disabled="isLoading"
+                autocomplete="new-password"
+                data-lpignore="true"
+                data-form-type="other"
+              />
+              <button
+                type="button"
+                @click="togglePasswordVisibility"
+                class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600 transition-colors"
+                :disabled="isLoading"
+              >
+                <Icon 
+                  :name="showPassword ? 'lucide:eye-off' : 'lucide:eye'" 
+                  class="w-5 h-5" 
+                />
+              </button>
+            </div>
           </div>
 
           <!-- Submit Button -->
@@ -63,7 +84,10 @@
             :disabled="isLoading"
             class="w-full bg-blue-600 text-white font-semibold py-3 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <span v-if="isLoading">Memproses...</span>
+            <span v-if="isLoading" class="flex items-center justify-center">
+              <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+              Memproses...
+            </span>
             <span v-else>Masuk</span>
           </button>
         </form>
@@ -93,12 +117,22 @@
 <script setup lang="ts">
 import { reactive, ref } from 'vue';
 import { useAuth } from '~/composables/auth/use-auth';
+import { useSweetAlert } from '~/composables/use-sweet-alert';
 
 definePageMeta({
   layout: false,
 });
 
+// Disable password manager suggestions
+useHead({
+  meta: [
+    { name: 'password-manager', content: 'false' },
+    { name: 'save-password', content: 'false' }
+  ]
+});
+
 const { login, getDashboardRoute } = useAuth();
+const { showSuccess, showError } = useSweetAlert();
 
 // Form state - simplified, no role selection
 const form = reactive({
@@ -108,6 +142,12 @@ const form = reactive({
 
 const isLoading = ref(false);
 const errorMessage = ref('');
+const showPassword = ref(false);
+
+// Toggle password visibility
+function togglePasswordVisibility() {
+  showPassword.value = !showPassword.value;
+}
 
 // Handle form submit
 async function handleSubmit() {
@@ -121,14 +161,41 @@ async function handleSubmit() {
     });
 
     if (result.success) {
-      // Redirect to role-specific dashboard (role comes from backend response)
+      // Show success alert
+      await showSuccess(
+        'Login Berhasil!', 
+        'Anda akan diarahkan ke dashboard.',
+        { timer: 2000 }
+      );
+      
+      // Redirect to role-specific dashboard
       const dashboardRoute = getDashboardRoute();
       await navigateTo(dashboardRoute);
     } else {
-      errorMessage.value = result.message;
+      // Check for account deactivation (is_active: false usually returns specific message from BE)
+      const isDeactivated = result.message?.toLowerCase().includes('nonaktif') || 
+                          result.message?.toLowerCase().includes('deactivated') ||
+                          result.message?.toLowerCase().includes('aktif');
+
+      if (isDeactivated) {
+        await showError(
+          'Akun Dinonaktifkan',
+          result.message || 'Akun Anda telah dinonaktifkan. Silakan hubungi admin untuk informasi lebih lanjut.'
+        );
+      } else {
+        // Show error alert
+        await showError(
+          'Login Gagal',
+          result.message || 'Silakan periksa kembali email/NIS/NIP dan password Anda.'
+        );
+      }
     }
   } catch (error: any) {
-    errorMessage.value = 'Terjadi kesalahan. Silakan coba lagi.';
+    // Show error alert
+    await showError(
+      'Terjadi Kesalahan',
+      'Terjadi kesalahan sistem. Silakan coba lagi dalam beberapa saat.'
+    );
     console.error('[Login] Error:', error);
   } finally {
     isLoading.value = false;

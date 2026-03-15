@@ -302,6 +302,7 @@ useHead({ title: "Kelas | Admin" });
             description="Kelola data kelas"
             searchable
             search-placeholder="Cari kelas..."
+            with-time
         />
 
         <UModal v-model:open="modalOpen">

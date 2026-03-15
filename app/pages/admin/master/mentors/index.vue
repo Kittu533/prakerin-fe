@@ -327,6 +327,7 @@ useHead({ title: "Mentor | Admin" });
             description="Kelola data mentor dari perusahaan"
             searchable
             search-placeholder="Cari mentor..."
+            with-time
         >
             <template #toolbar-right>
                 <USelectMenu

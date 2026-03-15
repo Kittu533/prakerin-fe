@@ -226,6 +226,7 @@ useHead({ title: "Jurusan | Admin" });
             description="Kelola data jurusan"
             searchable
             search-placeholder="Cari jurusan..."
+            with-time
         />
 
         <UModal v-model:open="modalOpen">

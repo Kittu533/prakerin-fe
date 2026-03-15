@@ -29,10 +29,13 @@ useSeoMeta({
   twitterImage: 'https://ui.nuxt.com/assets/templates/nuxt/dashboard-light.png',
   twitterCard: 'summary_large_image'
 })
+
+import GlobalLoadingOverlay from '~/components/common/GlobalLoadingOverlay.vue'
 </script>
 
 <template>
   <UApp>
+    <GlobalLoadingOverlay />
     <NuxtLoadingIndicator />
     <NuxtLayout>
       <NuxtPage :page-key="route => route.path" />

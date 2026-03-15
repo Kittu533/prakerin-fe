@@ -1,27 +1,50 @@
-import axios from 'axios'
+import axios from "axios";
+import { useGlobalLoading } from "~/composables/use-global-loading";
 
 export default defineNuxtPlugin(() => {
-    const config = useRuntimeConfig()
-    
-    const api = axios.create({
-        baseURL: config.public.apiUrl,
-        headers: {
-            'Content-Type': 'application/json',
-        },
-    })
+  const config = useRuntimeConfig();
+  const { showLoading, hideLoading } = useGlobalLoading();
 
-    // Add request interceptor for auth token
-    api.interceptors.request.use((config) => {
-        const token = useCookie('token').value
-        if (token) {
-            config.headers.Authorization = `Bearer ${token}`
-        }
-        return config
-    })
+  const api = axios.create({
+    baseURL: config.public.apiUrl,
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
 
-    return {
-        provide: {
-            axios: api
-        }
-    }
-})
+  // Add request interceptor
+  api.interceptors.request.use(
+    (config) => {
+      // Show loading spinner for API requests
+      showLoading();
+
+      const token = useCookie("token").value;
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+      return config;
+    },
+    (error) => {
+      hideLoading();
+      return Promise.reject(error);
+    },
+  );
+
+  // Add response interceptor
+  api.interceptors.response.use(
+    (response) => {
+      hideLoading();
+      return response;
+    },
+    (error) => {
+      hideLoading();
+      return Promise.reject(error);
+    },
+  );
+
+  return {
+    provide: {
+      axios: api,
+    },
+  };
+});

@@ -26,6 +26,7 @@ export interface Pengajuan {
     nama_perusahaan: string;
   };
   created_at?: string;
+  updated_at?: string;
 }
 
 export interface Penempatan {
@@ -65,6 +66,7 @@ export interface Penempatan {
     nip?: string;
   };
   created_at?: string;
+  updated_at?: string;
 }
 
 export interface Absensi {
@@ -359,14 +361,43 @@ export function usePenempatanApi() {
     return data;
   }
 
+  async function remove(id: string) {
+    const { data } = await apiFetch<SingleResponse<any>>(
+      "PlacementService",
+      `/penempatan/${id}`,
+      { method: "DELETE" },
+      true,
+    );
+    return data;
+  }
+
+  async function getSmartDraft(tahunAjaranId: string) {
+    const { data } = await apiFetch<SingleResponse<{
+      summary: {
+        total_unplaced_students: number;
+        total_matched: number;
+        total_remaining: number;
+      };
+      drafts: any[];
+    }>>(
+      "PlacementService",
+      `/penempatan/smart-draft?tahun_ajaran_id=${tahunAjaranId}`,
+      { method: "GET" },
+      true,
+    );
+    return data;
+  }
+
   return {
     getAll,
     getById,
     create,
     update,
+    delete: remove,
     getMentorStudents,
     getMentorStudentDetail,
     getMyStudents,
+    getSmartDraft,
   };
 }
 
@@ -459,7 +490,10 @@ export function useLogbookApi() {
     const { data } = await apiFetch<SingleResponse<Logbook>>(
       "PlacementService",
       `/logbook/${id}/review`,
-      { method: "POST", data: { status_persetujuan: "disetujui", catatan_pembimbing: catatan } },
+      {
+        method: "POST",
+        data: { status_persetujuan: "disetujui", catatan_pembimbing: catatan },
+      },
       true,
     );
     return data;
@@ -469,7 +503,10 @@ export function useLogbookApi() {
     const { data } = await apiFetch<SingleResponse<Logbook>>(
       "PlacementService",
       `/logbook/${id}/review`,
-      { method: "POST", data: { status_persetujuan: "ditolak", catatan_pembimbing: catatan } },
+      {
+        method: "POST",
+        data: { status_persetujuan: "ditolak", catatan_pembimbing: catatan },
+      },
       true,
     );
     return data;

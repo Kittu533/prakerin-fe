@@ -387,24 +387,27 @@ const handleSubmit = async () => {
 
         if (response.success) {
             toast.add({
-                title: "Penempatan berhasil dibuat",
-                description: "Data penempatan telah disimpan",
+                title: "Berhasil Menyimpan!",
+                description: "Data penempatan telah disimpan.",
                 color: "success",
+                icon: "i-heroicons-check-circle"
             });
             router.push("/admin/placement");
         } else {
             toast.add({
-                title: "Gagal membuat penempatan",
-                description: response.message || "Terjadi kesalahan",
+                title: "Gagal Menyimpan!",
+                description: response.message || "Terjadi kesalahan saat menyimpan data.",
                 color: "error",
+                icon: "i-heroicons-x-circle"
             });
         }
     } catch (error) {
         console.error("Error creating penempatan:", error);
         toast.add({
-            title: "Terjadi kesalahan",
-            description: "Silakan coba lagi",
+            title: "Gagal Menyimpan!",
+            description: "Terjadi kesalahan jaringan atau server.",
             color: "error",
+            icon: "i-heroicons-x-circle"
         });
     } finally {
         submitting.value = false;
@@ -442,14 +445,8 @@ useHead({ title: "Tambah Penempatan | Admin" });
     <div class="w-full">
         <!-- Header -->
         <div class="flex items-center gap-3 mb-6">
-            <UButton
-                variant="ghost"
-                color="neutral"
-                size="sm"
-                icon="lucide:arrow-left"
-                class="shrink-0"
-                @click="handleCancel"
-            >
+            <UButton variant="ghost" color="neutral" size="sm" icon="lucide:arrow-left" class="shrink-0"
+                @click="handleCancel">
                 Kembali
             </UButton>
             <div>
@@ -466,15 +463,9 @@ useHead({ title: "Tambah Penempatan | Admin" });
             <!-- Left: Form -->
             <div class="lg:col-span-2 space-y-6">
                 <!-- Periode PKL Selection (FITUR 5: Auto-Population) -->
-                <div
-                    class="bg-white rounded-xl border border-slate-200 overflow-hidden"
-                >
-                    <div
-                        class="px-5 py-3 border-b border-slate-100 bg-slate-50/50"
-                    >
-                        <h3
-                            class="font-semibold text-slate-900 text-sm uppercase tracking-wide"
-                        >
+                <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+                    <div class="px-5 py-3 border-b border-slate-100 bg-slate-50/50">
+                        <h3 class="font-semibold text-slate-900 text-sm uppercase tracking-wide">
                             0. Pilih Periode PKL
                         </h3>
                     </div>
@@ -482,21 +473,12 @@ useHead({ title: "Tambah Penempatan | Admin" });
                     <div class="p-5 space-y-4">
                         <!-- Periode PKL Selector -->
                         <div>
-                            <label
-                                class="block text-sm font-medium text-slate-700 mb-2"
-                            >
+                            <label class="block text-sm font-medium text-slate-700 mb-2">
                                 Periode PKL
                                 <span class="text-red-500 ml-1">*</span>
                             </label>
-                            <USelectMenu
-                                v-model="formData.id_periode_pkl"
-                                :items="periodePKLOptions"
-                                value-key="value"
-                                placeholder="Pilih periode PKL"
-                                size="lg"
-                                class="w-full"
-                                @change="handlePeriodeChange"
-                            >
+                            <USelectMenu v-model="formData.id_periode_pkl" :items="periodePKLOptions" value-key="value"
+                                placeholder="Pilih periode PKL" size="lg" class="w-full" @change="handlePeriodeChange">
                                 <template #label>
                                     <span v-if="formData.id_periode_pkl">
                                         {{
@@ -507,9 +489,7 @@ useHead({ title: "Tambah Penempatan | Admin" });
                                             )?.label
                                         }}
                                     </span>
-                                    <span v-else class="text-slate-400"
-                                        >Pilih periode PKL</span
-                                    >
+                                    <span v-else class="text-slate-400">Pilih periode PKL</span>
                                 </template>
                             </USelectMenu>
                             <p class="text-xs text-slate-500 mt-1">
@@ -519,18 +499,12 @@ useHead({ title: "Tambah Penempatan | Admin" });
                         </div>
 
                         <!-- Active Periode Info -->
-                        <div
-                            v-if="
-                                activePeriode &&
-                                formData.id_periode_pkl ===
-                                    activePeriode.id_periode_pkl
-                            "
-                            class="p-3 bg-green-50 border border-green-200 rounded-lg flex items-center gap-3"
-                        >
-                            <Icon
-                                name="lucide:check-circle"
-                                class="w-5 h-5 text-green-600 shrink-0"
-                            />
+                        <div v-if="
+                            activePeriode &&
+                            formData.id_periode_pkl ===
+                            activePeriode.id_periode_pkl
+                        " class="p-3 bg-green-50 border border-green-200 rounded-lg flex items-center gap-3">
+                            <Icon name="lucide:check-circle" class="w-5 h-5 text-green-600 shrink-0" />
                             <div class="flex-1">
                                 <p class="text-sm font-medium text-green-900">
                                     Periode Aktif:
@@ -555,15 +529,9 @@ useHead({ title: "Tambah Penempatan | Admin" });
                 </div>
 
                 <!-- Siswa Selection -->
-                <div
-                    class="bg-white rounded-xl border border-slate-200 overflow-hidden"
-                >
-                    <div
-                        class="px-5 py-3 border-b border-slate-100 bg-slate-50/50"
-                    >
-                        <h3
-                            class="font-semibold text-slate-900 text-sm uppercase tracking-wide"
-                        >
+                <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+                    <div class="px-5 py-3 border-b border-slate-100 bg-slate-50/50">
+                        <h3 class="font-semibold text-slate-900 text-sm uppercase tracking-wide">
                             1. Pilih Siswa (Kelas 12)
                         </h3>
                     </div>
@@ -571,19 +539,11 @@ useHead({ title: "Tambah Penempatan | Admin" });
                     <div class="p-5 space-y-4">
                         <!-- Filter: Jurusan -->
                         <div>
-                            <label
-                                class="block text-sm font-medium text-slate-700 mb-2"
-                            >
+                            <label class="block text-sm font-medium text-slate-700 mb-2">
                                 Jurusan
                             </label>
-                            <USelectMenu
-                                v-model="selectedJurusan"
-                                :items="jurusanOptions"
-                                value-key="value"
-                                placeholder="Pilih jurusan"
-                                size="lg"
-                                class="w-full"
-                            >
+                            <USelectMenu v-model="selectedJurusan" :items="jurusanOptions" value-key="value"
+                                placeholder="Pilih jurusan" size="lg" class="w-full">
                                 <template #label>
                                     <span v-if="selectedJurusan">
                                         {{
@@ -593,29 +553,18 @@ useHead({ title: "Tambah Penempatan | Admin" });
                                             )?.label
                                         }}
                                     </span>
-                                    <span v-else class="text-slate-400"
-                                        >Pilih jurusan</span
-                                    >
+                                    <span v-else class="text-slate-400">Pilih jurusan</span>
                                 </template>
                             </USelectMenu>
                         </div>
 
                         <!-- Filter: Kelas -->
                         <div>
-                            <label
-                                class="block text-sm font-medium text-slate-700 mb-2"
-                            >
+                            <label class="block text-sm font-medium text-slate-700 mb-2">
                                 Kelas
                             </label>
-                            <USelectMenu
-                                v-model="selectedKelas"
-                                :items="kelasOptions"
-                                value-key="value"
-                                placeholder="Pilih kelas"
-                                :disabled="!selectedJurusan"
-                                size="lg"
-                                class="w-full"
-                            >
+                            <USelectMenu v-model="selectedKelas" :items="kelasOptions" value-key="value"
+                                placeholder="Pilih kelas" :disabled="!selectedJurusan" size="lg" class="w-full">
                                 <template #label>
                                     <span v-if="selectedKelas">
                                         {{
@@ -637,10 +586,8 @@ useHead({ title: "Tambah Penempatan | Admin" });
                         </div>
 
                         <!-- Statistics -->
-                        <div
-                            v-if="selectedKelas && !fetchingSiswa"
-                            class="grid grid-cols-3 gap-3 p-3 bg-slate-50 rounded-lg border border-slate-200"
-                        >
+                        <div v-if="selectedKelas && !fetchingSiswa"
+                            class="grid grid-cols-3 gap-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
                             <div class="text-center">
                                 <p class="text-lg font-bold text-slate-900">
                                     {{ stats.total }}
@@ -666,49 +613,26 @@ useHead({ title: "Tambah Penempatan | Admin" });
                         </div>
 
                         <!-- Loading siswa -->
-                        <div
-                            v-if="fetchingSiswa"
-                            class="flex justify-center py-8"
-                        >
-                            <UIcon
-                                name="lucide:loader-2"
-                                class="w-8 h-8 animate-spin text-slate-400"
-                            />
+                        <div v-if="fetchingSiswa" class="flex justify-center py-8">
+                            <UIcon name="lucide:loader-2" class="w-8 h-8 animate-spin text-slate-400" />
                         </div>
 
                         <!-- Search & Select Siswa -->
                         <div v-if="selectedKelas && !fetchingSiswa">
-                            <label
-                                class="block text-sm font-medium text-slate-700 mb-2"
-                            >
+                            <label class="block text-sm font-medium text-slate-700 mb-2">
                                 Cari Siswa
-                                <span
-                                    v-if="stats.available > 0"
-                                    class="text-green-600 ml-1"
-                                >
+                                <span v-if="stats.available > 0" class="text-green-600 ml-1">
                                     ({{ stats.available }} tersedia)
                                 </span>
                             </label>
-                            <UInput
-                                v-model="searchSiswa"
-                                placeholder="Cari nama siswa..."
-                                icon="lucide:search"
-                                size="lg"
-                                class="w-full mb-3"
-                            />
+                            <UInput v-model="searchSiswa" placeholder="Cari nama siswa..." icon="lucide:search"
+                                size="lg" class="w-full mb-3" />
 
                             <!-- Siswa List -->
                             <div
-                                class="max-h-64 overflow-y-auto border border-slate-200 rounded-lg divide-y divide-slate-100"
-                            >
-                                <div
-                                    v-if="availableSiswa.length === 0"
-                                    class="p-4 text-center text-slate-500"
-                                >
-                                    <Icon
-                                        name="lucide:users"
-                                        class="w-8 h-8 mx-auto mb-2 text-slate-300"
-                                    />
+                                class="max-h-64 overflow-y-auto border border-slate-200 rounded-lg divide-y divide-slate-100">
+                                <div v-if="availableSiswa.length === 0" class="p-4 text-center text-slate-500">
+                                    <Icon name="lucide:users" class="w-8 h-8 mx-auto mb-2 text-slate-300" />
                                     <p>
                                         {{
                                             searchSiswa
@@ -718,20 +642,15 @@ useHead({ title: "Tambah Penempatan | Admin" });
                                     </p>
                                 </div>
 
-                                <div
-                                    v-for="siswa in availableSiswa"
-                                    :key="siswa.id_siswa"
+                                <div v-for="siswa in availableSiswa" :key="siswa.id_siswa"
                                     class="flex items-center gap-3 p-3 hover:bg-slate-50 cursor-pointer transition-colors"
                                     :class="{
                                         'bg-sky-50 ring-1 ring-sky-200':
                                             formData.siswa_id ===
                                             siswa.id_siswa,
-                                    }"
-                                    @click="formData.siswa_id = siswa.id_siswa"
-                                >
+                                    }" @click="formData.siswa_id = siswa.id_siswa">
                                     <div
-                                        class="w-10 h-10 rounded-lg bg-sky-100 flex items-center justify-center text-sky-600 text-sm font-semibold shrink-0"
-                                    >
+                                        class="w-10 h-10 rounded-lg bg-sky-100 flex items-center justify-center text-sky-600 text-sm font-semibold shrink-0">
                                         {{
                                             siswa.nama_siswa
                                                 ?.split(" ")
@@ -740,9 +659,7 @@ useHead({ title: "Tambah Penempatan | Admin" });
                                         }}
                                     </div>
                                     <div class="flex-1 min-w-0">
-                                        <p
-                                            class="text-sm font-medium text-slate-900"
-                                        >
+                                        <p class="text-sm font-medium text-slate-900">
                                             {{ siswa.nama_siswa }}
                                         </p>
                                         <p class="text-xs text-slate-500">
@@ -750,35 +667,24 @@ useHead({ title: "Tambah Penempatan | Admin" });
                                         </p>
                                     </div>
                                     <div class="shrink-0">
-                                        <Icon
-                                            :name="
-                                                formData.siswa_id ===
+                                        <Icon :name="formData.siswa_id ===
                                                 siswa.id_siswa
-                                                    ? 'lucide:check-circle-2'
-                                                    : 'lucide:circle'
-                                            "
-                                            :class="
-                                                formData.siswa_id ===
-                                                siswa.id_siswa
+                                                ? 'lucide:check-circle-2'
+                                                : 'lucide:circle'
+                                            " :class="formData.siswa_id ===
+                                                    siswa.id_siswa
                                                     ? 'text-sky-600'
                                                     : 'text-slate-300'
-                                            "
-                                            class="w-5 h-5"
-                                        />
+                                                " class="w-5 h-5" />
                                     </div>
                                 </div>
                             </div>
                         </div>
 
                         <!-- Selected Siswa Info -->
-                        <div
-                            v-if="selectedSiswaInfo"
-                            class="p-4 bg-green-50 border border-green-200 rounded-lg flex items-center gap-3"
-                        >
-                            <Icon
-                                name="lucide:check-circle"
-                                class="w-5 h-5 text-green-600 shrink-0"
-                            />
+                        <div v-if="selectedSiswaInfo"
+                            class="p-4 bg-green-50 border border-green-200 rounded-lg flex items-center gap-3">
+                            <Icon name="lucide:check-circle" class="w-5 h-5 text-green-600 shrink-0" />
                             <div class="flex-1">
                                 <p class="text-sm font-medium text-green-900">
                                     Siswa Terpilih:
@@ -794,15 +700,9 @@ useHead({ title: "Tambah Penempatan | Admin" });
                 </div>
 
                 <!-- Placement Details -->
-                <div
-                    class="bg-white rounded-xl border border-slate-200 overflow-hidden"
-                >
-                    <div
-                        class="px-5 py-3 border-b border-slate-100 bg-slate-50/50"
-                    >
-                        <h3
-                            class="font-semibold text-slate-900 text-sm uppercase tracking-wide"
-                        >
+                <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+                    <div class="px-5 py-3 border-b border-slate-100 bg-slate-50/50">
+                        <h3 class="font-semibold text-slate-900 text-sm uppercase tracking-wide">
                             2. Detail Penempatan
                         </h3>
                     </div>
@@ -810,85 +710,49 @@ useHead({ title: "Tambah Penempatan | Admin" });
                     <div class="p-5 space-y-4">
                         <!-- Perusahaan -->
                         <div>
-                            <label
-                                class="block text-sm font-medium text-slate-700 mb-2"
-                            >
+                            <label class="block text-sm font-medium text-slate-700 mb-2">
                                 Perusahaan
                                 <span class="text-red-500 ml-1">*</span>
                             </label>
-                            <USelectMenu
-                                v-model="formData.perusahaan_id"
-                                :items="perusahaanOptions"
-                                value-key="value"
-                                placeholder="Pilih perusahaan"
-                                size="lg"
-                                class="w-full"
-                            />
+                            <USelectMenu v-model="formData.perusahaan_id" :items="perusahaanOptions" value-key="value"
+                                placeholder="Pilih perusahaan" size="lg" class="w-full" />
                         </div>
 
                         <!-- Guru Pembimbing -->
                         <div>
-                            <label
-                                class="block text-sm font-medium text-slate-700 mb-2"
-                            >
+                            <label class="block text-sm font-medium text-slate-700 mb-2">
                                 Guru Pembimbing
                                 <span class="text-red-500 ml-1">*</span>
                             </label>
-                            <USelectMenu
-                                v-model="formData.guru_pembimbing_id"
-                                :items="guruOptions"
-                                value-key="value"
-                                placeholder="Pilih guru pembimbing"
-                                size="lg"
-                                class="w-full"
-                            />
+                            <USelectMenu v-model="formData.guru_pembimbing_id" :items="guruOptions" value-key="value"
+                                placeholder="Pilih guru pembimbing" size="lg" class="w-full" />
                         </div>
 
                         <!-- Dates -->
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
-                                <label
-                                    class="block text-sm font-medium text-slate-700 mb-2"
-                                >
+                                <label class="block text-sm font-medium text-slate-700 mb-2">
                                     Tanggal Mulai
                                     <span class="text-red-500 ml-1">*</span>
                                 </label>
-                                <UInput
-                                    v-model="formData.tanggal_mulai"
-                                    type="date"
-                                    size="lg"
-                                    class="w-full"
-                                />
+                                <UInput v-model="formData.tanggal_mulai" type="date" size="lg" class="w-full" />
                             </div>
                             <div>
-                                <label
-                                    class="block text-sm font-medium text-slate-700 mb-2"
-                                >
+                                <label class="block text-sm font-medium text-slate-700 mb-2">
                                     Tanggal Selesai
                                     <span class="text-red-500 ml-1">*</span>
                                 </label>
-                                <UInput
-                                    v-model="formData.tanggal_selesai"
-                                    type="date"
-                                    size="lg"
-                                    class="w-full"
-                                />
+                                <UInput v-model="formData.tanggal_selesai" type="date" size="lg" class="w-full" />
                             </div>
                         </div>
 
                         <!-- Duration Calculator -->
-                        <div
-                            v-if="
-                                formData.tanggal_mulai &&
-                                formData.tanggal_selesai
-                            "
-                            class="p-3 bg-sky-50 border border-sky-200 rounded-lg"
-                        >
+                        <div v-if="
+                            formData.tanggal_mulai &&
+                            formData.tanggal_selesai
+                        " class="p-3 bg-sky-50 border border-sky-200 rounded-lg">
                             <div class="flex items-center gap-2 text-sm">
-                                <Icon
-                                    name="lucide:calendar"
-                                    class="w-4 h-4 text-sky-600"
-                                />
+                                <Icon name="lucide:calendar" class="w-4 h-4 text-sky-600" />
                                 <span class="text-sky-900">
                                     Durasi:
                                     <span class="font-semibold">
@@ -900,7 +764,7 @@ useHead({ title: "Tambah Penempatan | Admin" });
                                                     new Date(
                                                         formData.tanggal_mulai,
                                                     ).getTime()) /
-                                                    (1000 * 60 * 60 * 24 * 30),
+                                                (1000 * 60 * 60 * 24 * 30),
                                             )
                                         }}
                                         bulan
@@ -915,52 +779,29 @@ useHead({ title: "Tambah Penempatan | Admin" });
             <!-- Right: Info & Summary -->
             <div class="lg:col-span-1 space-y-4">
                 <!-- Info Card -->
-                <div
-                    class="bg-blue-50 border border-blue-200 rounded-xl p-4 sticky top-6"
-                >
+                <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 sticky top-6">
                     <div class="flex gap-3">
-                        <Icon
-                            name="lucide:info"
-                            class="w-5 h-5 text-blue-600 shrink-0 mt-0.5"
-                        />
+                        <Icon name="lucide:info" class="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
                         <div class="text-sm text-blue-900">
                             <p class="font-semibold mb-2">Informasi Penting:</p>
                             <ul class="space-y-1.5">
                                 <li class="flex items-start gap-2">
-                                    <Icon
-                                        name="lucide:check"
-                                        class="w-4 h-4 mt-0.5 shrink-0"
-                                    />
-                                    <span
-                                        >Pilih periode PKL untuk auto-fill
-                                        tanggal dan tahun ajaran</span
-                                    >
+                                    <Icon name="lucide:check" class="w-4 h-4 mt-0.5 shrink-0" />
+                                    <span>Pilih periode PKL untuk auto-fill
+                                        tanggal dan tahun ajaran</span>
                                 </li>
                                 <li class="flex items-start gap-2">
-                                    <Icon
-                                        name="lucide:check"
-                                        class="w-4 h-4 mt-0.5 shrink-0"
-                                    />
-                                    <span
-                                        >Hanya siswa kelas 12 yang dapat
-                                        mengikuti PKL</span
-                                    >
+                                    <Icon name="lucide:check" class="w-4 h-4 mt-0.5 shrink-0" />
+                                    <span>Hanya siswa kelas 12 yang dapat
+                                        mengikuti PKL</span>
                                 </li>
                                 <li class="flex items-start gap-2">
-                                    <Icon
-                                        name="lucide:check"
-                                        class="w-4 h-4 mt-0.5 shrink-0"
-                                    />
-                                    <span
-                                        >Hanya siswa tanpa penempatan aktif yang
-                                        tersedia</span
-                                    >
+                                    <Icon name="lucide:check" class="w-4 h-4 mt-0.5 shrink-0" />
+                                    <span>Hanya siswa tanpa penempatan aktif yang
+                                        tersedia</span>
                                 </li>
                                 <li class="flex items-start gap-2">
-                                    <Icon
-                                        name="lucide:check"
-                                        class="w-4 h-4 mt-0.5 shrink-0"
-                                    />
+                                    <Icon name="lucide:check" class="w-4 h-4 mt-0.5 shrink-0" />
                                     <span>Durasi PKL minimal 6 bulan</span>
                                 </li>
                             </ul>
@@ -969,10 +810,8 @@ useHead({ title: "Tambah Penempatan | Admin" });
                 </div>
 
                 <!-- Summary Card -->
-                <div
-                    v-if="formData.siswa_id && formData.perusahaan_id"
-                    class="bg-white border border-slate-200 rounded-xl p-4 sticky top-6"
-                >
+                <div v-if="formData.siswa_id && formData.perusahaan_id"
+                    class="bg-white border border-slate-200 rounded-xl p-4 sticky top-6">
                     <h4 class="font-semibold text-slate-900 mb-3">
                         Ringkasan Penempatan
                     </h4>
@@ -981,13 +820,13 @@ useHead({ title: "Tambah Penempatan | Admin" });
                             <span class="text-slate-500">Siswa</span>
                             <span class="font-medium text-slate-900">{{
                                 selectedSiswaInfo?.nama_siswa
-                            }}</span>
+                                }}</span>
                         </div>
                         <div class="flex justify-between">
                             <span class="text-slate-500">Kelas</span>
                             <span class="font-medium text-slate-900">{{
                                 selectedSiswaInfo?.kelas?.nama_kelas
-                            }}</span>
+                                }}</span>
                         </div>
                         <div class="flex justify-between">
                             <span class="text-slate-500">Perusahaan</span>
@@ -1018,29 +857,15 @@ useHead({ title: "Tambah Penempatan | Admin" });
         </div>
 
         <!-- Action Buttons -->
-        <div
-            class="flex items-center justify-end gap-3 mt-6 pt-6 border-t border-slate-200"
-        >
-            <UButton
-                variant="outline"
-                color="neutral"
-                size="lg"
-                @click="handleCancel"
-            >
+        <div class="flex items-center justify-end gap-3 mt-6 pt-6 border-t border-slate-200">
+            <UButton variant="outline" color="neutral" size="lg" @click="handleCancel">
                 Batal
             </UButton>
-            <UButton
-                color="primary"
-                size="lg"
-                :loading="submitting"
-                :disabled="
-                    !formData.id_periode_pkl ||
-                    !formData.siswa_id ||
-                    !formData.perusahaan_id ||
-                    !formData.guru_pembimbing_id
-                "
-                @click="handleSubmit"
-            >
+            <UButton color="primary" size="lg" :loading="submitting" :disabled="!formData.id_periode_pkl ||
+                !formData.siswa_id ||
+                !formData.perusahaan_id ||
+                !formData.guru_pembimbing_id
+                " @click="handleSubmit">
                 <Icon name="lucide:check" class="w-4 h-4" />
                 Simpan Penempatan
             </UButton>

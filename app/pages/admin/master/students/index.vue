@@ -302,6 +302,7 @@ useHead({ title: "Siswa | Admin" });
             description="Kelola data siswa sekolah"
             searchable
             search-placeholder="Cari siswa..."
+            with-time
         >
             <template #toolbar-right>
                 <USelectMenu

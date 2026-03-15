@@ -266,6 +266,7 @@ useHead({ title: "Guru Pembimbing | Admin" });
             description="Kelola data guru pembimbing PKL"
             searchable
             search-placeholder="Cari guru..."
+            with-time
         />
     </div>
 </template>

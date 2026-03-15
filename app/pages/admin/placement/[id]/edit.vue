@@ -196,22 +196,27 @@ const handleSubmit = async (data: Record<string, any>) => {
 
         if (response.success) {
             toast.add({
-                title: "Penempatan berhasil diperbarui",
+                title: "Berhasil Memperbarui!",
+                description: "Data penempatan berhasil diperbarui.",
                 color: "success",
+                icon: "i-heroicons-check-circle"
             });
             router.push("/admin/placement");
         } else {
             toast.add({
-                title: "Gagal memperbarui penempatan",
-                description: response.message || "Terjadi kesalahan",
+                title: "Gagal Memperbarui!",
+                description: response.message || "Terjadi kesalahan saat menyimpan data.",
                 color: "error",
+                icon: "i-heroicons-x-circle"
             });
         }
     } catch (error) {
         console.error("Error updating penempatan:", error);
         toast.add({
-            title: "Terjadi kesalahan",
+            title: "Gagal Memperbarui!",
+            description: "Terjadi kesalahan jaringan atau server.",
             color: "error",
+            icon: "i-heroicons-x-circle"
         });
     } finally {
         submitting.value = false;
@@ -232,25 +237,12 @@ useHead({ title: "Edit Penempatan | Admin" });
 </script>
 
 <template>
-    <BaseFormPage
-        title="Edit Penempatan PKL"
-        subtitle="Perbarui data penempatan siswa"
-        :fields="formFields"
-        :data="formData"
-        :loading="loading"
-        :submit-loading="submitting"
-        submit-text="Simpan Perubahan"
-        cancel-text="Batal"
-        size="lg"
-        @cancel="handleCancel"
-        @submit="handleSubmit"
-    >
+    <BaseFormPage title="Edit Penempatan PKL" subtitle="Perbarui data penempatan siswa" :fields="formFields"
+        :data="formData" :loading="loading" :submit-loading="submitting" submit-text="Simpan Perubahan"
+        cancel-text="Batal" size="lg" @cancel="handleCancel" @submit="handleSubmit">
         <template #info>
             <div class="flex items-start gap-3">
-                <Icon
-                    name="lucide:alert-triangle"
-                    class="w-5 h-5 text-amber-600 shrink-0 mt-0.5"
-                />
+                <Icon name="lucide:alert-triangle" class="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
                 <div class="text-sm text-amber-900">
                     <p class="font-medium mb-1">Perhatian:</p>
                     <ul class="list-disc list-inside space-y-1">

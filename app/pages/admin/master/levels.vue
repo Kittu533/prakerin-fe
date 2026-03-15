@@ -231,6 +231,7 @@ useHead({ title: "Tingkat | Admin" });
             description="Kelola data tingkat kelas"
             searchable
             search-placeholder="Cari tingkat..."
+            with-time
         />
 
         <UModal v-model:open="modalOpen">

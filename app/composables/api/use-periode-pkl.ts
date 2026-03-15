@@ -16,8 +16,8 @@ export interface PeriodePKL {
   tanggal_selesai: string;
   status: "draft" | "aktif" | "selesai" | "arsip";
   deskripsi?: string;
-  created_at: string;
-  updated_at: string;
+  created_at?: string;
+  updated_at?: string;
   // Joined data
   tahun_ajaran?: {
     id_tahun_ajaran: string;

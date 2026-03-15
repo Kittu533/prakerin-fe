@@ -17,9 +17,14 @@ const editing = ref(false);
 const processing = ref(false);
 const resetUser = ref<User | null>(null);
 const newPassword = ref("");
+const showPasswords = ref<Record<string, boolean>>({});
+
+const toggleShowPassword = (userId: string) => {
+    showPasswords.value[userId] = !showPasswords.value[userId];
+};
 
 const form = reactive({
-    id: null as number | null,
+    id: null as string | null,
     identifier: "",
     password: "",
     role: "" as string,
@@ -35,42 +40,40 @@ const getInitials = (identifier: string) => {
 
 const columns: ColumnDef<User, any>[] = [
     {
-        id: "identifier",
-        header: "Pengguna",
+        id: "nama_lengkap",
+        header: "Nama Lengkap",
         cell: ({ row }) => {
             const role = row.original.role;
             const colorClass = roleColor(role).bg;
-            const nama = row.original.nama || row.original.identifier;
-            const additionalInfo = row.original.additionalInfo;
+            const nama = row.original.nama || "-";
 
             return h("div", { class: "flex items-center gap-3" }, [
                 h(
                     "div",
                     {
-                        class: `w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold ${colorClass} flex-shrink-0`,
+                        class: `w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-semibold ${colorClass} flex-shrink-0`,
                     },
                     getInitials(nama),
                 ),
-                h("div", { class: "min-w-0 flex-1" }, [
-                    h(
-                        "p",
-                        {
-                            class: "text-sm font-semibold text-slate-900 truncate",
-                        },
-                        nama,
-                    ),
-                    additionalInfo
-                        ? h(
-                              "p",
-                              { class: "text-xs text-slate-500 truncate" },
-                              additionalInfo,
-                          )
-                        : h(
-                              "p",
-                              { class: "text-xs text-slate-400" },
-                              row.original.identifier,
-                          ),
-                ]),
+                h("p", { class: "text-sm font-semibold text-slate-900 truncate" }, nama),
+            ]);
+        },
+    },
+    {
+        id: "identifier",
+        header: "Username",
+        cell: ({ row }) => {
+            return h("div", { class: "text-sm font-mono text-slate-600 bg-slate-100 px-2 py-0.5 rounded border border-slate-200 inline-block" }, [
+                row.original.identifier,
+            ]);
+        },
+    },
+    {
+        id: "info",
+        header: "Info Tambahan",
+        cell: ({ row }) => {
+            return h("div", { class: "text-xs text-slate-500 font-medium italic" }, [
+                row.original.additionalInfo || "-",
             ]);
         },
     },
@@ -96,6 +99,17 @@ const columns: ColumnDef<User, any>[] = [
                     },
                     roleLabel,
                 ),
+            ]);
+        },
+    },
+    {
+        id: "last_login",
+        header: "Terakhir Login",
+        cell: ({ row }) => {
+            const date = row.original.last_login;
+            if (!date) return "-";
+            return h("div", { class: "text-sm text-slate-600" }, [
+                formatDate(new Date(date), "dd MMM yyyy, HH:mm"),
             ]);
         },
     },
@@ -261,8 +275,15 @@ const saveUser = async () => {
                 entity_id: 1,
                 entity_type: form.role,
             });
-            if (response.success) {
+            if (response.success && response.data) {
                 toast.add({ title: "Akun ditambahkan", color: "success" });
+                
+                // Prepare modal to show the password to admin
+                resetUser.value = response.data;
+                // backend returns password in response.data.password or response.data.newPassword for one-time display
+                newPassword.value = (response.data as any).password || (response.data as any).newPassword || (response.data as any).generated_password || form.password;
+                resetModalOpen.value = true;
+                
                 await fetchData();
             } else {
                 toast.add({
@@ -282,9 +303,11 @@ const saveUser = async () => {
 const resetPassword = async (user: User) => {
     try {
         const response = await userApi.resetPassword(user.id);
-        if (response.success && response.data?.generated_password) {
+        const password = response.data?.newPassword || response.data?.generated_password;
+        
+        if (response.success && password) {
             resetUser.value = user;
-            newPassword.value = response.data.generated_password;
+            newPassword.value = password;
             resetModalOpen.value = true;
         } else {
             toast.add({
@@ -353,6 +376,7 @@ useHead({ title: "Kelola Akun | Admin" });
             description="Manajemen akun pengguna sistem"
             searchable
             search-placeholder="Cari pengguna..."
+            with-time
         >
             <template #toolbar-right>
                 <USelectMenu
@@ -543,42 +567,61 @@ useHead({ title: "Kelola Akun | Admin" });
             </template>
         </UModal>
 
-        <!-- Reset Password Modal -->
+        <!-- Password Display Modal (for Create & Reset) -->
         <UModal v-model:open="resetModalOpen">
             <template #content>
-                <UCard>
+                <UCard class="w-full max-w-sm">
                     <template #header>
-                        <h3 class="font-semibold text-slate-900">
-                            Password Baru
-                        </h3>
+                        <div class="flex items-center gap-2">
+                            <div class="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center">
+                                <Icon name="lucide:key-round" class="w-4 h-4 text-green-600" />
+                            </div>
+                            <h3 class="font-semibold text-slate-900">
+                                Informasi Kredensial
+                            </h3>
+                        </div>
                     </template>
-                    <div class="text-center py-4">
-                        <p class="text-sm text-slate-500 mb-3">
-                            Password baru untuk {{ resetUser?.identifier }}:
-                        </p>
-                        <div
-                            class="flex items-center justify-center gap-2 p-3 bg-slate-100 rounded-lg"
-                        >
-                            <code
-                                class="text-lg font-mono font-bold text-slate-900"
-                                >{{ newPassword }}</code
-                            >
-                            <UButton
-                                size="xs"
-                                color="primary"
-                                variant="ghost"
-                                @click="copyPassword"
-                            >
-                                <Icon name="lucide:copy" class="w-4 h-4" />
-                            </UButton>
+                    <div class="py-4">
+                        <div class="p-4 bg-amber-50 border border-amber-100 rounded-xl mb-4">
+                            <div class="flex gap-3">
+                                <Icon name="lucide:alert-triangle" class="w-5 h-5 text-amber-600 shrink-0" />
+                                <p class="text-xs text-amber-800 leading-relaxed">
+                                    PENTING: Password ini hanya ditampilkan <strong>sekali ini saja</strong> demi keamanan. Harap segera salin dan berikan kepada pengguna.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="space-y-3">
+                            <div>
+                                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Username / Identifier</p>
+                                <div class="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-mono font-bold text-slate-700">
+                                    {{ resetUser?.identifier }}
+                                </div>
+                            </div>
+                            <div>
+                                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Password Baru</p>
+                                <div class="flex items-center gap-2 p-3 bg-slate-100 border-2 border-dashed border-slate-300 rounded-xl group relative overflow-hidden">
+                                    <code class="text-xl font-mono font-black text-sky-700 flex-1">{{ newPassword }}</code>
+                                    <UButton
+                                        size="sm"
+                                        color="primary"
+                                        @click="copyPassword"
+                                        class="shrink-0"
+                                    >
+                                        <Icon name="lucide:copy" class="w-4 h-4 mr-1.5" />
+                                        Salin
+                                    </UButton>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     <template #footer>
                         <UButton
-                            color="primary"
+                            color="neutral"
+                            variant="ghost"
                             block
                             @click="resetModalOpen = false"
-                            >Tutup</UButton
+                            >Saya sudah menyalin password ini</UButton
                         >
                     </template>
                 </UCard>

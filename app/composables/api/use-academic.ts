@@ -77,6 +77,7 @@ export interface Siswa {
     tingkat?: { kode_tingkat: string };
   };
   created_at?: string;
+  updated_at?: string;
   generated_password?: string;
 }
 
@@ -88,6 +89,7 @@ export interface Guru {
   no_hp?: string;
   status_aktif: boolean;
   created_at?: string;
+  updated_at?: string;
   generated_password?: string;
 }
 
@@ -102,12 +104,16 @@ export interface Kelas {
   tingkat?: { id_tingkat: string; kode_tingkat: string };
   guru?: { id_guru: string; nama_guru: string };
   tahun_ajaran?: { id_tahun_ajaran: string; nama_tahun_ajaran: string };
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface Jurusan {
   id_jurusan: string;
   kode_jurusan: string;
   nama_jurusan: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface TahunAjaran {
@@ -116,12 +122,16 @@ export interface TahunAjaran {
   tanggal_mulai?: string;
   tanggal_selesai?: string;
   status_aktif: boolean;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface Tingkat {
   id_tingkat: string;
   kode_tingkat: string;
   urutan: number;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface PaginatedResponse<T> {
@@ -230,7 +240,7 @@ export function useSiswaApi() {
 
   async function resetPassword(id: string) {
     const { data } = await apiFetch<
-      SingleResponse<{ generated_password: string }>
+      SingleResponse<{ generated_password: string; newPassword?: string }>
     >("CoreService", `/siswa/${id}/reset-password`, { method: "POST" }, true);
     return data;
   }
@@ -326,7 +336,7 @@ export function useGuruApi() {
 
   async function resetPassword(id: string) {
     const { data } = await apiFetch<
-      SingleResponse<{ generated_password: string }>
+      SingleResponse<{ generated_password: string; newPassword?: string }>
     >("CoreService", `/guru/${id}/reset-password`, { method: "POST" }, true);
     return data;
   }

@@ -158,15 +158,14 @@ const columns: ColumnDef<Penempatan, any>[] = [
             return h(
                 "span",
                 {
-                    class: `inline-flex items-center px-2 py-1 rounded-md text-xs font-medium ${
-                        color === "success"
-                            ? "bg-success-50 text-success-700"
-                            : color === "warning"
-                              ? "bg-warning-50 text-warning-700"
-                              : color === "error"
+                    class: `inline-flex items-center px-2 py-1 rounded-md text-xs font-medium ${color === "success"
+                        ? "bg-success-50 text-success-700"
+                        : color === "warning"
+                            ? "bg-warning-50 text-warning-700"
+                            : color === "error"
                                 ? "bg-error-50 text-error-700"
                                 : "bg-neutral-100 text-neutral-700"
-                    }`,
+                        }`,
                 },
                 label,
             );
@@ -218,6 +217,28 @@ const columns: ColumnDef<Penempatan, any>[] = [
                         [
                             h("path", {
                                 d: "M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z",
+                            }),
+                        ],
+                    ),
+                ),
+                h(
+                    "button",
+                    {
+                        class: "p-1.5 rounded hover:bg-error-50 text-error-600",
+                        onClick: () => confirmDelete(row.original),
+                    },
+                    h(
+                        "svg",
+                        {
+                            class: "w-4 h-4",
+                            viewBox: "0 0 24 24",
+                            fill: "none",
+                            stroke: "currentColor",
+                            "stroke-width": 2,
+                        },
+                        [
+                            h("path", {
+                                d: "M3 6h18M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2M10 11v6M14 11v6",
                             }),
                         ],
                     ),
@@ -296,6 +317,52 @@ const navigateToDetail = (item: Penempatan) => {
 
 const navigateToEdit = (item: Penempatan) => {
     router.push(`/admin/placement/${item.id_penempatan}/edit`);
+};
+
+// Delete confirmation state
+const isDeleteModalOpen = ref(false);
+const itemToDelete = ref<Penempatan | null>(null);
+const isDeleting = ref(false);
+
+const confirmDelete = (item: Penempatan) => {
+    itemToDelete.value = item;
+    isDeleteModalOpen.value = true;
+};
+
+const handleDelete = async () => {
+    if (!itemToDelete.value) return;
+
+    isDeleting.value = true;
+    try {
+        const response = await penempatanApi.delete(itemToDelete.value.id_penempatan);
+        if (response.success) {
+            toast.add({
+                title: "Berhasil!",
+                description: "Data penempatan PKL berhasil dihapus.",
+                color: "success",
+                icon: "i-heroicons-check-circle"
+            });
+            await fetchData();
+        } else {
+            toast.add({
+                title: "Gagal Menghapus!",
+                description: response.message || "Terjadi kesalahan saat menghapus data.",
+                color: "error",
+                icon: "i-heroicons-x-circle"
+            });
+        }
+    } catch (error) {
+        toast.add({
+            title: "Gagal Menghapus!",
+            description: "Terjadi kesalahan jaringan atau server.",
+            color: "error",
+            icon: "i-heroicons-x-circle"
+        });
+    } finally {
+        isDeleting.value = false;
+        isDeleteModalOpen.value = false;
+        itemToDelete.value = null;
+    }
 };
 
 // Fetch data
@@ -501,25 +568,19 @@ useHead({ title: "Penempatan PKL | Admin" });
             <USkeleton v-for="i in 3" :key="i" class="h-20 rounded-xl" />
         </div>
         <div v-else class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div
-                class="bg-white rounded-xl border border-slate-200 p-4 text-center"
-            >
+            <div class="bg-white rounded-xl border border-slate-200 p-4 text-center">
                 <p class="text-2xl font-bold text-green-600">
                     {{ stats.aktif }}
                 </p>
                 <p class="text-sm text-slate-500">Aktif</p>
             </div>
-            <div
-                class="bg-white rounded-xl border border-slate-200 p-4 text-center"
-            >
+            <div class="bg-white rounded-xl border border-slate-200 p-4 text-center">
                 <p class="text-2xl font-bold text-blue-600">
                     {{ stats.selesai }}
                 </p>
                 <p class="text-sm text-slate-500">Selesai</p>
             </div>
-            <div
-                class="bg-white rounded-xl border border-slate-200 p-4 text-center"
-            >
+            <div class="bg-white rounded-xl border border-slate-200 p-4 text-center">
                 <p class="text-2xl font-bold text-red-600">
                     {{ stats.dibatalkan }}
                 </p>
@@ -528,83 +589,72 @@ useHead({ title: "Penempatan PKL | Admin" });
         </div>
 
         <!-- Table -->
-        <CommonAppDataTable
-            :data="filteredData"
-            :columns="columns"
-            :loading="loading"
-            title="Daftar Penempatan"
-            description="Kelola penempatan siswa di industri"
-            :searchable="false"
-            empty-title="Tidak ada data penempatan"
-            empty-description="Belum ada penempatan siswa di industri"
-            empty-icon="lucide:building-2"
-        >
+        <CommonAppDataTable :data="filteredData" :columns="columns" :loading="loading" title="Daftar Penempatan"
+            description="Kelola penempatan siswa di industri" :searchable="false" with-time
+            empty-title="Tidak ada data penempatan" empty-description="Belum ada penempatan siswa di industri"
+            empty-icon="lucide:building-2">
             <template #toolbar-left>
-                <UInput
-                    v-model="search"
-                    placeholder="Cari siswa atau perusahaan..."
-                    class="flex-1"
-                >
+                <UInput v-model="search" placeholder="Cari siswa atau perusahaan..." class="flex-1">
                     <template #leading>
-                        <Icon
-                            name="lucide:search"
-                            class="w-4 h-4 text-slate-400"
-                        />
+                        <Icon name="lucide:search" class="w-4 h-4 text-slate-400" />
                     </template>
                 </UInput>
-                <USelectMenu
-                    v-model="filterStatus"
-                    :items="statusOptions"
-                    placeholder="Status"
-                    class="w-full sm:w-36"
-                />
-                <USelectMenu
-                    v-model="filterPeriode"
-                    :items="periodeOptions"
-                    placeholder="Periode PKL"
-                    class="w-full sm:w-40"
-                >
+                <USelectMenu v-model="filterStatus" :items="statusOptions" placeholder="Status"
+                    class="w-full sm:w-36" />
+                <USelectMenu v-model="filterPeriode" :items="periodeOptions" placeholder="Periode PKL"
+                    class="w-full sm:w-40">
                     <template #label>
-                        <Icon
-                            name="lucide:calendar"
-                            class="w-4 h-4 text-slate-400 mr-1"
-                        />
+                        <Icon name="lucide:calendar" class="w-4 h-4 text-slate-400 mr-1" />
                         {{
                             filterPeriode
                                 ? periodeOptions.find(
-                                      (p) => p.value === filterPeriode,
-                                  )?.label
+                                    (p) => p.value === filterPeriode,
+                                )?.label
                                 : "Semua Periode"
                         }}
                     </template>
                 </USelectMenu>
             </template>
             <template #toolbar-right>
-                <UButton
-                    icon="lucide:download"
-                    variant="outline"
-                    :loading="exporting"
-                    :disabled="filteredData.length === 0"
-                    @click="exportToCSV"
-                >
+                <UButton icon="lucide:download" variant="outline" :loading="exporting"
+                    :disabled="filteredData.length === 0" @click="exportToCSV">
                     Export CSV
                 </UButton>
             </template>
         </CommonAppDataTable>
 
         <!-- Empty State -->
-        <div
-            v-if="!loading && data.length === 0"
-            class="p-8 text-center text-slate-500 bg-white rounded-xl border border-slate-200"
-        >
-            <Icon
-                name="lucide:building-2"
-                class="w-12 h-12 mx-auto mb-3 text-slate-300"
-            />
+        <div v-if="!loading && data.length === 0"
+            class="p-8 text-center text-slate-500 bg-white rounded-xl border border-slate-200">
+            <Icon name="lucide:building-2" class="w-12 h-12 mx-auto mb-3 text-slate-300" />
             <p>Belum ada data penempatan</p>
             <p class="text-sm mt-2">
                 Klik "Tambah Penempatan" untuk menambah data baru
             </p>
         </div>
+
+        <!-- Delete Confirmation Modal -->
+        <UModal v-model:open="isDeleteModalOpen">
+            <template #content>
+                <div class="p-6 text-center">
+                    <div class="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
+                        <Icon name="lucide:trash-2" class="w-6 h-6 text-red-600" />
+                    </div>
+                    <h3 class="text-lg font-bold text-slate-900 mb-2">Konfirmasi Hapus</h3>
+                    <p class="text-slate-500 text-sm mb-6">
+                        Apakah Anda yakin ingin menghapus data penempatan ini? Tindakan ini tidak dapat dibatalkan.
+                    </p>
+                    <div class="flex items-center justify-center gap-3">
+                        <UButton color="neutral" variant="ghost" @click="isDeleteModalOpen = false"
+                            :disabled="isDeleting">
+                            Batal
+                        </UButton>
+                        <UButton color="error" @click="handleDelete" :loading="isDeleting">
+                            Hapus Data
+                        </UButton>
+                    </div>
+                </div>
+            </template>
+        </UModal>
     </div>
 </template>

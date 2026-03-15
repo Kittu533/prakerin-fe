@@ -396,14 +396,20 @@ async function submitApplication() {
             resetForm();
             await loadData();
         } else {
-            throw new Error(response?.message || "Gagal mengirim pengajuan");
+            // Check for specific multi-period error or active placement error
+            const errorMsg = response?.message || "Gagal mengirim pengajuan";
+            toast.add({
+                title: "Pengajuan Ditolak",
+                description: errorMsg,
+                color: "error",
+            });
         }
     } catch (error: any) {
         console.error("Submit error:", error);
+        const errorMsg = error?.response?.data?.message || error?.message || "Terjadi kesalahan. Silakan coba lagi.";
         toast.add({
             title: "Gagal mengirim pengajuan",
-            description:
-                error?.message || "Terjadi kesalahan. Silakan coba lagi.",
+            description: errorMsg,
             color: "error",
         });
     } finally {

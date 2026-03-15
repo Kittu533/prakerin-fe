@@ -10,7 +10,8 @@ import {
     type SortingState,
     getSortedRowModel,
 } from "@tanstack/vue-table";
-import { ref, computed, watch } from "vue";
+import { ref, computed, watch, h } from "vue";
+import { formatDateTime } from "~/utils/format-date";
 
 type T = any;
 
@@ -27,6 +28,7 @@ const props = defineProps<{
     emptyTitle?: string;
     emptyDescription?: string;
     emptyIcon?: string;
+    withTime?: boolean;
 }>();
 
 const page = ref(1);
@@ -39,13 +41,53 @@ const searchPlaceholder = computed(
     () => props.searchPlaceholder || "Cari data...",
 );
 
+const effectiveColumns = computed(() => {
+    if (!props.withTime) return props.columns;
+
+    const cols = [...props.columns];
+    const actionIndex = cols.findIndex(
+        (c) => c.id === "aksi" || c.id === "actions",
+    );
+
+    const timeCols: ColumnDef<T, any>[] = [
+        {
+            id: "created_at",
+            header: "Dibuat",
+            cell: ({ row }) =>
+                h(
+                    "span",
+                    { class: "text-xs text-slate-500" },
+                    formatDateTime(row.original.created_at),
+                ),
+        },
+        {
+            id: "updated_at",
+            header: "Diperbarui",
+            cell: ({ row }) =>
+                h(
+                    "span",
+                    { class: "text-xs text-slate-500" },
+                    formatDateTime(row.original.updated_at),
+                ),
+        },
+    ];
+
+    if (actionIndex !== -1) {
+        cols.splice(actionIndex, 0, ...timeCols);
+    } else {
+        cols.push(...timeCols);
+    }
+
+    return cols;
+});
+
 /* ---------- TABLE INSTANCE ---------- */
 const table = useVueTable({
     get data() {
         return props.data;
     },
     get columns() {
-        return props.columns;
+        return effectiveColumns.value;
     },
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),

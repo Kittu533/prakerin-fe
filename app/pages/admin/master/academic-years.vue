@@ -3,6 +3,7 @@ import {
     useTahunAjaranApi,
     type TahunAjaran,
 } from "~/composables/api/use-academic";
+import { useArchiveApi } from "~/composables/api/use-archive";
 import { h } from "vue";
 import type { ColumnDef } from "@tanstack/vue-table";
 
@@ -10,11 +11,14 @@ definePageMeta({ layout: "admin" });
 
 const toast = useToast();
 const tahunAjaranApi = useTahunAjaranApi();
+const archiveApi = useArchiveApi();
 
 const loading = ref(true);
 const modalOpen = ref(false);
+const archiveModalOpen = ref(false);
 const editing = ref(false);
 const processing = ref(false);
+const selectedForArchive = ref<TahunAjaran | null>(null);
 
 const data = ref<TahunAjaran[]>([]);
 
@@ -109,6 +113,34 @@ const columns: ColumnDef<TahunAjaran, any>[] = [
                                 }),
                                 h("polyline", {
                                     points: "22 4 12 14.01 9 11.01",
+                                }),
+                            ],
+                        ),
+                    ),
+                !row.original.status_aktif &&
+                    h(
+                        "button",
+                        {
+                            class: "p-1.5 rounded hover:bg-amber-50 text-amber-600",
+                            title: "Arsip Data Tahun Ini",
+                            onClick: () => openArchiveModal(row.original),
+                        },
+                        h(
+                            "svg",
+                            {
+                                class: "w-4 h-4",
+                                viewBox: "0 0 24 24",
+                                fill: "none",
+                                stroke: "currentColor",
+                                "stroke-width": 2,
+                            },
+                            [
+                                h("path", {
+                                    d: "M21 8H3V6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v2z",
+                                }),
+                                h("path", { d: "M10 12h4" }),
+                                h("path", {
+                                    d: "M3 8v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8",
                                 }),
                             ],
                         ),
@@ -261,6 +293,41 @@ async function setActive(item: TahunAjaran) {
     }
 }
 
+function openArchiveModal(item: TahunAjaran) {
+    selectedForArchive.value = item;
+    archiveModalOpen.value = true;
+}
+
+async function handleArchive() {
+    if (!selectedForArchive.value) return;
+    
+    processing.value = true;
+    try {
+        const response = await archiveApi.archiveYear(selectedForArchive.value.id_tahun_ajaran);
+        if (response.success) {
+            toast.add({
+                title: "Data berhasil diarsipkan",
+                description: response.message,
+                color: "success",
+            });
+            archiveModalOpen.value = false;
+            fetchData();
+        } else {
+            toast.add({
+                title: response.message || "Gagal mengarsipkan data",
+                color: "error",
+            });
+        }
+    } catch (error: any) {
+        toast.add({
+            title: error.message || "Terjadi kesalahan saat mengarsipkan",
+            color: "error",
+        });
+    } finally {
+        processing.value = false;
+    }
+}
+
 onMounted(() => fetchData());
 
 useHead({ title: "Tahun Ajaran | Admin" });
@@ -288,6 +355,7 @@ useHead({ title: "Tahun Ajaran | Admin" });
             description="Kelola data tahun ajaran"
             searchable
             search-placeholder="Cari tahun ajaran..."
+            with-time
         />
 
         <UModal v-model:open="modalOpen">
@@ -335,6 +403,47 @@ useHead({ title: "Tahun Ajaran | Admin" });
                                 :loading="processing"
                                 @click="save"
                                 >Simpan</UButton
+                            >
+                        </div>
+                    </template>
+                </UCard>
+            </template>
+        </UModal>
+
+        <!-- Archive Confirmation Modal -->
+        <UModal v-model:open="archiveModalOpen">
+            <template #content>
+                <UCard>
+                    <template #header>
+                        <h3 class="font-semibold text-slate-900 flex items-center gap-2">
+                            <Icon name="lucide:archive" class="w-5 h-5 text-amber-600" />
+                            Konfirmasi Pengarsipan
+                        </h3>
+                    </template>
+                    <div class="space-y-4">
+                        <div class="p-4 bg-amber-50 border border-amber-100 rounded-lg text-sm text-amber-800">
+                            <p class="font-bold mb-1">PENTING:</p>
+                            <p>Proses ini akan memindahkan data penempatan yang sudah <strong>Selesai</strong> atau <strong>Dibatalkan</strong> ke Cold Storage (Arsip) dan menghapus data aslinya dari database operasional.</p>
+                        </div>
+                        <p class="text-sm text-slate-600">
+                            Apakah Anda yakin ingin mengarsipkan data untuk tahun ajaran <strong>{{ selectedForArchive?.nama_tahun_ajaran }}</strong>?
+                        </p>
+                    </div>
+                    <template #footer>
+                        <div class="flex gap-3">
+                            <UButton
+                                variant="outline"
+                                color="neutral"
+                                class="flex-1"
+                                @click="archiveModalOpen = false"
+                                >Batal</UButton
+                            >
+                            <UButton
+                                color="warning"
+                                class="flex-1"
+                                :loading="processing"
+                                @click="handleArchive"
+                                >Ya, Arsipkan Data</UButton
                             >
                         </div>
                     </template>

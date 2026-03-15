@@ -520,6 +520,7 @@ useHead({ title: "Verifikasi Pengajuan | Admin" });
             title="Daftar Pengajuan"
             description="Kelola dan verifikasi pengajuan PKL siswa"
             :searchable="false"
+            with-time
             empty-title="Tidak ada data pengajuan"
             empty-description="Belum ada pengajuan PKL yang masuk"
             empty-icon="lucide:file-text"

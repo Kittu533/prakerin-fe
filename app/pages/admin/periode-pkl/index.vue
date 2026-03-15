@@ -763,6 +763,7 @@ useHead({ title: "Periode PKL | Admin" });
             :columns="columns"
             :loading="loading"
             :searchable="false"
+            with-time
             empty-title="Tidak ada periode PKL"
             empty-description="Belum ada periode PKL yang dibuat"
             empty-icon="lucide:calendar-clock"

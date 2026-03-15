@@ -24,6 +24,7 @@ export interface Perusahaan {
   status_kerjasama?: boolean;
   tahun_mulai_kerjasama?: number;
   created_at?: string;
+  updated_at?: string;
 }
 
 export interface Mentor {
@@ -39,6 +40,7 @@ export interface Mentor {
     nama_perusahaan: string;
   };
   created_at?: string;
+  updated_at?: string;
   generated_password?: string;
 }
 
@@ -227,7 +229,7 @@ export function useMentorApi() {
 
   async function resetPassword(id: string) {
     const { data } = await apiFetch<
-      SingleResponse<{ generated_password: string }>
+      SingleResponse<{ generated_password: string; newPassword?: string }>
     >(
       "PartnerService",
       `/mentor/${id}/reset-password`,

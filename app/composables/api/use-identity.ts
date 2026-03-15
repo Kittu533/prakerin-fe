@@ -8,10 +8,10 @@ import { apiFetch } from "~/composables/api-fetch";
 // TYPES
 // =============================================
 export interface User {
-  id: number;
+  id: string;
   identifier: string;
   role: "admin" | "guru" | "siswa" | "mentor";
-  entity_id: number;
+  entity_id: string;
   entity_type: string;
   is_active: boolean;
   created_at?: string;
@@ -63,7 +63,7 @@ export function useUserApi() {
     return data;
   }
 
-  async function getById(id: number) {
+  async function getById(id: string) {
     const { data } = await apiFetch<SingleResponse<User>>(
       "AuthService",
       `/users/${id}`,
@@ -77,7 +77,7 @@ export function useUserApi() {
     identifier: string;
     password: string;
     role: string;
-    entity_id: number;
+    entity_id: string;
     entity_type: string;
   }) {
     const { data } = await apiFetch<SingleResponse<User>>(
@@ -90,7 +90,7 @@ export function useUserApi() {
   }
 
   async function update(
-    id: number,
+    id: string,
     payload: Partial<{
       identifier: string;
       role: string;
@@ -106,7 +106,7 @@ export function useUserApi() {
     return data;
   }
 
-  async function remove(id: number) {
+  async function remove(id: string) {
     const { data } = await apiFetch<SingleResponse<null>>(
       "AuthService",
       `/users/${id}`,
@@ -116,14 +116,14 @@ export function useUserApi() {
     return data;
   }
 
-  async function resetPassword(id: number) {
+  async function resetPassword(id: string) {
     const { data } = await apiFetch<
-      SingleResponse<{ generated_password: string }>
+      SingleResponse<{ generated_password: string; newPassword?: string }>
     >("AuthService", `/users/${id}/reset-password`, { method: "POST" }, true);
     return data;
   }
 
-  async function toggleStatus(id: number, is_active: boolean) {
+  async function toggleStatus(id: string, is_active: boolean) {
     const { data } = await apiFetch<SingleResponse<User>>(
       "AuthService",
       `/users/${id}/status`,

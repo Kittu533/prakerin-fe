@@ -282,6 +282,7 @@ useHead({ title: "Perusahaan Mitra | Admin" });
             description="Kelola data perusahaan mitra PKL"
             searchable
             search-placeholder="Cari perusahaan..."
+            with-time
         >
             <template #toolbar-right>
                 <!-- Additional toolbar actions can go here -->
