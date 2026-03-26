@@ -51,10 +51,9 @@ export const useDataStore = defineStore("data", {
     isMinimized: false,
     isTemporarilyOpen: false,
 
-    // Auth Tokens
+    // Auth Tokens (Access Token is kept in memory and cookie for SSR)
     token: null as string | null,
     tokenSignature: null as string | null,
-    refreshToken: null as string | null,
 
     // User Profile
     profile: null as AuthUser | null,
@@ -101,15 +100,13 @@ export const useDataStore = defineStore("data", {
     // =====================
     setProfile(profile: AuthUser) {
       this.profile = profile;
-      if (import.meta.client) {
-        localStorage.setItem("profile", JSON.stringify(profile));
-      }
+      const profileCookie = useCookie("profile", { maxAge: 7 * 24 * 60 * 60 });
+      profileCookie.value = JSON.stringify(profile);
     },
     clearProfile() {
       this.profile = null;
-      if (import.meta.client) {
-        localStorage.removeItem("profile");
-      }
+      const profileCookie = useCookie("profile");
+      profileCookie.value = null;
     },
 
     // =====================
@@ -122,37 +119,27 @@ export const useDataStore = defineStore("data", {
       // Decode dan simpan payload JWT untuk akses cepat
       this.jwtPayload = decodeJwt(token);
 
-      if (import.meta.client) {
-        localStorage.setItem("token", token);
-        if (signature) {
-          localStorage.setItem("tokenSignature", signature);
-        }
+      // Save to cookie for SSR persistence
+      const tokenCookie = useCookie("token", { 
+        maxAge: 7 * 24 * 60 * 60,
+        sameSite: 'lax'
+      });
+      tokenCookie.value = token;
+      
+      if (signature) {
+        const sigCookie = useCookie("tokenSignature", { maxAge: 7 * 24 * 60 * 60 });
+        sigCookie.value = signature;
       }
     },
     clearToken() {
       this.token = null;
       this.tokenSignature = null;
       this.jwtPayload = null;
-      if (import.meta.client) {
-        localStorage.removeItem("token");
-        localStorage.removeItem("tokenSignature");
-      }
-    },
-
-    // =====================
-    // REFRESH TOKEN HANDLER
-    // =====================
-    setRefreshToken(token: string) {
-      this.refreshToken = token;
-      if (import.meta.client) {
-        localStorage.setItem("refreshToken", token);
-      }
-    },
-    clearRefreshToken() {
-      this.refreshToken = null;
-      if (import.meta.client) {
-        localStorage.removeItem("refreshToken");
-      }
+      
+      const tokenCookie = useCookie("token");
+      tokenCookie.value = null;
+      const sigCookie = useCookie("tokenSignature");
+      sigCookie.value = null;
     },
 
     // =====================
@@ -160,7 +147,6 @@ export const useDataStore = defineStore("data", {
     // =====================
     clearAuth() {
       this.clearToken();
-      this.clearRefreshToken();
       this.clearProfile();
     },
 
@@ -168,44 +154,28 @@ export const useDataStore = defineStore("data", {
     // INITIALIZATION
     // =====================
     initializeFromLocalStorage() {
-      if (!import.meta.client) return;
+      // Use cookies instead of localStorage for better SSR and security
+      const token = useCookie("token").value;
+      const tokenSignature = useCookie("tokenSignature").value;
 
-      const token = localStorage.getItem("token");
-      const tokenSignature = localStorage.getItem("tokenSignature");
-      const refreshToken = localStorage.getItem("refreshToken");
-
-      this.token = token;
-      this.tokenSignature = tokenSignature;
-      this.refreshToken = refreshToken;
+      this.token = token || null;
+      this.tokenSignature = tokenSignature || null;
 
       // Decode token untuk mendapatkan payload
-      if (token) {
-        this.jwtPayload = decodeJwt(token);
-        console.log("[DataStore] Token decoded:", {
-          hasToken: !!token,
-          payload: this.jwtPayload,
-          isExpired: this.jwtPayload
-            ? this.jwtPayload.exp * 1000 < Date.now()
-            : null,
-        });
+      if (this.token) {
+        this.jwtPayload = decodeJwt(this.token);
       }
 
-      console.log("[DataStore] Initialized from localStorage:", {
-        hasToken: !!token,
-        hasRefreshToken: !!refreshToken,
-        tokenLength: token?.length || 0,
-        userId: this.jwtPayload?.entity_id,
-        userRole: this.jwtPayload?.role,
-      });
-
-      const savedProfile = localStorage.getItem("profile");
+      const savedProfile = useCookie("profile").value;
       if (savedProfile) {
         try {
-          this.profile = JSON.parse(savedProfile);
-          console.log("[DataStore] Profile loaded:", this.profile?.role);
+          // useCookie might already parse JSON if it's an object, 
+          // but sometimes it's stored as string
+          this.profile = typeof savedProfile === 'string' 
+            ? JSON.parse(savedProfile) 
+            : savedProfile;
         } catch {
           this.profile = null;
-          console.error("[DataStore] Failed to parse saved profile");
         }
       }
     },

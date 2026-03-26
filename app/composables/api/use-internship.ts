@@ -388,6 +388,32 @@ export function usePenempatanApi() {
     return data;
   }
 
+  async function getStudentStats(tahunAjaranId?: string) {
+    const query = tahunAjaranId ? `?tahun_ajaran_id=${tahunAjaranId}` : "";
+    const { data } = await apiFetch<SingleResponse<{
+      stats: {
+        total_siswa: number;
+        belum_pkl: number;
+        aktif: number;
+        selesai: number;
+        dibatalkan: number;
+        belum_mulai: number;
+        expired: number;
+      };
+      students: any[];
+      periode_info: {
+        now: string;
+        description: string;
+      };
+    }>>(
+      "PlacementService",
+      `/penempatan/student-stats${query}`,
+      { method: "GET" },
+      true,
+    );
+    return data;
+  }
+
   return {
     getAll,
     getById,
@@ -398,6 +424,7 @@ export function usePenempatanApi() {
     getMentorStudentDetail,
     getMyStudents,
     getSmartDraft,
+    getStudentStats,
   };
 }
 

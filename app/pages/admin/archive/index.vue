@@ -1,16 +1,24 @@
 <script setup lang="ts">
 import { useArchiveApi } from "~/composables/api/use-archive";
+import { useTahunAjaranApi } from "~/composables/api/use-academic";
 
 definePageMeta({ layout: "admin" });
 
 const toast = useToast();
 const archiveApi = useArchiveApi();
+const tahunAjaranApi = useTahunAjaranApi();
 
 const loading = ref(true);
 const data = ref<any[]>([]);
 const page = ref(1);
 const limit = ref(10);
 const total = ref(0);
+
+// Archive Modal State
+const isArchiveModalOpen = ref(false);
+const isArchiving = ref(false);
+const selectedTahunAjaran = ref("");
+const tahunAjaranOptions = ref<{ label: string; value: string }[]>([]);
 
 async function fetchData() {
     loading.value = true;
@@ -19,14 +27,64 @@ async function fetchData() {
             page: page.value,
             limit: limit.value
         });
-        if (response.success) {
-            data.value = response.data || [];
-            total.value = response.pagination?.total || 0;
+        if (response.success && response.data) {
+            // Handle nested data structure if present
+            const archiveData = response.data.data || response.data;
+            data.value = Array.isArray(archiveData) ? archiveData : [];
+            total.value = response.data.pagination?.total || response.pagination?.total || 0;
         }
     } catch (error) {
         toast.add({ title: "Gagal memuat data arsip", color: "error" });
     } finally {
         loading.value = false;
+    }
+}
+
+async function fetchTahunAjaran() {
+    try {
+        const response = await tahunAjaranApi.getAll({ limit: 100 });
+        if (response.success && response.data) {
+            // Handle nested data structure from safeFetch
+            const yearsData = response.data.data || response.data;
+            tahunAjaranOptions.value = (Array.isArray(yearsData) ? yearsData : []).map((item: any) => ({
+                label: item.nama_tahun_ajaran,
+                value: item.id_tahun_ajaran
+            }));
+        }
+    } catch (error) {
+        console.error("Gagal memuat tahun ajaran", error);
+    }
+}
+
+async function handleArchive() {
+    if (!selectedTahunAjaran.value) return;
+
+    isArchiving.value = true;
+    try {
+        const response = await archiveApi.archiveYear(selectedTahunAjaran.value);
+        if (response.success) {
+            toast.add({ 
+                title: "Berhasil!", 
+                description: "Data tahun ajaran berhasil diarsipkan.", 
+                color: "success" 
+            });
+            isArchiveModalOpen.value = false;
+            fetchData();
+        } else {
+            toast.add({ 
+                title: "Gagal", 
+                description: response.message || "Gagal mengarsipkan data.", 
+                color: "error" 
+            });
+        }
+    } catch (error: any) {
+        toast.add({ 
+            title: "Error", 
+            description: error.data?.message || "Terjadi kesalahan server.", 
+            color: "error" 
+        });
+    } finally {
+        isArchiving.value = false;
     }
 }
 
@@ -39,7 +97,10 @@ const formatDate = (dateStr: string | null) => {
     });
 };
 
-onMounted(() => fetchData());
+onMounted(() => {
+    fetchData();
+    fetchTahunAjaran();
+});
 
 watch([page, limit], () => fetchData());
 
@@ -48,11 +109,20 @@ useHead({ title: "Arsip Penempatan | Admin" });
 
 <template>
     <div class="space-y-6">
-        <div>
-            <h1 class="text-xl lg:text-2xl font-bold text-slate-900">
-                Arsip Penempatan
-            </h1>
-            <p class="text-sm text-slate-500">Daftar penempatan siswa yang telah diarsipkan (Cold Storage).</p>
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-xl lg:text-2xl font-bold text-slate-900">
+                    Arsip Penempatan
+                </h1>
+                <p class="text-sm text-slate-500">Daftar penempatan siswa yang telah diarsipkan (Cold Storage).</p>
+            </div>
+            <UButton 
+                icon="lucide:archive" 
+                color="primary" 
+                @click="isArchiveModalOpen = true"
+            >
+                Arsipkan Tahun Ajaran
+            </UButton>
         </div>
 
         <UCard class="overflow-hidden">
@@ -131,5 +201,47 @@ useHead({ title: "Arsip Penempatan | Admin" });
                 </div>
             </template>
         </UCard>
+
+        <!-- Archive Modal -->
+        <UModal v-model:open="isArchiveModalOpen">
+            <template #content>
+                <div class="p-6">
+                    <h3 class="text-lg font-bold text-slate-900 mb-2">Arsipkan Tahun Ajaran</h3>
+                    <p class="text-slate-500 text-sm mb-4">
+                        Memindahkan data penempatan, absensi, dan penilaian ke tabel arsip. 
+                        Data yang aslinya akan dihapus dari tabel operasional.
+                    </p>
+                    
+                    <div class="space-y-4">
+                        <UFormField label="Pilih Tahun Ajaran" required>
+                            <USelectMenu 
+                                v-model="selectedTahunAjaran" 
+                                :items="tahunAjaranOptions" 
+                                value-attribute="value"
+                                option-attribute="label"
+                                placeholder="Pilih Tahun Ajaran"
+                            />
+                        </UFormField>
+
+                        <UAlert 
+                            icon="lucide:alert-triangle"
+                            color="warning" 
+                            variant="subtle"
+                            title="Peringatan"
+                            description="Tindakan ini tidak dapat dibatalkan secara otomatis dari UI."
+                        />
+                    </div>
+
+                    <div class="flex items-center justify-end gap-3 mt-6">
+                        <UButton color="neutral" variant="ghost" @click="isArchiveModalOpen = false" :disabled="isArchiving">
+                            Batal
+                        </UButton>
+                        <UButton color="primary" @click="handleArchive" :loading="isArchiving" :disabled="!selectedTahunAjaran">
+                            Proses Arsip
+                        </UButton>
+                    </div>
+                </div>
+            </template>
+        </UModal>
     </div>
 </template>

@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { useInternshipApi } from "~/composables/api/use-internship";
+import { usePenempatanApi } from "~/composables/api/use-internship";
 import { useTahunAjaranApi, type TahunAjaran } from "~/composables/api/use-academic";
 
 definePageMeta({ layout: "admin" });
 
 const toast = useToast();
-const internshipApi = useInternshipApi();
+const penempatanApi = usePenempatanApi();
 const tahunAjaranApi = useTahunAjaranApi();
 
 const loading = ref(false);
@@ -26,10 +26,12 @@ async function fetchAcademicYears() {
     tahunAjaranLoading.value = true;
     try {
         const response = await tahunAjaranApi.getAll({ limit: 100 });
-        if (response.success) {
-            academicYears.value = response.data || [];
+        if (response.success && response.data) {
+            // Handle nested data structure from safeFetch
+            const yearsData = response.data.data || response.data;
+            academicYears.value = Array.isArray(yearsData) ? yearsData : [];
             // Select active year by default
-            const activeYear = academicYears.value.find(y => y.status_aktif);
+            const activeYear = academicYears.value.find((y: TahunAjaran) => y.status_aktif);
             if (activeYear) selectedYear.value = activeYear.id_tahun_ajaran;
         }
     } catch (error) {
@@ -47,9 +49,11 @@ async function generateDraft() {
 
     loading.value = true;
     try {
-        const response = await internshipApi.getSmartDraft(selectedYear.value);
-        if (response.success) {
-            result.value = response.data;
+        const response = await penempatanApi.getSmartDraft(selectedYear.value);
+        if (response.success && response.data) {
+            // Handle nested data structure if present
+            const draftData = response.data.data || response.data;
+            result.value = draftData;
             toast.add({ title: "Draft berhasil di-generate", color: "success" });
         }
     } catch (error: any) {

@@ -4,7 +4,7 @@ import {
     usePenempatanApi,
     type Penempatan,
 } from "~/composables/api/use-internship";
-import { useSiswaApi, useGuruApi } from "~/composables/api/use-academic";
+import { useSiswaApi, useGuruApi, useTahunAjaranApi } from "~/composables/api/use-academic";
 import { usePeriodePKLApi } from "~/composables/api/use-periode-pkl";
 import { usePerusahaanApi } from "~/composables/api/use-partner";
 import {
@@ -25,6 +25,7 @@ const siswaApi = useSiswaApi();
 const guruApi = useGuruApi();
 const perusahaanApi = usePerusahaanApi();
 const periodePKLApi = usePeriodePKLApi();
+const tahunAjaranApi = useTahunAjaranApi();
 
 // State
 const loading = ref(true);
@@ -33,6 +34,19 @@ const filterStatus = ref("Semua");
 const filterPeriode = ref<string | null>(null);
 
 const data = ref<Penempatan[]>([]);
+
+// Smart Draft State
+const isSmartDraftModalOpen = ref(false);
+const isGeneratingDraft = ref(false);
+const selectedTahunAjaranForDraft = ref("");
+const smartDraftResult = ref<{
+    summary: {
+        total_unplaced_students: number;
+        total_matched: number;
+        total_remaining: number;
+    };
+    drafts: any[];
+} | null>(null);
 
 // Stats
 const stats = reactive({ aktif: 0, selesai: 0, dibatalkan: 0 });
@@ -43,6 +57,33 @@ const perusahaanOptions = ref<{ label: string; value: string }[]>([]);
 const guruOptions = ref<{ label: string; value: string }[]>([]);
 
 const periodeOptions = ref<{ label: string; value: string }[]>([]);
+const tahunAjaranOptionsForDraft = ref<{ label: string; value: string }[]>([]);
+
+const handleGetSmartDraft = async () => {
+    if (!selectedTahunAjaranForDraft.value) return;
+
+    isGeneratingDraft.value = true;
+    try {
+        const response = await penempatanApi.getSmartDraft(selectedTahunAjaranForDraft.value);
+        if (response.success) {
+            smartDraftResult.value = response.data;
+        } else {
+            toast.add({
+                title: "Gagal!",
+                description: response.message || "Gagal menghasilkan draf cerdas.",
+                color: "error"
+            });
+        }
+    } catch (error: any) {
+        toast.add({
+            title: "Error",
+            description: error.data?.message || "Terjadi kesalahan server.",
+            color: "error"
+        });
+    } finally {
+        isGeneratingDraft.value = false;
+    }
+};
 
 // Exporting state
 const exporting = ref(false);
@@ -392,12 +433,13 @@ const fetchData = async () => {
 
 const fetchOptions = async () => {
     try {
-        const [siswaRes, perusahaanRes, guruRes, periodeRes] =
+        const [siswaRes, perusahaanRes, guruRes, periodeRes, tahunAjaranRes] =
             await Promise.all([
                 siswaApi.getAll({ limit: 1000 }),
                 perusahaanApi.getAll({ limit: 100 }),
                 guruApi.getAll({ limit: 100 }),
                 periodePKLApi.getAll({ limit: 100 }),
+                tahunAjaranApi.getAll(),
             ]);
 
         if (siswaRes.success) {
@@ -424,11 +466,12 @@ const fetchOptions = async () => {
                 value: p.id_periode_pkl,
             }));
             console.log("Periode options loaded:", periodeOptions.value);
-        } else {
-            console.error(
-                "Failed to load periode options:",
-                periodeRes.message,
-            );
+        }
+        if (tahunAjaranRes.success) {
+            tahunAjaranOptionsForDraft.value = (tahunAjaranRes.data || []).map((t) => ({
+                label: t.nama_tahun_ajaran,
+                value: t.id_tahun_ajaran,
+            }));
         }
     } catch (error) {
         console.error("Failed to fetch options:", error);
@@ -558,9 +601,14 @@ useHead({ title: "Penempatan PKL | Admin" });
                     Kelola penempatan siswa di industri
                 </p>
             </div>
-            <UButton icon="lucide:plus" @click="navigateToCreate">
-                Tambah Penempatan
-            </UButton>
+            <div class="flex items-center gap-2">
+                <UButton icon="lucide:sparkles" color="white" @click="isSmartDraftModalOpen = true">
+                    Smart Draft
+                </UButton>
+                <UButton icon="lucide:plus" @click="navigateToCreate">
+                    Tambah Penempatan
+                </UButton>
+            </div>
         </div>
 
         <!-- Stats -->
@@ -651,6 +699,111 @@ useHead({ title: "Penempatan PKL | Admin" });
                         </UButton>
                         <UButton color="error" @click="handleDelete" :loading="isDeleting">
                             Hapus Data
+                        </UButton>
+                    </div>
+                </div>
+            </template>
+        </UModal>
+
+        <!-- Smart Draft Modal -->
+        <UModal v-model:open="isSmartDraftModalOpen" size="xl">
+            <template #content>
+                <div class="p-6">
+                    <div class="flex items-center gap-2 mb-2">
+                        <Icon name="lucide:sparkles" class="w-5 h-5 text-primary-600" />
+                        <h3 class="text-lg font-bold text-slate-900">Smart Placement Draft</h3>
+                    </div>
+                    <p class="text-slate-500 text-sm mb-6">
+                        Gunakan algoritma cerdas untuk mencocokkan siswa dengan perusahaan berdasarkan jurusan dan kuota.
+                    </p>
+
+                    <div v-if="!smartDraftResult" class="space-y-4">
+                        <UFormField label="Pilih Tahun Ajaran untuk Simulasi" required>
+                            <div class="flex gap-2">
+                                <USelectMenu 
+                                    v-model="selectedTahunAjaranForDraft" 
+                                    :items="tahunAjaranOptionsForDraft" 
+                                    value-attribute="value"
+                                    option-attribute="label"
+                                    placeholder="Pilih Tahun Ajaran"
+                                    class="flex-1"
+                                />
+                                <UButton 
+                                    color="primary" 
+                                    :loading="isGeneratingDraft" 
+                                    :disabled="!selectedTahunAjaranForDraft"
+                                    @click="handleGetSmartDraft"
+                                >
+                                    Generate Draft
+                                </UButton>
+                            </div>
+                        </UFormField>
+                    </div>
+
+                    <div v-else class="space-y-6">
+                        <!-- Summary Stats -->
+                        <div class="grid grid-cols-3 gap-4">
+                            <div class="p-3 bg-slate-50 rounded-lg border border-slate-200 text-center">
+                                <p class="text-xs text-slate-500 uppercase font-semibold">Belum Ditempatkan</p>
+                                <p class="text-xl font-bold text-slate-900">{{ smartDraftResult.summary.total_unplaced_students }}</p>
+                            </div>
+                            <div class="p-3 bg-success-50 rounded-lg border border-success-100 text-center">
+                                <p class="text-xs text-success-600 uppercase font-semibold">Berhasil Dicocokkan</p>
+                                <p class="text-xl font-bold text-success-700">{{ smartDraftResult.summary.total_matched }}</p>
+                            </div>
+                            <div class="p-3 bg-warning-50 rounded-lg border border-warning-100 text-center">
+                                <p class="text-xs text-warning-600 uppercase font-semibold">Sisa Siswa</p>
+                                <p class="text-xl font-bold text-warning-700">{{ smartDraftResult.summary.total_remaining }}</p>
+                            </div>
+                        </div>
+
+                        <!-- Draft Table -->
+                        <div class="max-h-[400px] overflow-y-auto border border-slate-200 rounded-lg">
+                            <table class="w-full text-sm text-left">
+                                <thead class="bg-slate-50 text-slate-600 sticky top-0 border-b border-slate-200">
+                                    <tr>
+                                        <th class="px-4 py-2">Siswa</th>
+                                        <th class="px-4 py-2">Rekomendasi Perusahaan</th>
+                                        <th class="px-4 py-2">Kecocokan</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-200">
+                                    <tr v-for="(draft, idx) in smartDraftResult.drafts" :key="idx">
+                                        <td class="px-4 py-3">
+                                            <p class="font-medium text-slate-900">{{ draft.nama_siswa }}</p>
+                                            <p class="text-xs text-slate-500">{{ draft.jurusan }}</p>
+                                        </td>
+                                        <td class="px-4 py-3">
+                                            <p class="font-medium text-slate-900">{{ draft.nama_perusahaan }}</p>
+                                            <p class="text-xs text-slate-500">{{ draft.bidang_usaha }}</p>
+                                        </td>
+                                        <td class="px-4 py-3">
+                                            <UBadge size="xs" color="success" variant="subtle">MATCHED</UBadge>
+                                        </td>
+                                    </tr>
+                                    <tr v-if="smartDraftResult.drafts.length === 0">
+                                        <td colspan="3" class="px-4 py-8 text-center text-slate-500 italic">
+                                            Tidak ada kecocokan otomatis yang ditemukan.
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="flex justify-between items-center bg-sky-50 p-4 rounded-lg border border-sky-100">
+                            <p class="text-sm text-sky-800">
+                                <Icon name="lucide:info" class="w-4 h-4 inline mr-1" />
+                                Draft ini bersifat simulasi dan tidak disimpan ke database secara otomatis.
+                            </p>
+                            <UButton color="primary" variant="ghost" @click="smartDraftResult = null">
+                                Reset Simulasi
+                            </UButton>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-end gap-3 mt-6">
+                        <UButton color="neutral" variant="ghost" @click="isSmartDraftModalOpen = false">
+                            Tutup
                         </UButton>
                     </div>
                 </div>

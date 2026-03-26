@@ -18,7 +18,11 @@ export default defineNuxtConfig({
     },
   },
 
-  plugins: ["~/plugins/pinia.ts", "~/plugins/axios.ts", "~/plugins/sweetalert.client.ts"],
+  plugins: [
+    "~/plugins/pinia.ts",
+    "~/plugins/axios.ts",
+    "~/plugins/sweetalert.client.ts",
+  ],
   css: ["~/assets/css/main.css"],
   modules: [
     "@nuxt/ui",
@@ -54,6 +58,6 @@ export default defineNuxtConfig({
     preload: true,
   },
   routeRules: {
-    "/": { prerender: true },
+    // Remove prerender for "/" to fix "closed or destroyed stream" error
   },
 });

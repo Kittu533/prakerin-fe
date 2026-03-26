@@ -45,6 +45,7 @@ export async function apiFetch<T>(
   // Create axios instance
   const instance = axios.create({
     baseURL,
+    withCredentials: true,
     headers: {
       'Content-Type': 'application/json',
     },
@@ -95,22 +96,16 @@ export async function apiFetch<T>(
         console.warn('[API Interceptor] 401/403 detected, attempting token refresh...');
         
         try {
-          // Try to refresh token
-          const refreshToken = dataStore.refreshToken || localStorage.getItem('refreshToken');
-          if (refreshToken) {
-            const { data: refreshResponse } = await axios.post(`${baseURL}/auth/refresh`, {
-              refreshToken
-            });
+          // Try to refresh token (browser will send refreshToken cookie automatically)
+          const { data: refreshResponse } = await instance.post('/auth/refresh');
+          
+          if (refreshResponse.success && refreshResponse.data) {
+            // Update access token in store
+            dataStore.setToken(refreshResponse.data.accessToken);
             
-            if (refreshResponse.success && refreshResponse.data) {
-              // Update tokens
-              dataStore.setToken(refreshResponse.data.accessToken);
-              dataStore.setRefreshToken(refreshResponse.data.refreshToken);
-              
-              // Retry original request with new token
-              originalRequest.headers['Authorization'] = `Bearer ${refreshResponse.data.accessToken}`;
-              return instance(originalRequest);
-            }
+            // Retry original request with new token
+            originalRequest.headers['Authorization'] = `Bearer ${refreshResponse.data.accessToken}`;
+            return instance(originalRequest);
           }
         } catch (refreshError) {
           console.error('[API Interceptor] Token refresh failed:', refreshError);

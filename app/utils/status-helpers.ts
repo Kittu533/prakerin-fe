@@ -6,10 +6,20 @@
  * Status configuration mapping
  */
 export const STATUS_CONFIG = {
+  siswa: {
+    aktif: { color: 'success', label: 'Aktif', icon: 'lucide:user-check' },
+    lulus: { color: 'primary', label: 'Lulus', icon: 'lucide:graduation-cap' },
+    pindah: { color: 'warning', label: 'Pindah', icon: 'lucide:arrow-right-circle' },
+    dikeluarkan: { color: 'error', label: 'Dikeluarkan', icon: 'lucide:user-x' },
+  },
   penempatan: {
-    aktif: { color: 'success', label: 'Aktif', icon: 'lucide:check-circle' },
-    selesai: { color: 'primary', label: 'Selesai', icon: 'lucide:flag' },
-    dibatalkan: { color: 'error', label: 'Dibatalkan', icon: 'lucide:x-circle' },
+    aktif: { color: 'success', label: 'PKL Aktif', icon: 'lucide:check-circle' },
+    selesai: { color: 'primary', label: 'PKL Selesai', icon: 'lucide:flag' },
+    batal: { color: 'error', label: 'PKL Batal', icon: 'lucide:x-circle' },
+    // Student placement status
+    belum_pkl: { color: 'warning', label: 'Belum PKL', icon: 'lucide:user-plus' },
+    akan_pkl: { color: 'info', label: 'Akan PKL', icon: 'lucide:clock' },
+    expired: { color: 'neutral', label: 'Expired', icon: 'lucide:alert-triangle' },
   },
   pengajuan: {
     menunggu: { color: 'warning', label: 'Menunggu', icon: 'lucide:clock' },
@@ -27,7 +37,7 @@ export const STATUS_CONFIG = {
 } as const
 
 export type StatusType = keyof typeof STATUS_CONFIG
-export type StatusValue = 'success' | 'primary' | 'error' | 'warning' | 'neutral'
+export type StatusValue = 'success' | 'primary' | 'error' | 'warning' | 'neutral' | 'info'
 
 /**
  * Get status color
@@ -81,11 +91,21 @@ export function getStatusConfig(
  * Status options for select/filter
  */
 export const STATUS_OPTIONS: Record<string, { label: string; value: string }[]> = {
-  penempatan: [
-    { label: 'Semua', value: 'all' },
+  siswa: [
+    { label: 'Semua Status', value: 'all' },
     { label: 'Aktif', value: 'aktif' },
-    { label: 'Selesai', value: 'selesai' },
-    { label: 'Dibatalkan', value: 'dibatalkan' },
+    { label: 'Lulus', value: 'lulus' },
+    { label: 'Pindah', value: 'pindah' },
+    { label: 'Dikeluarkan', value: 'dikeluarkan' },
+  ],
+  penempatan: [
+    { label: 'Semua Status', value: 'all' },
+    { label: 'PKL Aktif', value: 'aktif' },
+    { label: 'PKL Selesai', value: 'selesai' },
+    { label: 'PKL Batal', value: 'batal' },
+    { label: 'Belum PKL', value: 'belum_pkl' },
+    { label: 'Akan PKL', value: 'akan_pkl' },
+    { label: 'Expired', value: 'expired' },
   ],
   pengajuan: [
     { label: 'Semua', value: 'all' },

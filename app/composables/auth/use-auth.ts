@@ -47,7 +47,6 @@ export function useAuth() {
 
       if (response.success && response.data) {
         dataStore.setToken(response.data.accessToken, "");
-        dataStore.setRefreshToken(response.data.refreshToken);
         dataStore.setProfile(response.data.user);
 
         console.debug("[useAuth] Login successful:", {
@@ -144,23 +143,19 @@ export function useAuth() {
   // REFRESH TOKEN
   // =============================================
   async function refreshToken(): Promise<boolean> {
-    const currentRefreshToken = dataStore.refreshToken;
-    if (!currentRefreshToken) return false;
-
     try {
       const { data: response } = await apiFetch<AuthRefreshResponse>(
         "AuthService",
         "/refresh",
         {
           method: "POST",
-          data: { refreshToken: currentRefreshToken },
+          // refreshToken is sent via httpOnly cookie
         },
         false,
       );
 
       if (response.success && response.data) {
         dataStore.setToken(response.data.accessToken, "");
-        dataStore.setRefreshToken(response.data.refreshToken);
         return true;
       }
 

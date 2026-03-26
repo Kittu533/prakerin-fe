@@ -218,6 +218,7 @@ const pageTitle = computed(() => {
         "/admin/master/companies": "Perusahaan",
         "/admin/master/mentors": "Mentor Industri",
         "/admin/placement/smart-draft": "Smart Placement Draft",
+        "/admin/placement/overview": "Overview Siswa PKL",
         "/admin/archive": "Arsip Penempatan",
     };
 
@@ -254,6 +255,7 @@ const menuItems: MenuItem[] = [
         badgeColor: "warning",
     },
     { to: "/admin/placement", icon: "lucide:map-pin", label: "Penempatan" },
+    { to: "/admin/placement/overview", icon: "lucide:users", label: "Overview Siswa" },
     { to: "/admin/placement/smart-draft", icon: "lucide:wand-2", label: "Smart Draft" },
     { to: "/admin/monitoring", icon: "lucide:activity", label: "Monitoring" },
     { to: "/admin/archive", icon: "lucide:archive", label: "Arsip" },
