@@ -13,6 +13,31 @@ export interface GuruProfile {
   nama_guru: string;
   email?: string;
   no_hp?: string;
+  jenis_kelamin?: string;
+  tempat_lahir?: string;
+  tanggal_lahir?: string;
+  alamat?: string;
+  status_aktif?: boolean;
+}
+
+export interface GuruListResponse {
+  success: boolean;
+  data: GuruProfile[];
+  page: number;
+  limit: number;
+  total: number;
+  message?: string;
+}
+
+export interface GuruImportResult {
+  success: number;
+  failed: number;
+  errors: string[];
+  importedGurus: Array<{
+    nip: string;
+    nama_guru: string;
+    defaultPassword?: string;
+  }>;
 }
 
 export interface SiswaBimbingan {
@@ -85,6 +110,162 @@ export function useGuruApi() {
   }
 
   /**
+   * Get all guru (for admin/tata_usaha)
+   */
+  async function getAllGuru(params?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+  }): Promise<{ success: boolean; data?: GuruListResponse; message: string }> {
+    const searchParams = new URLSearchParams();
+    if (params?.page) searchParams.append("page", params.page.toString());
+    if (params?.limit) searchParams.append("limit", params.limit.toString());
+    if (params?.search) searchParams.append("search", params.search);
+
+    const queryString = searchParams.toString();
+    const endpoint = queryString ? `/guru?${queryString}` : "/guru";
+
+    try {
+      const response = await apiFetch<GuruListResponse>(
+        "CoreService",
+        endpoint,
+        { method: "GET" },
+        true
+      );
+
+      if (response.status >= 200 && response.status < 300) {
+        return {
+          success: true,
+          data: response.data,
+          message: "Success",
+        };
+      }
+      return {
+        success: false,
+        message: response.data?.message || `HTTP ${response.status}`,
+      };
+    } catch (error: any) {
+      console.error("[GuruAPI] Error fetching guru:", error);
+      return {
+        success: false,
+        message: error?.message || "Network error",
+      };
+    }
+  }
+
+  /**
+   * Import guru from CSV/Excel data
+   */
+  async function importGuru(data: Array<{
+    nip: string;
+    nama_guru: string;
+    email?: string;
+    no_hp?: string;
+  }>): Promise<{ success: boolean; data?: GuruImportResult; message: string }> {
+    try {
+      const response = await apiFetch<{ success: boolean; data: GuruImportResult; message?: string }>(
+        "CoreService",
+        "/guru/import",
+        {
+          method: "POST",
+          data: { data },
+        },
+        true
+      );
+
+      if (response.status >= 200 && response.status < 300 && response.data?.success) {
+        return {
+          success: true,
+          data: response.data.data,
+          message: response.data.message || "Import berhasil",
+        };
+      }
+      return {
+        success: false,
+        message: response.data?.message || "Import gagal",
+      };
+    } catch (error: any) {
+      console.error("[GuruAPI] Error importing guru:", error);
+      return {
+        success: false,
+        message: error?.message || "Network error",
+      };
+    }
+  }
+
+  /**
+   * Export guru to CSV/Excel
+   */
+  async function exportGuru(ids?: string[]): Promise<{ success: boolean; data?: any[]; message: string }> {
+    const searchParams = new URLSearchParams();
+    if (ids && ids.length > 0) {
+      searchParams.append("ids", ids.join(","));
+    }
+
+    const queryString = searchParams.toString();
+    const endpoint = queryString ? `/guru/export?${queryString}` : "/guru/export";
+
+    try {
+      const response = await apiFetch<{ success: boolean; data: any[]; message?: string }>(
+        "CoreService",
+        endpoint,
+        { method: "GET" },
+        true
+      );
+
+      if (response.status >= 200 && response.status < 300 && response.data?.success) {
+        return {
+          success: true,
+          data: response.data.data,
+          message: response.data.message || "Export berhasil",
+        };
+      }
+      return {
+        success: false,
+        message: response.data?.message || "Export gagal",
+      };
+    } catch (error: any) {
+      console.error("[GuruAPI] Error exporting guru:", error);
+      return {
+        success: false,
+        message: error?.message || "Network error",
+      };
+    }
+  }
+
+  /**
+   * Download import template
+   */
+  async function downloadTemplate(): Promise<{ success: boolean; data?: any[]; message: string }> {
+    try {
+      const response = await apiFetch<{ success: boolean; data: any[]; message?: string }>(
+        "CoreService",
+        "/guru/template",
+        { method: "GET" },
+        true
+      );
+
+      if (response.status >= 200 && response.status < 300 && response.data?.success) {
+        return {
+          success: true,
+          data: response.data.data,
+          message: "Template berhasil diunduh",
+        };
+      }
+      return {
+        success: false,
+        message: response.data?.message || "Gagal mengunduh template",
+      };
+    } catch (error: any) {
+      console.error("[GuruAPI] Error downloading template:", error);
+      return {
+        success: false,
+        message: error?.message || "Network error",
+      };
+    }
+  }
+
+  /**
    * Get siswa bimbingan (students under guru's supervision)
    * Uses penempatan API filtered by guru_pembimbing_id
    */
@@ -98,7 +279,7 @@ export function useGuruApi() {
     if (params?.limit) query.append("limit", String(params.limit));
     if (params?.status_penempatan) query.append("status_penempatan", params.status_penempatan);
 
-    const { data } = await apiFetch<PaginatedResponse<SiswaBimbingan>>(
+    const { data } = await apiFetch<PaginatedResponse<SiswaBimbingan>(
       "PlacementService",
       `/penempatan/guru/me?${query.toString()}`,
       { method: "GET" },
@@ -193,7 +374,7 @@ export function useGuruApi() {
    * Get detail siswa bimbingan by penempatan ID
    */
   async function getDetailSiswaBimbingan(idPenempatan: string) {
-    const { data } = await apiFetch<SingleResponse<SiswaBimbingan>>(
+    const { data } = await apiFetch<SingleResponse<SiswaBimbingan>(
       "PlacementService",
       `/penempatan/${idPenempatan}`,
       { method: "GET" },
@@ -283,12 +464,15 @@ export function useGuruApi() {
 
   return {
     getProfile,
+    getAllGuru,
+    importGuru,
+    exportGuru,
+    downloadTemplate,
     getSiswaBimbingan,
     getDashboardStats,
     getAbsensiSiswa,
     getLogbookSiswa,
     getPenilaianSiswa,
-    // Detail page APIs
     getDetailSiswaBimbingan,
     getLogbookByPenempatan,
     getAbsensiByPenempatan,

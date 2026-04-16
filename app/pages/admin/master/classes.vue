@@ -3,22 +3,25 @@ import {
     useKelasApi,
     useJurusanApi,
     useTahunAjaranApi,
-    useTingkatApi,
     type Kelas,
     type Jurusan,
     type TahunAjaran,
-    type Tingkat,
 } from "~/composables/api/use-academic";
 import { h } from "vue";
 import type { ColumnDef } from "@tanstack/vue-table";
 
 definePageMeta({ layout: "admin" });
 
+const TINGKAT_OPTIONS = [
+    { kode_tingkat: 'X', label: 'X' },
+    { kode_tingkat: 'XI', label: 'XI' },
+    { kode_tingkat: 'XII', label: 'XII' },
+] as const;
+
 const toast = useToast();
 const kelasApi = useKelasApi();
 const jurusanApi = useJurusanApi();
 const tahunAjaranApi = useTahunAjaranApi();
-const tingkatApi = useTingkatApi();
 
 const loading = ref(true);
 const modalOpen = ref(false);
@@ -28,14 +31,13 @@ const processing = ref(false);
 const data = ref<Kelas[]>([]);
 const allJurusan = ref<Jurusan[]>([]);
 const allTahunAjaran = ref<TahunAjaran[]>([]);
-const allTingkat = ref<Tingkat[]>([]);
 
-const selectedJurusanId = ref<number | undefined>(undefined);
-const selectedTingkatId = ref<number | undefined>(undefined);
-const selectedTahunAjaranId = ref<number | undefined>(undefined);
+const selectedJurusanId = ref<string | undefined>(undefined);
+const selectedKodeTingkat = ref<string | undefined>(undefined);
+const selectedTahunAjaranId = ref<string | undefined>(undefined);
 
 const form = reactive({
-    id_kelas: null as number | null,
+    id_kelas: null as string | null,
     nama_kelas: "",
 });
 
@@ -75,7 +77,7 @@ const columns: ColumnDef<Kelas, any>[] = [
             return h(
                 "span",
                 { class: "text-sm text-slate-600" },
-                row.original.tingkat?.kode_tingkat || "-",
+                row.original.kode_tingkat || "-",
             );
         },
     },
@@ -165,14 +167,12 @@ async function fetchData() {
 
 async function fetchDropdownData() {
     try {
-        const [jurusanRes, tahunRes, tingkatRes] = await Promise.all([
+        const [jurusanRes, tahunRes] = await Promise.all([
             jurusanApi.getAll({ limit: 100 }),
             tahunAjaranApi.getAll({ limit: 100 }),
-            tingkatApi.getAll(),
         ]);
         if (jurusanRes.success) allJurusan.value = jurusanRes.data;
         if (tahunRes.success) allTahunAjaran.value = tahunRes.data;
-        if (tingkatRes.success) allTingkat.value = tingkatRes.data;
     } catch (error) {
         console.error("Failed to fetch dropdown data:", error);
     }
@@ -184,13 +184,13 @@ function openModal(item?: Kelas) {
         form.id_kelas = item.id_kelas;
         form.nama_kelas = item.nama_kelas;
         selectedJurusanId.value = item.id_jurusan;
-        selectedTingkatId.value = item.id_tingkat;
+        selectedKodeTingkat.value = item.kode_tingkat;
         selectedTahunAjaranId.value = item.id_tahun_ajaran;
     } else {
         form.id_kelas = null;
         form.nama_kelas = "";
         selectedJurusanId.value = undefined;
-        selectedTingkatId.value = undefined;
+        selectedKodeTingkat.value = undefined;
         selectedTahunAjaranId.value = undefined;
     }
     modalOpen.value = true;
@@ -200,7 +200,7 @@ async function save() {
     if (
         !form.nama_kelas ||
         !selectedJurusanId.value ||
-        !selectedTingkatId.value ||
+        !selectedKodeTingkat.value ||
         !selectedTahunAjaranId.value
     ) {
         toast.add({ title: "Lengkapi semua field", color: "error" });
@@ -213,7 +213,7 @@ async function save() {
             const response = await kelasApi.update(form.id_kelas, {
                 nama_kelas: form.nama_kelas,
                 id_jurusan: selectedJurusanId.value,
-                id_tingkat: selectedTingkatId.value,
+                kode_tingkat: selectedKodeTingkat.value,
                 id_tahun_ajaran: selectedTahunAjaranId.value,
             });
             if (response.success) {
@@ -230,7 +230,7 @@ async function save() {
             const response = await kelasApi.create({
                 nama_kelas: form.nama_kelas,
                 id_jurusan: selectedJurusanId.value,
-                id_tingkat: selectedTingkatId.value,
+                kode_tingkat: selectedKodeTingkat.value,
                 id_tahun_ajaran: selectedTahunAjaranId.value,
             });
             if (response.success) {
@@ -340,19 +340,19 @@ useHead({ title: "Kelas | Admin" });
                         </UFormField>
                         <UFormField label="Tingkat" required>
                             <USelectMenu
-                                v-model="selectedTingkatId"
-                                :items="allTingkat"
-                                value-key="id_tingkat"
+                                v-model="selectedKodeTingkat"
+                                :items="TINGKAT_OPTIONS"
+                                value-key="kode_tingkat"
                                 class="w-full"
                             >
                                 <template #default>{{
-                                    allTingkat.find(
+                                    TINGKAT_OPTIONS.find(
                                         (t) =>
-                                            t.id_tingkat === selectedTingkatId,
-                                    )?.kode_tingkat || "Pilih Tingkat"
+                                            t.kode_tingkat === selectedKodeTingkat,
+                                    )?.label || "Pilih Tingkat"
                                 }}</template>
                                 <template #item="{ item }">{{
-                                    item.kode_tingkat
+                                    item.label
                                 }}</template>
                             </USelectMenu>
                         </UFormField>

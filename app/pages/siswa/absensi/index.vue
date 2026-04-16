@@ -114,7 +114,7 @@
         >
             <div class="relative group min-h-[320px] lg:min-h-[400px]">
                 <ClientOnly>
-                    <div v-if="isMounted && officeCoords" style="height: 320px; width: 100%" class="lg:h-80">
+                    <div v-if="isMounted && hasValidOfficeCoords" style="height: 320px; width: 100%" class="lg:h-80">
                         <LMap
                             ref="map"
                             :zoom="15"
@@ -184,6 +184,13 @@
                                 </LMarker>
                             </template>
                         </LMap>
+                    </div>
+                    <div v-else-if="isMounted" class="h-64 lg:h-80 bg-slate-100 flex items-center justify-center">
+                        <div class="text-center">
+                            <Icon name="lucide:map-pin-off" class="w-10 h-10 text-slate-300 mx-auto mb-2" />
+                            <p class="text-xs text-slate-400 font-medium tracking-wide">Lokasi PKL belum diatur</p>
+                            <p class="text-[10px] text-slate-400 mt-1">Hubungi admin untuk mengatur koordinat perusahaan</p>
+                        </div>
                     </div>
                     <template #fallback>
                         <div
@@ -463,9 +470,21 @@ const userCoords = computed(() => {
 // Center coordinate for the map - Ensure no NaN
 const mapCenter = computed(() => {
     if (userCoords.value) return userCoords.value;
-    if (officeCoords.value) return officeCoords.value;
+    if (officeCoords.value && isValidCoords(officeCoords.value)) return officeCoords.value;
     return DEFAULT_COORDS;
 });
+
+// Validate coordinates
+function isValidCoords(coords: [number, number] | null): coords is [number, number] {
+    if (!coords) return false;
+    const [lat, lng] = coords;
+    return typeof lat === 'number' && !isNaN(lat) && 
+           typeof lng === 'number' && !isNaN(lng) &&
+           lat >= -90 && lat <= 90 && 
+           lng >= -180 && lng <= 180;
+}
+
+const hasValidOfficeCoords = computed(() => isValidCoords(officeCoords.value));
 
 // Watch for coordinates to stop locating state
 watch(userCoords, (newCoords) => {
@@ -618,7 +637,7 @@ async function handleCheckIn() {
     submitting.value = true;
     try {
         const res = await absensiApi.create({
-            id_penempatan: Number(penempatan.value.id_penempatan),
+            id_penempatan: penempatan.value.id_penempatan,
             tanggal: new Date().toISOString().split("T")[0],
             status_absensi: "hadir",
             metode_absensi: "gps",
@@ -763,6 +782,11 @@ onMounted(() => {
     });
     loadData();
     requestLocation();
+});
+
+onUnmounted(() => {
+    isMounted.value = false;
+    pause();
 });
 
 useHead({ title: "Absensi | Siswa PKL" });

@@ -119,12 +119,6 @@ export interface SiswaPenempatan {
     email?: string;
     no_hp?: string;
   };
-  mentor?: {
-    id_mentor: string;
-    nama_mentor: string;
-    email?: string;
-    no_hp?: string;
-  };
   tahun_ajaran?: {
     nama_tahun_ajaran: string;
   };

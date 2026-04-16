@@ -10,6 +10,7 @@ const toast = useToast();
 const guruApi = useGuruApi();
 
 const loading = ref(true);
+const syncingAccounts = ref(false);
 
 const data = ref<Guru[]>([]);
 
@@ -33,6 +34,38 @@ const getInitials = (nama: string) => {
         .slice(0, 2)
         .toUpperCase();
 };
+
+async function syncAccounts() {
+    if (!confirm("Sinkronkan akun untuk semua guru yang belum memiliki akun?")) return;
+    
+    syncingAccounts.value = true;
+    try {
+        const response = await guruApi.syncAccounts();
+        if (response.success) {
+            const result = response.data;
+            if (result.processed > 0) {
+                toast.add({ 
+                    title: "Sinkronisasi berhasil", 
+                    description: `${result.processed} akun guru berhasil dibuat/diperbarui`,
+                    color: "success" 
+                });
+            } else {
+                toast.add({ 
+                    title: "Tidak ada perubahan", 
+                    description: "Semua guru sudah memiliki akun",
+                    color: "info" 
+                });
+            }
+        } else {
+            toast.add({ title: "Gagal sinkronisasi", color: "error" });
+        }
+    } catch (error) {
+        console.error("Failed to sync accounts:", error);
+        toast.add({ title: "Gagal sinkronisasi akun", color: "error" });
+    } finally {
+        syncingAccounts.value = false;
+    }
+}
 
 const columns: ColumnDef<Guru, any>[] = [
     {
@@ -249,13 +282,24 @@ useHead({ title: "Guru Pembimbing | Admin" });
                     Kelola data guru pembimbing PKL
                 </p>
             </div>
-            <UButton
-                color="primary"
-                icon="lucide:plus"
-                @click="navigateToCreate"
-            >
-                Tambah Guru
-            </UButton>
+            <div class="flex gap-2">
+                <UButton
+                    color="neutral"
+                    variant="outline"
+                    icon="lucide:refresh-cw"
+                    :loading="syncingAccounts"
+                    @click="syncAccounts"
+                >
+                    Sync Akun
+                </UButton>
+                <UButton
+                    color="primary"
+                    icon="lucide:plus"
+                    @click="navigateToCreate"
+                >
+                    Tambah Guru
+                </UButton>
+            </div>
         </div>
 
         <CommonAppDataTable

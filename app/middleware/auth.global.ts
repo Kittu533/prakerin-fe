@@ -62,8 +62,4 @@ export default defineNuxtRouteMiddleware((to) => {
     console.warn("[Auth Middleware] Siswa access denied for role:", role);
     return navigateTo("/login");
   }
-  if (path.startsWith("/mentor") && role !== "mentor") {
-    console.warn("[Auth Middleware] Mentor access denied for role:", role);
-    return navigateTo("/siswa");
-  }
 });

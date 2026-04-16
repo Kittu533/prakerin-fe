@@ -1,10 +1,9 @@
 /**
  * Partner Service API Composable
- * Handles: Perusahaan, Mentor
+ * Handles: Perusahaan
  *
  * API Endpoints (via Gateway):
  * - /api/perusahaan
- * - /api/mentor
  */
 import { apiFetch } from "~/composables/api-fetch";
 
@@ -25,23 +24,6 @@ export interface Perusahaan {
   tahun_mulai_kerjasama?: number;
   created_at?: string;
   updated_at?: string;
-}
-
-export interface Mentor {
-  id_mentor: string;
-  nama_mentor: string;
-  jabatan?: string;
-  email?: string;
-  no_hp?: string;
-  id_perusahaan: string;
-  status_aktif?: boolean;
-  perusahaan?: {
-    id_perusahaan: string;
-    nama_perusahaan: string;
-  };
-  created_at?: string;
-  updated_at?: string;
-  generated_password?: string;
 }
 
 export interface PaginatedResponse<T> {
@@ -146,112 +128,4 @@ export function usePerusahaanApi() {
   }
 
   return { getAll, getById, create, update, remove };
-}
-
-// =============================================
-// MENTOR API
-// =============================================
-export function useMentorApi() {
-  async function getAll(params?: {
-    page?: number;
-    limit?: number;
-    id_perusahaan?: string;
-  }) {
-    const query = new URLSearchParams();
-    if (params?.page) query.append("page", String(params.page));
-    if (params?.limit) query.append("limit", String(params.limit));
-    if (params?.id_perusahaan)
-      query.append("id_perusahaan", String(params.id_perusahaan));
-
-    const { data } = await apiFetch<PaginatedResponse<Mentor>>(
-      "PartnerService",
-      `/mentor?${query.toString()}`,
-      { method: "GET" },
-      true,
-    );
-    return data;
-  }
-
-  async function getById(id: string) {
-    const { data } = await apiFetch<SingleResponse<Mentor>>(
-      "PartnerService",
-      `/mentor/${id}`,
-      { method: "GET" },
-      true,
-    );
-    return data;
-  }
-
-  async function create(payload: {
-    nama_mentor: string;
-    jabatan?: string;
-    email: string;
-    no_hp?: string;
-    id_perusahaan: string;
-  }) {
-    const { data } = await apiFetch<SingleResponse<Mentor>>(
-      "PartnerService",
-      "/mentor",
-      { method: "POST", data: payload },
-      true,
-    );
-    return data;
-  }
-
-  async function update(
-    id: string,
-    payload: Partial<{
-      nama_mentor: string;
-      jabatan: string;
-      email: string;
-      no_hp: string;
-      id_perusahaan: string;
-    }>,
-  ) {
-    const { data } = await apiFetch<SingleResponse<Mentor>>(
-      "PartnerService",
-      `/mentor/${id}`,
-      { method: "PUT", data: payload },
-      true,
-    );
-    return data;
-  }
-
-  async function remove(id: string) {
-    const { data } = await apiFetch<SingleResponse<Mentor>>(
-      "PartnerService",
-      `/mentor/${id}`,
-      { method: "DELETE" },
-      true,
-    );
-    return data;
-  }
-
-  async function resetPassword(id: string) {
-    const { data } = await apiFetch<
-      SingleResponse<{ generated_password: string; newPassword?: string }>
-    >(
-      "PartnerService",
-      `/mentor/${id}/reset-password`,
-      { method: "POST" },
-      true,
-    );
-    return data;
-  }
-
-  /**
-   * Get current mentor's profile (for authenticated mentor)
-   * Uses /mentor/me endpoint which allows mentors to access their own profile
-   */
-  async function getMe() {
-    const { data } = await apiFetch<SingleResponse<Mentor>>(
-      "PartnerService",
-      `/mentor/me`,
-      { method: "GET" },
-      true,
-    );
-    return data;
-  }
-
-  return { getAll, getById, getMe, create, update, remove, resetPassword };
 }

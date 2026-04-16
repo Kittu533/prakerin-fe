@@ -10,7 +10,7 @@ import { apiFetch } from "~/composables/api-fetch";
 export interface User {
   id: string;
   identifier: string;
-  role: "admin" | "guru" | "siswa" | "mentor";
+  role: "admin" | "guru" | "siswa";
   entity_id: string;
   entity_type: string;
   is_active: boolean;

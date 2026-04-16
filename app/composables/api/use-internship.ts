@@ -52,13 +52,6 @@ export interface Penempatan {
     nama_perusahaan: string;
     alamat?: string;
     bidang_usaha?: string;
-    mentor?: Array<{
-      id_mentor: string;
-      nama_mentor: string;
-      jabatan?: string;
-      email?: string;
-      no_hp?: string;
-    }>;
   };
   guru?: {
     id_guru: string;
@@ -203,6 +196,7 @@ export function usePenempatanApi() {
     page?: number;
     limit?: number;
     status?: string;
+    siswa_id?: string;
     id_perusahaan?: string;
     id_guru?: string;
     id_tahun_ajaran?: string;
@@ -211,6 +205,7 @@ export function usePenempatanApi() {
     if (params?.page) query.append("page", String(params.page));
     if (params?.limit) query.append("limit", String(params.limit));
     if (params?.status) query.append("status", params.status);
+    if (params?.siswa_id) query.append("siswa_id", String(params.siswa_id));
     if (params?.id_perusahaan)
       query.append("id_perusahaan", String(params.id_perusahaan));
     if (params?.id_guru) query.append("id_guru", String(params.id_guru));
@@ -272,52 +267,6 @@ export function usePenempatanApi() {
   }
 
   // Mentor-specific: Get students at mentor's company
-  async function getMentorStudents(params?: { page?: number; limit?: number }) {
-    const query = new URLSearchParams();
-    if (params?.page) query.append("page", String(params.page));
-    if (params?.limit) query.append("limit", String(params.limit));
-
-    const { data } = await apiFetch<
-      PaginatedResponse<
-        Penempatan & {
-          absensi: { status_absensi: string }[];
-          logbook: { id_logbook: number; status_persetujuan: string }[];
-          penilaian: { nilai_akhir: number } | null;
-        }
-      >
-    >(
-      "PlacementService",
-      `/penempatan/mentor/me?${query.toString()}`,
-      { method: "GET" },
-      true,
-    );
-    return data;
-  }
-
-  // Mentor-specific: Get student detail
-  async function getMentorStudentDetail(id: string) {
-    const { data } = await apiFetch<
-      SingleResponse<
-        Penempatan & {
-          absensi: any[];
-          logbook: any[];
-          penilaian: any;
-          stats: {
-            kehadiran: number;
-            total_logbook: number;
-            nilai: number | null;
-          };
-        }
-      >
-    >(
-      "PlacementService",
-      `/penempatan/mentor/siswa/${id}`,
-      { method: "GET" },
-      true,
-    );
-    return data;
-  }
-
   // Guru-specific: Get students mentored by this guru
   async function getMyStudents(params?: {
     page?: number;
@@ -342,7 +291,6 @@ export function usePenempatanApi() {
           perusahaan?: {
             id_perusahaan: string;
             nama_perusahaan: string;
-            mentor?: { nama: string };
           };
           absensi: { status_absensi: string }[];
           logbook: { id_logbook: number; status_persetujuan: string }[];

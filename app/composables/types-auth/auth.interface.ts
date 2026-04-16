@@ -6,7 +6,7 @@
 // =============================================
 // USER ROLES
 // =============================================
-export type UserRole = 'admin' | 'guru' | 'siswa' | 'mentor';
+export type UserRole = 'admin' | 'guru' | 'siswa' | 'tata_usaha';
 
 // =============================================
 // LOGIN

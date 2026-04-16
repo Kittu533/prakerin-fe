@@ -14,7 +14,6 @@ export interface DashboardStats {
   total_penempatan_selesai: number;
   total_perusahaan: number;
   total_guru: number;
-  total_mentor: number;
   masalah_absensi: number;
 }
 

@@ -11,7 +11,7 @@
                             <h1 class="font-bold text-slate-900 text-sm">
                                 SIM Prakerin
                             </h1>
-                            <p class="text-xs text-slate-500">Admin Panel</p>
+                            <p class="text-xs text-slate-500">Admin Humas</p>
                         </div>
                     </div>
 
@@ -19,65 +19,8 @@
                     <nav class="flex-1 overflow-y-auto py-4 px-3">
                         <div class="space-y-1">
                             <template v-for="item in menuItems" :key="item.to || item.label">
-                                <!-- Regular menu item -->
-                                <NuxtLink v-if="!item.children" :to="item.to"
-                                    class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors"
-                                    :class="isActive(item.to!)
-                                            ? 'bg-sky-50 text-sky-600'
-                                            : 'text-slate-600 hover:bg-slate-50'
-                                        ">
-                                    <Icon :name="item.icon" class="w-5 h-5" />
-                                    <span>{{ item.label }}</span>
-                                    <UBadge v-if="item.badge" :color="item.badgeColor || 'primary'" variant="subtle"
-                                        size="xs" class="ml-auto">{{ item.badge }}</UBadge>
-                                </NuxtLink>
-
-                                <!-- Menu item with children (expandable) -->
-                                <div v-else>
-                                    <button @click="toggleSubmenu(item.label)"
-                                        class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors"
-                                        :class="isSubmenuActive(item.children)
-                                                ? 'bg-sky-50 text-sky-600'
-                                                : 'text-slate-600 hover:bg-slate-50'
-                                            ">
-                                        <Icon :name="item.icon" class="w-5 h-5" />
-                                        <span>{{ item.label }}</span>
-                                        <Icon
-                                            :name="expandedMenus.includes(item.label) ? 'lucide:chevron-down' : 'lucide:chevron-right'"
-                                            class="w-4 h-4 ml-auto transition-transform" />
-                                    </button>
-
-                                    <!-- Submenu items -->
-                                    <div v-show="expandedMenus.includes(item.label)" class="ml-8 mt-1 space-y-1">
-                                        <NuxtLink v-for="child in item.children" :key="child.to" :to="child.to"
-                                            class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors"
-                                            :class="isActive(child.to!)
-                                                    ? 'bg-sky-50 text-sky-600 font-medium'
-                                                    : 'text-slate-600 hover:bg-slate-50'
-                                                ">
-                                            <Icon :name="child.icon" class="w-4 h-4" />
-                                            <span>{{ child.label }}</span>
-                                        </NuxtLink>
-                                    </div>
-                                </div>
+                                <AdminSidebarMenuItem :item="item" :active-path="route.path" />
                             </template>
-                        </div>
-
-                        <div class="mt-6 pt-6 border-t border-slate-100">
-                            <p class="px-3 mb-2 text-xs font-semibold text-slate-400 uppercase">
-                                Master Data
-                            </p>
-                            <div class="space-y-1">
-                                <NuxtLink v-for="item in masterItems" :key="item.to" :to="item.to"
-                                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors"
-                                    :class="isActive(item.to)
-                                            ? 'bg-sky-50 text-sky-600 font-medium'
-                                            : 'text-slate-600 hover:bg-slate-50'
-                                        ">
-                                    <Icon :name="item.icon" class="w-4 h-4" />
-                                    <span>{{ item.label }}</span>
-                                </NuxtLink>
-                            </div>
                         </div>
                     </nav>
 
@@ -86,14 +29,14 @@
                         <div class="flex items-center gap-3 p-2 rounded-lg bg-slate-50">
                             <div
                                 class="w-9 h-9 rounded-lg bg-sky-500 flex items-center justify-center text-white font-semibold text-sm">
-                                AD
+                                AH
                             </div>
                             <div class="flex-1 min-w-0">
                                 <p class="text-sm font-medium text-slate-900 truncate">
-                                    Administrator
+                                    Admin Humas
                                 </p>
                                 <p class="text-xs text-slate-500">
-                                    Super Admin
+                                    Hubungan Masyarakat
                                 </p>
                             </div>
                             <UButton variant="ghost" color="neutral" size="xs" @click="handleLogout">
@@ -141,11 +84,11 @@
                                 class="hidden sm:flex items-center gap-2 p-1.5 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer">
                                 <div
                                     class="w-8 h-8 rounded-lg bg-sky-500 flex items-center justify-center text-white font-semibold text-sm">
-                                    AD
+                                    AH
                                 </div>
                                 <div class="text-left">
                                     <p class="text-sm font-medium text-slate-900">
-                                        Administrator
+                                        Admin Humas
                                     </p>
                                 </div>
                             </div>
@@ -193,7 +136,6 @@ const route = useRoute();
 const { showConfirmation, showSuccess } = useSweetAlert();
 
 const hasNotification = ref(true);
-const expandedMenus = ref<string[]>([]);
 
 const pageTitle = computed(() => {
     const titles: Record<string, string> = {
@@ -209,14 +151,6 @@ const pageTitle = computed(() => {
         "/admin/reporting/company": "Ketersediaan Kuota",
         "/admin/reporting/application": "Pengajuan Mandiri",
         "/admin/reporting/unplaced-students": "Siswa Belum Penempatan",
-        "/admin/master/academic-years": "Tahun Ajaran",
-        "/admin/master/departments": "Jurusan",
-        "/admin/master/levels": "Tingkat",
-        "/admin/master/classes": "Kelas",
-        "/admin/master/teachers": "Guru Pembimbing",
-        "/admin/master/students": "Siswa",
-        "/admin/master/companies": "Perusahaan",
-        "/admin/master/mentors": "Mentor Industri",
         "/admin/placement/smart-draft": "Smart Placement Draft",
         "/admin/placement/overview": "Overview Siswa PKL",
         "/admin/archive": "Arsip Penempatan",
@@ -255,11 +189,56 @@ const menuItems: MenuItem[] = [
         badgeColor: "warning",
     },
     { to: "/admin/placement", icon: "lucide:map-pin", label: "Penempatan" },
-    { to: "/admin/placement/overview", icon: "lucide:users", label: "Overview Siswa" },
-    { to: "/admin/placement/smart-draft", icon: "lucide:wand-2", label: "Smart Draft" },
     { to: "/admin/monitoring", icon: "lucide:activity", label: "Monitoring" },
     { to: "/admin/archive", icon: "lucide:archive", label: "Arsip" },
     { to: "/admin/users", icon: "lucide:users", label: "Kelola Akun" },
+    {
+        icon: "lucide:briefcase",
+        label: "SIAP PKL",
+        children: [
+            {
+                icon: "lucide:book-open",
+                label: "JURNAL PKL",
+                children: [
+                    { to: "/admin/siap-pkl/jurnal/isi", icon: "lucide:file-edit", label: "ISI JURNAL PKL" },
+                    { to: "/admin/siap-pkl/jurnal/monitoring", icon: "lucide:monitor", label: "MONITORING JURNAL" },
+                ]
+            },
+            { to: "/admin/siap-pkl/jurnal/iduka", icon: "lucide:file-text", label: "SURAT KE IDUKA" },
+            { to: "/admin/siap-pkl/jurnal/guru", icon: "lucide:file-text", label: "SURAT TUGAS GURU" },
+            { to: "/admin/siap-pkl/jurnal/murid", icon: "lucide:file-text", label: "SURAT TUGAS PKL MURID" },
+            { to: "/admin/siap-pkl/kelola-tempat", icon: "lucide:building-2", label: "KELOLA DATA TEMPAT PKL" },
+            { to: "/admin/siap-pkl/statistik", icon: "lucide:bar-chart-3", label: "STATISTIK PKL" },
+            { to: "/admin/siap-pkl/maps", icon: "lucide:map", label: "MAPS" },
+        ],
+    },
+    {
+        icon: "lucide:briefcase",
+        label: "Data Mitra",
+        children: [
+            {
+                to: "/admin/mitra/dudi",
+                icon: "lucide:building-2",
+                label: "Data DUDI PKL",
+            },
+            {
+                to: "/admin/mitra/mou",
+                icon: "lucide:file-signature",
+                label: "Data MOU",
+            },
+        ],
+    },
+    {
+        icon: "lucide:file-text",
+        label: "PERSURATAN UKK 2025/2026",
+        children: [
+            {
+                to: "/admin/siap-ukk/pengajuan-asesor",
+                icon: "lucide:user-check",
+                label: "PENGAJUAN ASESOR UKK 2026",
+            },
+        ],
+    },
     {
         icon: "lucide:bar-chart-3",
         label: "Laporan",
@@ -298,33 +277,6 @@ const menuItems: MenuItem[] = [
     },
 ];
 
-const masterItems = [
-    {
-        to: "/admin/master/academic-years",
-        icon: "lucide:calendar",
-        label: "Tahun Ajaran",
-    },
-    {
-        to: "/admin/master/departments",
-        icon: "lucide:layers",
-        label: "Jurusan",
-    },
-    { to: "/admin/master/levels", icon: "lucide:signal", label: "Tingkat" },
-    { to: "/admin/master/classes", icon: "lucide:school", label: "Kelas" },
-    { to: "/admin/master/teachers", icon: "lucide:user-check", label: "Guru" },
-    {
-        to: "/admin/master/students",
-        icon: "lucide:graduation-cap",
-        label: "Siswa",
-    },
-    {
-        to: "/admin/master/companies",
-        icon: "lucide:building",
-        label: "Perusahaan",
-    },
-    { to: "/admin/master/mentors", icon: "lucide:briefcase", label: "Mentor" },
-];
-
 const bottomNavItems = [
     { to: "/admin", icon: "lucide:home", label: "Home" },
     {
@@ -335,50 +287,13 @@ const bottomNavItems = [
     },
     { to: "/admin/placement", icon: "lucide:map-pin", label: "Penempatan" },
     { to: "/admin/users", icon: "lucide:users", label: "Akun" },
-    { to: "/admin/master/students", icon: "lucide:database", label: "Master" },
+    { to: "/admin/monitoring", icon: "lucide:activity", label: "Monitoring" },
 ];
-
-const isActive = (path: string) => {
-    if (path === "/admin") return route.path === "/admin";
-    return route.path.startsWith(path);
-};
-
-const isSubmenuActive = (children: any[]) => {
-    return children.some((child) => route.path.startsWith(child.to));
-};
-
-const toggleSubmenu = (label: string) => {
-    const index = expandedMenus.value.indexOf(label);
-    if (index > -1) {
-        expandedMenus.value.splice(index, 1);
-    } else {
-        expandedMenus.value.push(label);
-    }
-};
-
-// Auto-expand submenu if current route is a child
-watch(
-    () => route.path,
-    () => {
-        menuItems.forEach((item) => {
-            if (item.children && isSubmenuActive(item.children)) {
-                if (!expandedMenus.value.includes(item.label)) {
-                    expandedMenus.value.push(item.label);
-                }
-            }
-        });
-    },
-    { immediate: true }
-);
 
 const isActiveRoute = (path: string) => {
     if (path === "/admin") return route.path === "/admin";
-    if (path === "/admin/master/students")
-        return route.path.startsWith("/admin/master");
     return route.path.startsWith(path);
 };
-
-const logout = () => navigateTo("/login");
 
 async function handleLogout() {
     const result = await showConfirmation(

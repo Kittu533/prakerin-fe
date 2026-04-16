@@ -6,10 +6,10 @@
                 <div>
                     <p class="text-sky-100 text-sm">Selamat datang,</p>
                     <h1 class="text-xl lg:text-2xl font-bold mt-1">
-                        Administrator 👋
+                        Admin Humas 👋
                     </h1>
                     <p class="text-sky-100 text-sm mt-1">
-                        Panel Admin SIM Prakerin
+                        Panel Hubungan Masyarakat
                     </p>
                 </div>
                 <UButton
@@ -601,5 +601,5 @@ onMounted(() => {
     fetchDashboardData();
 });
 
-useHead({ title: "Dashboard | Admin" });
+useHead({ title: "Dashboard | Admin Humas" });
 </script>

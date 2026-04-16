@@ -79,21 +79,23 @@ export async function apiFetch<T>(
     }
   }
 
-  // Add response interceptor to handle 401/403 errors
+  // Add response interceptor to handle 401 errors only
   instance.interceptors.response.use(
     (response) => response,
     async (error) => {
       const originalRequest = error.config;
 
-      // If 401 or 403 and hasn't already tried to refresh
+      // Only retry on 401 (Unauthorized), not 403 (Forbidden)
+      // 401 = token expired/invalid -> try refresh
+      // 403 = no permission -> refresh won't help
       if (
-        (error.response?.status === 401 || error.response?.status === 403) &&
+        error.response?.status === 401 &&
         withToken &&
         !originalRequest._retry
       ) {
         originalRequest._retry = true;
         
-        console.warn('[API Interceptor] 401/403 detected, attempting token refresh...');
+        console.warn('[API Interceptor] 401 detected, attempting token refresh...');
         
         try {
           // Try to refresh token (browser will send refreshToken cookie automatically)
@@ -117,6 +119,11 @@ export async function apiFetch<T>(
           window.location.href = '/login';
         }
         return Promise.reject(error);
+      }
+      
+      // For 403 errors, just log and reject - don't redirect or clear auth
+      if (error.response?.status === 403) {
+        console.warn('[API Interceptor] 403 Forbidden - User does not have permission for this endpoint');
       }
       
       return Promise.reject(error);

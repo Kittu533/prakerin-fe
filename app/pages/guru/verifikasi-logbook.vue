@@ -116,15 +116,31 @@
     <template v-else>
       <!-- Filters -->
       <div class="bg-white rounded-xl border border-slate-200 p-4">
-        <div class="flex flex-col sm:flex-row gap-3">
-          <UInput v-model="search" placeholder="Cari kegiatan..." class="flex-1">
-            <template #leading>
-              <Icon name="lucide:search" class="w-4 h-4 text-slate-400" />
-            </template>
-          </UInput>
-          <USelectMenu v-model="filterStatus" :options="statusOptions" placeholder="Filter Status"
-            class="w-full sm:w-40" />
-          <USelectMenu v-model="itemsPerPage" :options="perPageOptions" class="w-full sm:w-28" />
+        <div class="flex flex-col gap-3">
+          <div class="flex flex-col sm:flex-row gap-3">
+            <UInput v-model="search" placeholder="Cari kegiatan..." class="flex-1">
+              <template #leading>
+                <Icon name="lucide:search" class="w-4 h-4 text-slate-400" />
+              </template>
+            </UInput>
+            <USelectMenu v-model="filterStatus" :options="statusOptions" placeholder="Filter Status"
+              class="w-full sm:w-40" />
+            <USelectMenu v-model="itemsPerPage" :options="perPageOptions" class="w-full sm:w-28" />
+          </div>
+          <div class="flex flex-col sm:flex-row gap-3 items-end">
+            <div class="flex-1">
+              <label class="text-xs font-medium text-slate-600 mb-1 block">Rentang Tanggal Export</label>
+              <div class="flex gap-2 items-center">
+                <UInput v-model="filterDateStart" type="date" class="flex-1" />
+                <span class="text-slate-400">-</span>
+                <UInput v-model="filterDateEnd" type="date" class="flex-1" />
+              </div>
+            </div>
+            <UButton color="primary" variant="outline" icon="lucide:download" :loading="exporting" :disabled="!selectedSiswa || logbooks.length === 0"
+              @click="exportToExcel">
+              Export Excel
+            </UButton>
+          </div>
         </div>
       </div>
 
@@ -269,6 +285,7 @@
 <script setup lang="ts">
 import { useGuruApi } from '~/composables/api/use-guru'
 import { useLogbookApi } from '~/composables/api/use-internship'
+import * as XLSX from 'xlsx-js-style'
 
 definePageMeta({ layout: 'guru' })
 
@@ -287,6 +304,9 @@ const selectedItem = ref<any>(null)
 const selectedSiswa = ref<any>(null)
 const currentPage = ref(1)
 const itemsPerPage = ref(10)
+const exporting = ref(false)
+const filterDateStart = ref('')
+const filterDateEnd = ref('')
 
 const statusOptions = ['Pending', 'Disetujui', 'Revisi']
 const perPageOptions = [5, 10, 25, 50]
@@ -312,7 +332,9 @@ const filteredLogbooks = computed(() => {
     const matchSearch = !search.value ||
       item.kegiatan.toLowerCase().includes(search.value.toLowerCase())
     const matchStatus = !filterStatus.value || item.status === filterStatus.value
-    return matchSearch && matchStatus
+    const matchDateStart = !filterDateStart.value || item.rawDate >= filterDateStart.value
+    const matchDateEnd = !filterDateEnd.value || item.rawDate <= filterDateEnd.value
+    return matchSearch && matchStatus && matchDateStart && matchDateEnd
   })
 })
 
@@ -335,6 +357,12 @@ const selectSiswa = async (siswa: any) => {
   loadingLogbook.value = true
   currentPage.value = 1
 
+  const today = new Date()
+  const oneMonthAgo = new Date(today)
+  oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1)
+  filterDateStart.value = oneMonthAgo.toISOString().split('T')[0]
+  filterDateEnd.value = today.toISOString().split('T')[0]
+
   try {
     const res = await getLogbooks({ id_penempatan: siswa.id_penempatan, limit: 100 })
     if (res?.data) {
@@ -343,6 +371,7 @@ const selectSiswa = async (siswa: any) => {
         kegiatan: l.judul_kegiatan || '-',
         deskripsi: l.isi_kegiatan || '-',
         tanggal: new Date(l.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }),
+        rawDate: new Date(l.tanggal).toISOString().split('T')[0],
         jamMulai: l.jam_mulai || '-',
         jamSelesai: l.jam_selesai || '-',
         status: mapStatus(l.status_persetujuan),
@@ -374,6 +403,8 @@ const backToList = () => {
   logbooks.value = []
   search.value = ''
   filterStatus.value = null
+  filterDateStart.value = ''
+  filterDateEnd.value = ''
   currentPage.value = 1
   recalcOverallStats()
 }
@@ -445,6 +476,149 @@ function recalcOverallStats() {
   stats.approved = a
   stats.revision = r
   stats.total = p + a + r
+}
+
+async function exportToExcel() {
+  const filteredData = filteredLogbooks.value
+  if (!selectedSiswa.value || filteredData.length === 0) {
+    toast.add({ title: 'Tidak ada data untuk diekspor', color: 'error' })
+    return
+  }
+
+  exporting.value = true
+
+  try {
+    const wb = XLSX.utils.book_new()
+
+    const formatDate = (dateStr: string) => {
+      if (!dateStr) return '-'
+      return new Date(dateStr).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
+    }
+    const dateRangeText = filterDateStart.value && filterDateEnd.value
+      ? `${formatDate(filterDateStart.value)} - ${formatDate(filterDateEnd.value)}`
+      : 'Semua Periode'
+
+    const filteredStats = {
+      total: filteredData.length,
+      approved: filteredData.filter(i => i.status === 'Disetujui').length,
+      pending: filteredData.filter(i => i.status === 'Pending').length,
+      revision: filteredData.filter(i => i.status === 'Revisi').length
+    }
+
+    const headerData = [
+      ['LAPORAN VERIFIKASI LOGBOOK PKL'],
+      [''],
+      ['Nama Siswa', selectedSiswa.value.nama],
+      ['Kelas', selectedSiswa.value.kelas],
+      ['Perusahaan', selectedSiswa.value.industri],
+      ['Periode', dateRangeText],
+      ['Tanggal Export', new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })],
+      [''],
+      ['RINGKASAN'],
+      ['Total Logbook', filteredStats.total.toString()],
+      ['Disetujui', filteredStats.approved.toString()],
+      ['Pending', filteredStats.pending.toString()],
+      ['Revisi', filteredStats.revision.toString()],
+      [''],
+    ]
+
+    const tableHeader = ['No', 'Tanggal', 'Judul Kegiatan', 'Deskripsi', 'Jam Mulai', 'Jam Selesai', 'Status', 'Catatan Pembimbing']
+    const tableData = filteredData.map((item, index) => [
+      index + 1,
+      item.tanggal,
+      item.kegiatan,
+      item.deskripsi,
+      item.jamMulai,
+      item.jamSelesai,
+      item.status,
+      item.catatan || '-'
+    ])
+
+    const wsData = [...headerData, tableHeader, ...tableData]
+    const ws = XLSX.utils.aoa_to_sheet(wsData)
+
+    ws['!cols'] = [
+      { wch: 5 },
+      { wch: 15 },
+      { wch: 35 },
+      { wch: 50 },
+      { wch: 12 },
+      { wch: 12 },
+      { wch: 12 },
+      { wch: 30 }
+    ]
+
+    const thinBorder = {
+      style: 'thin',
+      color: { rgb: '000000' }
+    }
+    const borderAll = {
+      top: thinBorder,
+      bottom: thinBorder,
+      left: thinBorder,
+      right: thinBorder
+    }
+
+    const titleCell = ws['A1']
+    if (titleCell) {
+      titleCell.s = {
+        font: { bold: true, sz: 16, name: 'Arial' },
+        alignment: { horizontal: 'center', vertical: 'center' }
+      }
+    }
+    ws['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 7 } }]
+
+    const labelRows = [3, 4, 5, 6, 7, 9, 10, 11, 12, 13]
+    labelRows.forEach(row => {
+      const labelCell = ws[XLSX.utils.encode_cell({ r: row - 1, c: 0 })]
+      if (labelCell) {
+        labelCell.s = {
+          font: { bold: true, name: 'Arial', sz: 11 },
+          alignment: { vertical: 'center' }
+        }
+      }
+    })
+
+    const headerRowIndex = headerData.length
+    const dataStartRow = headerRowIndex + 1
+    const dataEndRow = headerRowIndex + tableData.length
+    const lastCol = 7
+
+    for (let col = 0; col <= lastCol; col++) {
+      const cellAddress = XLSX.utils.encode_cell({ r: headerRowIndex, c: col })
+      if (!ws[cellAddress]) ws[cellAddress] = { v: tableHeader[col] }
+      ws[cellAddress].s = {
+        font: { bold: true, name: 'Arial', sz: 11, color: { rgb: 'FFFFFF' } },
+        fill: { fgColor: { rgb: '4472C4' } },
+        border: borderAll,
+        alignment: { horizontal: 'center', vertical: 'center', wrapText: true }
+      }
+    }
+
+    for (let row = dataStartRow; row <= dataEndRow; row++) {
+      for (let col = 0; col <= lastCol; col++) {
+        const cellAddress = XLSX.utils.encode_cell({ r: row, c: col })
+        if (!ws[cellAddress]) ws[cellAddress] = { v: '' }
+        ws[cellAddress].s = {
+          font: { name: 'Arial', sz: 10 },
+          border: borderAll,
+          alignment: { vertical: 'center', wrapText: true }
+        }
+      }
+    }
+
+    XLSX.utils.book_append_sheet(wb, ws, 'Logbook')
+
+    const fileName = `Logbook_${selectedSiswa.value.nama.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.xlsx`
+    XLSX.writeFile(wb, fileName)
+
+    toast.add({ title: 'Data berhasil diekspor', color: 'success' })
+  } catch (e) {
+    console.error('Export error:', e)
+    toast.add({ title: 'Gagal mengekspor data', color: 'error' })
+  } finally {
+    exporting.value = false
+  }
 }
 
 async function fetchData() {

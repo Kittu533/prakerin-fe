@@ -248,8 +248,8 @@ export function useAuth() {
     return hasRole("siswa");
   }
 
-  function isMentor(): boolean {
-    return hasRole("mentor");
+  function isTataUsaha(): boolean {
+    return hasRole("tata_usaha");
   }
 
   // =============================================
@@ -263,8 +263,8 @@ export function useAuth() {
         return "/guru";
       case "siswa":
         return "/siswa";
-      case "mentor":
-        return "/mentor";
+      case "tata_usaha":
+        return "/tata-usaha";
       default:
         return "/login";
     }
@@ -291,7 +291,7 @@ export function useAuth() {
     isAdmin,
     isGuru,
     isSiswa,
-    isMentor,
+    isTataUsaha,
     getDashboardRoute,
   };
 }

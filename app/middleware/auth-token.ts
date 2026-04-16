@@ -31,7 +31,7 @@ export default defineNuxtRouteMiddleware((to) => {
   if (path.startsWith("/siswa") && role !== "siswa") {
     return navigateTo(getDashboardRoute());
   }
-  if (path.startsWith("/mentor") && role !== "mentor") {
+  if (path.startsWith("/tata-usaha") && role !== "tata_usaha") {
     return navigateTo(getDashboardRoute());
   }
 });

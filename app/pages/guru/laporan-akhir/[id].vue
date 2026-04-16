@@ -1,10 +1,15 @@
 <template>
   <div class="space-y-6">
     <!-- Back -->
-    <UButton to="/guru/laporan-akhir" variant="ghost" color="neutral" size="sm">
-      <Icon name="lucide:arrow-left" class="w-4 h-4 mr-2" />
-      Kembali
-    </UButton>
+    <div class="flex items-center justify-between">
+      <UButton to="/guru/laporan-akhir" variant="ghost" color="neutral" size="sm">
+        <Icon name="lucide:arrow-left" class="w-4 h-4 mr-2" />
+        Kembali
+      </UButton>
+      <UButton v-if="data" color="primary" variant="outline" icon="lucide:download" :loading="exporting" @click="exportToExcel">
+        Export Excel
+      </UButton>
+    </div>
 
     <!-- Header -->
     <div class="bg-white rounded-xl border border-slate-200 p-6">
@@ -267,6 +272,7 @@
 
 <script setup lang="ts">
 import { useGuruApi } from '~/composables/api/use-guru'
+import * as XLSX from 'xlsx-js-style'
 
 definePageMeta({ layout: 'guru' })
 
@@ -274,6 +280,7 @@ const route = useRoute()
 const toast = useToast()
 const guruApi = useGuruApi()
 const loading = ref(true)
+const exporting = ref(false)
 const data = ref<any>(null)
 
 const absensiBreakdown = computed(() => {
@@ -328,6 +335,259 @@ onMounted(async () => {
     loading.value = false
   }
 })
+
+async function exportToExcel() {
+  if (!data.value) {
+    toast.add({ title: 'Tidak ada data untuk diekspor', color: 'error' })
+    return
+  }
+
+  exporting.value = true
+
+  try {
+    const wb = XLSX.utils.book_new()
+    const thinBorder = {
+      style: 'thin' as const,
+      color: { rgb: '000000' }
+    }
+    const borderAll = {
+      top: thinBorder,
+      bottom: thinBorder,
+      left: thinBorder,
+      right: thinBorder
+    }
+    const headerStyle = {
+      font: { bold: true, name: 'Arial', sz: 11, color: { rgb: 'FFFFFF' } },
+      fill: { fgColor: { rgb: '4472C4' } },
+      border: borderAll,
+      alignment: { horizontal: 'center' as const, vertical: 'center' as const, wrapText: true }
+    }
+    const labelStyle = {
+      font: { bold: true, name: 'Arial', sz: 11 },
+      alignment: { vertical: 'center' as const }
+    }
+    const cellStyle = {
+      font: { name: 'Arial', sz: 10 },
+      border: borderAll,
+      alignment: { vertical: 'center' as const, wrapText: true }
+    }
+
+    // Sheet 1: Ringkasan
+    const ringkasanData = [
+      ['LAPORAN AKHIR PKL'],
+      [''],
+      ['DATA SISWA'],
+      ['Nama Siswa', data.value.siswa?.nama_siswa || '-'],
+      ['NIS', data.value.siswa?.nis || '-'],
+      ['Kelas', data.value.siswa?.kelas?.nama_kelas || '-'],
+      ['Jurusan', data.value.siswa?.kelas?.jurusan?.nama_jurusan || '-'],
+      [''],
+      ['DATA PENEMPATAN'],
+      ['Perusahaan', data.value.perusahaan?.nama_perusahaan || '-'],
+      ['Alamat Perusahaan', data.value.perusahaan?.alamat || '-'],
+      ['Mentor', data.value.perusahaan?.mentor?.[0]?.nama_mentor || '-'],
+      ['Guru Pembimbing', data.value.guru?.nama_guru || '-'],
+      ['Periode PKL', `${formatDate(data.value.tanggal_mulai)} - ${formatDate(data.value.tanggal_selesai)}`],
+      ['Tahun Ajaran', data.value.tahun_ajaran?.nama_tahun_ajaran || '-'],
+      ['Status', data.value.status_penempatan || '-'],
+      [''],
+      ['REKAP KEHADIRAN'],
+      ['Persentase Kehadiran', `${data.value.stats?.kehadiran || 0}%`],
+      ['Hadir', absensiBreakdown.value.hadir.toString()],
+      ['Izin', absensiBreakdown.value.izin.toString()],
+      ['Sakit', absensiBreakdown.value.sakit.toString()],
+      ['Alpa', absensiBreakdown.value.alpa.toString()],
+      [''],
+      ['REKAP LOGBOOK'],
+      ['Total Logbook', (data.value.logbook?.length || 0).toString()],
+      ['Menunggu Verifikasi', logbookBreakdown.value.menunggu.toString()],
+      ['Disetujui', logbookBreakdown.value.disetujui.toString()],
+      ['Ditolak', logbookBreakdown.value.ditolak.toString()],
+      [''],
+      ['NILAI AKHIR'],
+      ['Kedisiplinan', data.value.penilaian?.nilai_kedisiplinan ?? '-'],
+      ['Keterampilan', data.value.penilaian?.nilai_keterampilan ?? '-'],
+      ['Sikap', data.value.penilaian?.nilai_sikap ?? '-'],
+      ['Pembimbing Perusahaan', data.value.penilaian?.nilai_pembimbing_perusahaan ?? '-'],
+      ['Pembimbing Sekolah', data.value.penilaian?.nilai_pembimbing_sekolah ?? '-'],
+      ['Nilai Akhir', data.value.penilaian?.nilai_akhir ? Number(data.value.penilaian.nilai_akhir).toFixed(1) : '-'],
+      [''],
+      ['Tanggal Cetak', new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })],
+    ]
+
+    const wsRingkasan = XLSX.utils.aoa_to_sheet(ringkasanData)
+    wsRingkasan['!cols'] = [{ wch: 25 }, { wch: 50 }]
+
+    wsRingkasan['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 1 } }]
+    if (wsRingkasan['A1']) {
+      wsRingkasan['A1'].s = { font: { bold: true, sz: 16, name: 'Arial' }, alignment: { horizontal: 'center' } }
+    }
+
+    const sectionLabels = [3, 8, 17, 23, 29]
+    sectionLabels.forEach(row => {
+      const cell = wsRingkasan[XLSX.utils.encode_cell({ r: row - 1, c: 0 })]
+      if (cell) {
+        cell.s = { font: { bold: true, sz: 12, name: 'Arial', color: { rgb: '4472C4' } }, alignment: { horizontal: 'left' } }
+      }
+    })
+
+    for (let row = 1; row < ringkasanData.length; row++) {
+      const labelCell = wsRingkasan[XLSX.utils.encode_cell({ r: row, c: 0 })]
+      if (labelCell && !sectionLabels.includes(row + 1) && ringkasanData[row][0] !== '') {
+        labelCell.s = labelStyle
+      }
+      const valueCell = wsRingkasan[XLSX.utils.encode_cell({ r: row, c: 1 })]
+      if (valueCell) {
+        valueCell.s = { font: { name: 'Arial', sz: 10 }, alignment: { vertical: 'center' } }
+      }
+    }
+
+    XLSX.utils.book_append_sheet(wb, wsRingkasan, 'Ringkasan')
+
+    // Sheet 2: Absensi
+    const absensiHeader = ['No', 'Tanggal', 'Status', 'Waktu Masuk', 'Waktu Keluar', 'Metode', 'Keterangan']
+    const absensiData = (data.value.absensi || []).map((a: any, i: number) => [
+      i + 1,
+      formatDate(a.tanggal),
+      a.status_absensi?.toUpperCase() || '-',
+      a.waktu_masuk ? new Date(a.waktu_masuk).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '-',
+      a.waktu_keluar ? new Date(a.waktu_keluar).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '-',
+      a.metode_absensi || '-',
+      a.keterangan || '-'
+    ])
+
+    const wsAbsensi = XLSX.utils.aoa_to_sheet([
+      ['REKAP ABSENSI PKL'],
+      [''],
+      ['Nama Siswa', data.value.siswa?.nama_siswa || '-'],
+      ['Perusahaan', data.value.perusahaan?.nama_perusahaan || '-'],
+      [''],
+      absensiHeader,
+      ...absensiData
+    ])
+
+    wsAbsensi['!cols'] = [
+      { wch: 5 }, { wch: 15 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 10 }, { wch: 30 }
+    ]
+    wsAbsensi['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 6 } }]
+    if (wsAbsensi['A1']) {
+      wsAbsensi['A1'].s = { font: { bold: true, sz: 14, name: 'Arial' }, alignment: { horizontal: 'center' } }
+    }
+
+    const absensiHeaderRow = 5
+    for (let col = 0; col < absensiHeader.length; col++) {
+      const cell = wsAbsensi[XLSX.utils.encode_cell({ r: absensiHeaderRow, c: col })]
+      if (cell) cell.s = headerStyle
+    }
+
+    for (let row = absensiHeaderRow + 1; row <= absensiHeaderRow + absensiData.length; row++) {
+      for (let col = 0; col < absensiHeader.length; col++) {
+        const cell = wsAbsensi[XLSX.utils.encode_cell({ r: row, c: col })]
+        if (cell) cell.s = cellStyle
+      }
+    }
+
+    XLSX.utils.book_append_sheet(wb, wsAbsensi, 'Absensi')
+
+    // Sheet 3: Logbook
+    const logbookHeader = ['No', 'Tanggal', 'Judul Kegiatan', 'Isi Kegiatan', 'Jam Mulai', 'Jam Selesai', 'Status', 'Catatan']
+    const logbookData = (data.value.logbook || []).map((l: any, i: number) => [
+      i + 1,
+      formatDate(l.tanggal),
+      l.judul_kegiatan || '-',
+      l.isi_kegiatan || '-',
+      l.jam_mulai || '-',
+      l.jam_selesai || '-',
+      l.status_persetujuan === 'disetujui' ? 'Disetujui' : l.status_persetujuan === 'ditolak' ? 'Ditolak' : 'Menunggu',
+      l.catatan_pembimbing || '-'
+    ])
+
+    const wsLogbook = XLSX.utils.aoa_to_sheet([
+      ['REKAP LOGBOOK PKL'],
+      [''],
+      ['Nama Siswa', data.value.siswa?.nama_siswa || '-'],
+      ['Perusahaan', data.value.perusahaan?.nama_perusahaan || '-'],
+      [''],
+      logbookHeader,
+      ...logbookData
+    ])
+
+    wsLogbook['!cols'] = [
+      { wch: 5 }, { wch: 12 }, { wch: 30 }, { wch: 50 }, { wch: 10 }, { wch: 10 }, { wch: 12 }, { wch: 30 }
+    ]
+    wsLogbook['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 7 } }]
+    if (wsLogbook['A1']) {
+      wsLogbook['A1'].s = { font: { bold: true, sz: 14, name: 'Arial' }, alignment: { horizontal: 'center' } }
+    }
+
+    const logbookHeaderRow = 5
+    for (let col = 0; col < logbookHeader.length; col++) {
+      const cell = wsLogbook[XLSX.utils.encode_cell({ r: logbookHeaderRow, c: col })]
+      if (cell) cell.s = headerStyle
+    }
+
+    for (let row = logbookHeaderRow + 1; row <= logbookHeaderRow + logbookData.length; row++) {
+      for (let col = 0; col < logbookHeader.length; col++) {
+        const cell = wsLogbook[XLSX.utils.encode_cell({ r: row, c: col })]
+        if (cell) cell.s = cellStyle
+      }
+    }
+
+    XLSX.utils.book_append_sheet(wb, wsLogbook, 'Logbook')
+
+    // Sheet 4: Monitoring
+    const monitoringHeader = ['No', 'Tanggal', 'Hasil Monitoring', 'Kendala']
+    const monitoringData = (data.value.monitoring || []).map((m: any, i: number) => [
+      i + 1,
+      formatDate(m.tanggal_monitoring),
+      m.hasil_monitoring || '-',
+      m.kendala || '-'
+    ])
+
+    const wsMonitoring = XLSX.utils.aoa_to_sheet([
+      ['REKAP MONITORING PKL'],
+      [''],
+      ['Nama Siswa', data.value.siswa?.nama_siswa || '-'],
+      ['Perusahaan', data.value.perusahaan?.nama_perusahaan || '-'],
+      [''],
+      monitoringHeader,
+      ...monitoringData
+    ])
+
+    wsMonitoring['!cols'] = [
+      { wch: 5 }, { wch: 15 }, { wch: 50 }, { wch: 30 }
+    ]
+    wsMonitoring['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 3 } }]
+    if (wsMonitoring['A1']) {
+      wsMonitoring['A1'].s = { font: { bold: true, sz: 14, name: 'Arial' }, alignment: { horizontal: 'center' } }
+    }
+
+    const monitoringHeaderRow = 5
+    for (let col = 0; col < monitoringHeader.length; col++) {
+      const cell = wsMonitoring[XLSX.utils.encode_cell({ r: monitoringHeaderRow, c: col })]
+      if (cell) cell.s = headerStyle
+    }
+
+    for (let row = monitoringHeaderRow + 1; row <= monitoringHeaderRow + monitoringData.length; row++) {
+      for (let col = 0; col < monitoringHeader.length; col++) {
+        const cell = wsMonitoring[XLSX.utils.encode_cell({ r: row, c: col })]
+        if (cell) cell.s = cellStyle
+      }
+    }
+
+    XLSX.utils.book_append_sheet(wb, wsMonitoring, 'Monitoring')
+
+    const fileName = `Laporan_Akhir_${data.value.siswa?.nama_siswa?.replace(/\s+/g, '_') || 'Siswa'}_${new Date().toISOString().split('T')[0]}.xlsx`
+    XLSX.writeFile(wb, fileName)
+
+    toast.add({ title: 'Data berhasil diekspor', color: 'success' })
+  } catch (e) {
+    console.error('Export error:', e)
+    toast.add({ title: 'Gagal mengekspor data', color: 'error' })
+  } finally {
+    exporting.value = false
+  }
+}
 
 useHead({ title: 'Detail Laporan Akhir | Guru PKL' })
 </script>
