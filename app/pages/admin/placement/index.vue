@@ -34,6 +34,9 @@ const filterStatus = ref("Semua");
 const filterPeriode = ref<string | null>(null);
 
 const data = ref<Penempatan[]>([]);
+const selectedPenempatanIds = ref<string[]>([]);
+const quickCompletingId = ref<string | null>(null);
+const bulkCompleting = ref(false);
 
 // Smart Draft State
 const isSmartDraftModalOpen = ref(false);
@@ -49,7 +52,7 @@ const smartDraftResult = ref<{
 } | null>(null);
 
 // Stats
-const stats = reactive({ aktif: 0, selesai: 0, dibatalkan: 0 });
+const stats = reactive({ aktif: 0, selesai: 0 });
 
 // Options
 const siswaOptions = ref<{ label: string; value: string }[]>([]);
@@ -93,6 +96,36 @@ const columnHelper = createColumnHelper<Penempatan>();
 
 // Define columns using TanStack Table format
 const columns: ColumnDef<Penempatan, any>[] = [
+    {
+        id: "select",
+        header: () =>
+            h("input", {
+                type: "checkbox",
+                class: "w-4 h-4 rounded border-slate-300",
+                checked: isAllActiveSelected.value,
+                disabled: activeFilteredData.value.length === 0,
+                onChange: () => toggleSelectAllActive(),
+                title: "Pilih semua siswa aktif di daftar",
+            }),
+        cell: ({ row }) => {
+            const item = row.original;
+            const canSelect = item.status_penempatan === "aktif";
+            const checked = selectedPenempatanIds.value.includes(
+                item.id_penempatan,
+            );
+
+            return h("input", {
+                type: "checkbox",
+                class: "w-4 h-4 rounded border-slate-300",
+                disabled: !canSelect,
+                checked,
+                onChange: () => toggleSelectPlacement(item.id_penempatan),
+                title: canSelect
+                    ? "Pilih siswa untuk selesai massal"
+                    : "Hanya penempatan aktif yang bisa dipilih",
+            });
+        },
+    },
     {
         id: "no",
         header: "No",
@@ -265,6 +298,37 @@ const columns: ColumnDef<Penempatan, any>[] = [
                 h(
                     "button",
                     {
+                        class: "p-1.5 rounded hover:bg-emerald-50 text-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed",
+                        onClick: () => completeSinglePlacement(row.original),
+                        disabled:
+                            row.original.status_penempatan !== "aktif" ||
+                            quickCompletingId.value ===
+                                row.original.id_penempatan ||
+                            bulkCompleting.value,
+                        title:
+                            row.original.status_penempatan === "aktif"
+                                ? "Selesaikan PKL siswa ini"
+                                : "Hanya penempatan aktif yang bisa diselesaikan",
+                    },
+                    h(
+                        "svg",
+                        {
+                            class: "w-4 h-4",
+                            viewBox: "0 0 24 24",
+                            fill: "none",
+                            stroke: "currentColor",
+                            "stroke-width": 2,
+                        },
+                        [
+                            h("path", {
+                                d: "M20 6 9 17l-5-5",
+                            }),
+                        ],
+                    ),
+                ),
+                h(
+                    "button",
+                    {
                         class: "p-1.5 rounded hover:bg-error-50 text-error-600",
                         onClick: () => confirmDelete(row.original),
                     },
@@ -290,17 +354,24 @@ const columns: ColumnDef<Penempatan, any>[] = [
 ];
 
 // Status options
-const statusOptions = ["Semua", "Aktif", "Selesai", "Dibatalkan"];
+const statusOptions = ["Aktif", "Selesai", "Semua"];
 
 const statusApiValue: Record<string, string> = {
     Aktif: "aktif",
     Selesai: "selesai",
-    Dibatalkan: "dibatalkan",
 };
+
+const operationalStatuses: Penempatan["status_penempatan"][] = [
+    "aktif",
+    "selesai",
+];
 
 // Filtered data (sorted ASC by created_at or id)
 const filteredData = computed(() => {
     let result = data.value.filter((d) => {
+        const isOperational = operationalStatuses.includes(d.status_penempatan);
+        if (!isOperational) return false;
+
         const siswaName = getSiswaName(d.siswa_id).toLowerCase();
         const perusahaanName = getPerusahaanName(d.perusahaan_id).toLowerCase();
         const matchSearch =
@@ -324,25 +395,40 @@ const filteredData = computed(() => {
     return result;
 });
 
+const activeFilteredData = computed(() =>
+    filteredData.value.filter((item) => item.status_penempatan === "aktif"),
+);
+
+const selectedActivePlacements = computed(() =>
+    activeFilteredData.value.filter((item) =>
+        selectedPenempatanIds.value.includes(item.id_penempatan),
+    ),
+);
+
+const isAllActiveSelected = computed(() =>
+    activeFilteredData.value.length > 0 &&
+    selectedActivePlacements.value.length === activeFilteredData.value.length,
+);
+
 // Name resolvers
-const getSiswaName = (siswaId: number) => {
+const getSiswaName = (siswaId: string) => {
     const siswa = siswaOptions.value.find((s) => s.value === siswaId);
     return siswa ? extractNameFromLabel(siswa.label) : `Siswa #${siswaId}`;
 };
 
-const getSiswaKelas = (siswaId: number) => {
+const getSiswaKelas = (siswaId: string) => {
     const siswa = siswaOptions.value.find((s) => s.value === siswaId);
     return siswa ? extractKelasFromLabel(siswa.label) : "-";
 };
 
-const getPerusahaanName = (perusahaanId: number) => {
+const getPerusahaanName = (perusahaanId: string) => {
     const perusahaan = perusahaanOptions.value.find(
         (p) => p.value === perusahaanId,
     );
     return perusahaan?.label || `Perusahaan #${perusahaanId}`;
 };
 
-const getGuruName = (guruId: number) => {
+const getGuruName = (guruId: string) => {
     const guru = guruOptions.value.find((g) => g.value === guruId);
     return guru?.label || `Guru #${guruId}`;
 };
@@ -358,6 +444,154 @@ const navigateToDetail = (item: Penempatan) => {
 
 const navigateToEdit = (item: Penempatan) => {
     router.push(`/admin/placement/${item.id_penempatan}/edit`);
+};
+
+const syncSelectionWithVisibleActiveRows = () => {
+    const visibleActiveIds = new Set(
+        activeFilteredData.value.map((item) => item.id_penempatan),
+    );
+    selectedPenempatanIds.value = selectedPenempatanIds.value.filter((id) =>
+        visibleActiveIds.has(id),
+    );
+};
+
+const toggleSelectPlacement = (placementId: string) => {
+    if (
+        !activeFilteredData.value.some(
+            (item) => item.id_penempatan === placementId,
+        )
+    ) {
+        return;
+    }
+
+    if (selectedPenempatanIds.value.includes(placementId)) {
+        selectedPenempatanIds.value = selectedPenempatanIds.value.filter(
+            (id) => id !== placementId,
+        );
+        return;
+    }
+
+    selectedPenempatanIds.value = [...selectedPenempatanIds.value, placementId];
+};
+
+const toggleSelectAllActive = () => {
+    if (isAllActiveSelected.value) {
+        selectedPenempatanIds.value = [];
+        return;
+    }
+
+    selectedPenempatanIds.value = activeFilteredData.value.map(
+        (item) => item.id_penempatan,
+    );
+};
+
+const completePlacementBatch = async (
+    targets: Penempatan[],
+    actionLabel: string,
+) => {
+    if (targets.length === 0) {
+        toast.add({
+            title: "Tidak ada data aktif",
+            description: "Tidak ada penempatan aktif yang bisa diselesaikan",
+            color: "warning",
+        });
+        return;
+    }
+
+    const confirmed = confirm(
+        `${actionLabel} ${targets.length} siswa?\n\nAksi ini akan mengubah status penempatan menjadi Selesai.`,
+    );
+    if (!confirmed) return;
+
+    bulkCompleting.value = true;
+
+    try {
+        const failedNames: string[] = [];
+        let successCount = 0;
+
+        for (const item of targets) {
+            try {
+                await penempatanApi.complete(item.id_penempatan);
+                successCount += 1;
+            } catch {
+                failedNames.push(getSiswaName(item.siswa_id));
+            }
+        }
+
+        if (successCount > 0) {
+            toast.add({
+                title: "Selesai diproses",
+                description: `${successCount} siswa berhasil diselesaikan`,
+                color: "success",
+            });
+        }
+
+        if (failedNames.length > 0) {
+            const preview = failedNames.slice(0, 3).join(", ");
+            toast.add({
+                title: `${failedNames.length} siswa gagal diproses`,
+                description:
+                    failedNames.length > 3
+                        ? `${preview}, dan lainnya`
+                        : preview,
+                color: "error",
+            });
+        }
+
+        await fetchData();
+    } catch (error: any) {
+        toast.add({
+            title: "Gagal memproses penyelesaian",
+            description: error?.message || "Terjadi kesalahan saat memproses",
+            color: "error",
+        });
+    } finally {
+        bulkCompleting.value = false;
+        selectedPenempatanIds.value = [];
+    }
+};
+
+const completeSinglePlacement = async (item: Penempatan) => {
+    if (item.status_penempatan !== "aktif") return;
+
+    const siswaName = getSiswaName(item.siswa_id);
+    const confirmed = confirm(
+        `Selesaikan PKL ${siswaName}?\n\nStatus penempatan akan diubah menjadi Selesai.`,
+    );
+    if (!confirmed) return;
+
+    quickCompletingId.value = item.id_penempatan;
+    try {
+        await penempatanApi.complete(item.id_penempatan);
+        toast.add({
+            title: "PKL berhasil diselesaikan",
+            description: `${siswaName} sudah ditandai selesai`,
+            color: "success",
+        });
+        await fetchData();
+    } catch (error: any) {
+        toast.add({
+            title: "Gagal menyelesaikan PKL",
+            description: error?.message || "Terjadi kesalahan saat memproses",
+            color: "error",
+        });
+    } finally {
+        quickCompletingId.value = null;
+    }
+};
+
+const completeSelectedPlacements = async () => {
+    await completePlacementBatch(
+        selectedActivePlacements.value,
+        "Selesaikan PKL untuk",
+    );
+};
+
+const completeVisibleActivePlacements = async () => {
+    await completePlacementBatch(
+        activeFilteredData.value,
+        "Selesaikan cepat semua",
+    );
 };
 
 // Delete confirmation state
@@ -413,14 +647,12 @@ const fetchData = async () => {
         const response = await penempatanApi.getAll({ limit: 1000 });
         if (response.success) {
             data.value = response.data || [];
+            syncSelectionWithVisibleActiveRows();
             stats.aktif = data.value.filter(
                 (d) => d.status_penempatan === "aktif",
             ).length;
             stats.selesai = data.value.filter(
                 (d) => d.status_penempatan === "selesai",
-            ).length;
-            stats.dibatalkan = data.value.filter(
-                (d) => d.status_penempatan === "dibatalkan",
             ).length;
         }
     } catch (error) {
@@ -436,7 +668,7 @@ const fetchOptions = async () => {
         const [siswaRes, perusahaanRes, guruRes, periodeRes, tahunAjaranRes] =
             await Promise.all([
                 siswaApi.getAll({ limit: 1000 }),
-                perusahaanApi.getAll({ limit: 100 }),
+                perusahaanApi.getAll({ limit: 100, mou_aktif: true }),
                 guruApi.getAll({ limit: 100 }),
                 periodePKLApi.getAll({ limit: 100 }),
                 tahunAjaranApi.getAll(),
@@ -582,6 +814,10 @@ const exportToCSV = () => {
     }
 };
 
+watch([search, filterStatus, filterPeriode], () => {
+    syncSelectionWithVisibleActiveRows();
+});
+
 onMounted(async () => {
     await fetchOptions();
     await fetchData();
@@ -612,10 +848,10 @@ useHead({ title: "Penempatan PKL | Admin" });
         </div>
 
         <!-- Stats -->
-        <div v-if="loading" class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <USkeleton v-for="i in 3" :key="i" class="h-20 rounded-xl" />
+        <div v-if="loading" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <USkeleton v-for="i in 2" :key="i" class="h-20 rounded-xl" />
         </div>
-        <div v-else class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div v-else class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div class="bg-white rounded-xl border border-slate-200 p-4 text-center">
                 <p class="text-2xl font-bold text-green-600">
                     {{ stats.aktif }}
@@ -627,12 +863,6 @@ useHead({ title: "Penempatan PKL | Admin" });
                     {{ stats.selesai }}
                 </p>
                 <p class="text-sm text-slate-500">Selesai</p>
-            </div>
-            <div class="bg-white rounded-xl border border-slate-200 p-4 text-center">
-                <p class="text-2xl font-bold text-red-600">
-                    {{ stats.dibatalkan }}
-                </p>
-                <p class="text-sm text-slate-500">Dibatalkan</p>
             </div>
         </div>
 
@@ -664,6 +894,15 @@ useHead({ title: "Penempatan PKL | Admin" });
                 </USelectMenu>
             </template>
             <template #toolbar-right>
+                <UButton icon="lucide:check-check" color="success" variant="soft" :loading="bulkCompleting"
+                    :disabled="activeFilteredData.length === 0 || bulkCompleting" @click="completeVisibleActivePlacements">
+                    Selesaikan Cepat ({{ activeFilteredData.length }})
+                </UButton>
+                <UButton icon="lucide:list-checks" color="primary" :loading="bulkCompleting"
+                    :disabled="selectedActivePlacements.length === 0 || bulkCompleting"
+                    @click="completeSelectedPlacements">
+                    Selesaikan Terpilih ({{ selectedActivePlacements.length }})
+                </UButton>
                 <UButton icon="lucide:download" variant="outline" :loading="exporting"
                     :disabled="filteredData.length === 0" @click="exportToCSV">
                     Export CSV

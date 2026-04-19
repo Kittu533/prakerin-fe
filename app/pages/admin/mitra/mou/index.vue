@@ -1,111 +1,32 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { useMitraMouPage } from '../../../../composables/pages/admin/use-mitra-mou-page'
 
 definePageMeta({
   layout: 'admin'
 })
 
-// Mock data for MoU table
-const mouData = ref([
-  {
-    id: 1,
-    nama: 'Cassio SingaporePTE. LTD.',
-    bidang: 'PENDIDIKAN',
-    alamat: 'Menara Cakrawala, Jl. M.H. Thamrin No.9 lantai 14, RT.2/RW.1, Kb. Sirih, Kec. Menteng, Kota Jakarta Pusat, Daerah Khusus Ibukota Jakarta 10340',
-    no_mou: '400.14.5.4/0129/2026',
-    perihal: 'NOTA KESEPAHAMAN (MoU) ANTARA CASIO SINGAPORE PTE. LTD. - JAKARTA REPRESENTATIVE OFFICE DAN SMKN 7 SEMARANG',
-    tags: ['TKP'],
-    mulai: '30-01-2026',
-    berakhir: '30-01-2029',
-    status: 'AKTIF',
-    pic_nama: '-',
-    pic_telepon: '-',
-    link_dokumen: '#'
-  },
-  {
-    id: 2,
-    nama: 'YAYASAN SAVE THE CHILDREN INDONESIA',
-    bidang: 'JASA',
-    alamat: 'Kantor Nasional: Jln. Bangka IX No. 40 A&B, Mampang Prapatan Jakarta Selatan, DKI Jakarta 12720',
-    no_mou: '376.AGR.YSTC.XI.2024',
-    perihal: 'KESEPAKATAN BERSAMA ANTARA YAYASAN SAVE THE CHILDREN INDONESIA DENGAN SMKN 7 SEMARANG TENTANG KETERLIBATAN DALAM PROGRAM KECAKAPAN KESIAPAN KERJA',
-    tags: ['KPBS', 'PPLG', 'TEK', 'TKL', 'TKP', 'TME', 'TO', 'TPFL'],
-    mulai: '11-11-2024',
-    berakhir: '11-11-2025',
-    status: 'EXPIRED',
-    pic_nama: '-',
-    pic_telepon: '-',
-    link_dokumen: '#'
-  },
-  {
-    id: 3,
-    nama: 'Yayasan Save The Children Indonesia',
-    bidang: 'JASA',
-    alamat: 'Kantor Nasional: Jln. Bangka IX No. 40 A&B, Mampang Prapatan Jakarta Selatan, DKI Jakarta 12720',
-    no_mou: '010.AGR.YSTC.I.',
-    perihal: 'PERJANJIAN KERJASAMA ANTARA YAYASAN SAVE THE CHILDREN INDONESIA DENGAN SMKN 7 SEMARANG TENTANG KETERLIBATAN DALAM PROGRAM KESIAPAN KERJA',
-    tags: ['TKL', 'PPLG', 'TPFL', 'TO', 'TKP', 'KPBS', 'TEK', 'TME'],
-    mulai: '18-01-2026',
-    berakhir: '28-08-2028',
-    status: 'AKTIF',
-    pic_nama: '-',
-    pic_telepon: '-',
-    link_dokumen: '#'
-  }
-])
-
-const isModalOpen = ref(false)
-
-const filters = ref({
-  nama: '',
-  alamat: '',
-  bidang: 'Semua Bidang',
-  masa_berlaku: 'Semua Masa Berlaku'
-})
-
-const form = ref({
-  nama: '',
-  bidang: '',
-  alamat: '',
-  no_mou: '',
-  perihal: '',
-  kompetensi: '',
-  tanggal_mulai: '',
-  tanggal_berakhir: '',
-  pic_nama: '',
-  pic_telepon: '',
-  link_maps: ''
-})
-
-const stats = ref({
-  total: 3,
-  aktif: 2,
-  expired: 1,
-  bulan_ini: 0,
-  tahun_ini: 0,
-  bidang: [
-    { label: 'JASA', count: 2 },
-    { label: 'PENDIDIKAN', count: 1 }
-  ]
-})
-
-const bidangOptions = ['PENDIDIKAN', 'JASA', 'INDUSTRI', 'PERDAGANGAN', 'LAINNYA']
-
-const openModal = () => { isModalOpen.value = true }
-const closeModal = () => { isModalOpen.value = false }
-const handleSave = () => { 
-  // TODO: Implement save logic
-  closeModal() 
-}
-
-function formatDate(dateStr: string) {
-  if (!dateStr) return '-'
-  return new Date(dateStr).toLocaleDateString('id-ID', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric'
-  })
-}
+const {
+  loading,
+  submitting,
+  mouData,
+  isModalOpen,
+  filters,
+  form,
+  stats,
+  bidangOptions,
+  companyOptions,
+  selectedCompany,
+  paginationText,
+  modalTitle,
+  submitButtonText,
+  dokumenUpload,
+  openModal,
+  closeModal,
+  handleDokumenFileChange,
+  handleSave,
+  handleKelolaMou,
+  formatDate,
+} = useMitraMouPage()
 </script>
 
 <template>
@@ -121,10 +42,7 @@ function formatDate(dateStr: string) {
       <input v-model="filters.nama" type="text" placeholder="Nama Industri..." class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all" />
       <input v-model="filters.alamat" type="text" placeholder="Cari Alamat..." class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all" />
       <select v-model="filters.bidang" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none appearance-none cursor-pointer">
-        <option>Semua Bidang</option>
-        <option>PENDIDIKAN</option>
-        <option>JASA</option>
-        <option>INDUSTRI</option>
+        <option v-for="item in bidangOptions" :key="item">{{ item }}</option>
       </select>
       <select v-model="filters.masa_berlaku" class="w-full border-2 border-red-500 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none appearance-none cursor-pointer bg-white">
         <option>Semua Masa Berlaku</option>
@@ -187,6 +105,9 @@ function formatDate(dateStr: string) {
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-100">
+            <tr v-if="loading">
+              <td colspan="7" class="px-6 py-8 text-center text-sm text-slate-500">Memuat data MoU...</td>
+            </tr>
             <tr v-for="(item, index) in mouData" :key="item.id" class="hover:bg-slate-50/50 transition-colors group">
               <td class="px-6 py-6 text-center text-sm font-black text-slate-800">{{ index + 1 }}</td>
               <td class="px-6 py-6">
@@ -201,7 +122,7 @@ function formatDate(dateStr: string) {
               <td class="px-6 py-6">
                 <div class="space-y-1 max-w-[250px]">
                   <div class="text-xs text-slate-500 leading-relaxed">{{ item.alamat }}</div>
-                  <a :href="item.link_dokumen" class="inline-flex items-center gap-1 text-[10px] font-bold text-blue-600 hover:underline">
+                  <a :href="item.link_maps || '#'" target="_blank" class="inline-flex items-center gap-1 text-[10px] font-bold text-blue-600 hover:underline">
                     <Icon name="lucide:map-pin" class="w-3 h-3" />
                     Lihat Lokasi
                   </a>
@@ -217,10 +138,14 @@ function formatDate(dateStr: string) {
                   <div class="flex flex-wrap gap-1">
                     <span v-for="tag in item.tags" :key="tag" class="bg-slate-100 text-slate-600 text-[9px] px-2 py-0.5 rounded font-bold uppercase">{{ tag }}</span>
                   </div>
-                  <button class="flex items-center gap-1.5 border border-red-200 rounded px-2.5 py-1 text-[10px] font-bold text-red-500 hover:bg-red-50 transition-all uppercase">
+                  <a
+                    :href="item.link_dokumen || '#'"
+                    target="_blank"
+                    class="inline-flex items-center gap-1.5 border border-red-200 rounded px-2.5 py-1 text-[10px] font-bold text-red-500 hover:bg-red-50 transition-all uppercase"
+                  >
                     <Icon name="lucide:file-text" class="w-3.5 h-3.5" />
                     Lihat Dokumen
-                  </button>
+                  </a>
                 </div>
               </td>
               <td class="px-6 py-6">
@@ -247,16 +172,22 @@ function formatDate(dateStr: string) {
                 </div>
               </td>
               <td class="px-6 py-6 text-center">
-                <button class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-xs font-bold transition-all shadow-sm active:scale-95">
+                <button
+                  @click="handleKelolaMou(item.id)"
+                  class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-xs font-bold transition-all shadow-sm active:scale-95"
+                >
                   KELOLA
                 </button>
               </td>
+            </tr>
+            <tr v-if="!loading && mouData.length === 0">
+              <td colspan="7" class="px-6 py-8 text-center text-sm text-slate-500">Belum ada data MoU</td>
             </tr>
           </tbody>
         </table>
       </div>
       <div class="px-6 py-4 flex items-center justify-between border-t border-slate-100 bg-slate-50/50">
-        <div class="text-xs text-slate-500 font-medium">Menampilkan 1 - 3 dari 3 MoU</div>
+        <div class="text-xs text-slate-500 font-medium">{{ paginationText }}</div>
         <div class="flex gap-2">
           <button disabled class="px-3 py-1.5 text-[10px] font-bold bg-white border border-slate-200 rounded text-slate-300">Prev</button>
           <button disabled class="px-3 py-1.5 text-[10px] font-bold bg-white border border-slate-200 rounded text-slate-300">Next</button>
@@ -266,8 +197,9 @@ function formatDate(dateStr: string) {
 
     <!-- Modal for adding MoU -->
     <UModal 
-      v-model:open="isModalOpen" 
-      title="Tambah Data MoU" 
+      :open="isModalOpen"
+      @update:open="(value) => (isModalOpen = value)"
+      :title="modalTitle" 
       description="Formulir untuk menambahkan data Memorandum of Understanding baru"
       size="xl"
     >
@@ -278,21 +210,20 @@ function formatDate(dateStr: string) {
             <div class="md:col-span-2 space-y-2">
               <label class="flex items-center gap-2 text-[10px] font-black text-slate-700 uppercase tracking-wider">
                 <Icon name="lucide:building-2" class="w-4 h-4 text-blue-600" />
-                NAMA INSTANSI / PERUSAHAAN
+                PILIH PERUSAHAAN MITRA
               </label>
-              <input v-model="form.nama" type="text" placeholder="Contoh: PT. Industri Maju Jaya" class="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all placeholder:text-slate-300" />
+              <select v-model="form.perusahaan_id" class="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none appearance-none cursor-pointer bg-white">
+                <option value="">Pilih Perusahaan</option>
+                <option v-for="company in companyOptions" :key="company.id_perusahaan" :value="company.id_perusahaan">
+                  {{ company.nama_perusahaan }}
+                </option>
+              </select>
             </div>
 
-            <!-- Bidang Usaha -->
-            <div class="space-y-2">
-              <label class="flex items-center gap-2 text-[10px] font-black text-slate-700 uppercase tracking-wider">
-                <Icon name="lucide:briefcase" class="w-4 h-4 text-blue-600" />
-                BIDANG USAHA
-              </label>
-              <select v-model="form.bidang" class="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none appearance-none cursor-pointer bg-white">
-                <option value="">Pilih Bidang</option>
-                <option v-for="opt in bidangOptions" :key="opt" :value="opt">{{ opt }}</option>
-              </select>
+            <div v-if="selectedCompany" class="md:col-span-2 rounded-xl border border-slate-200 bg-slate-50 p-4 text-xs space-y-1">
+              <p><span class="font-bold text-slate-700">Nama:</span> {{ selectedCompany.nama_perusahaan }}</p>
+              <p><span class="font-bold text-slate-700">Bidang:</span> {{ selectedCompany.bidang_usaha || '-' }}</p>
+              <p><span class="font-bold text-slate-700">Alamat:</span> {{ selectedCompany.alamat || '-' }}</p>
             </div>
 
             <!-- Nomor MoU -->
@@ -302,15 +233,6 @@ function formatDate(dateStr: string) {
                 NOMOR MoU
               </label>
               <input v-model="form.no_mou" type="text" placeholder="Contoh: 400.14.5.4/0129/2026" class="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all" />
-            </div>
-
-            <!-- Alamat -->
-            <div class="md:col-span-2 space-y-2">
-              <label class="flex items-center gap-2 text-[10px] font-black text-slate-700 uppercase tracking-wider">
-                <Icon name="lucide:map-pin" class="w-4 h-4 text-blue-600" />
-                ALAMAT LENGKAP
-              </label>
-              <textarea v-model="form.alamat" rows="2" placeholder="Masukkan alamat lengkap instansi..." class="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all resize-none"></textarea>
             </div>
 
             <!-- Perihal MoU -->
@@ -374,6 +296,22 @@ function formatDate(dateStr: string) {
               </label>
               <input v-model="form.link_maps" type="text" placeholder="https://maps.google.com/..." class="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all" />
             </div>
+
+            <div class="md:col-span-2 space-y-2">
+              <label class="flex items-center gap-2 text-[10px] font-black text-slate-700 uppercase tracking-wider">
+                <Icon name="lucide:link" class="w-4 h-4 text-blue-600" />
+                UPLOAD DOKUMEN MoU (PDF)
+              </label>
+              <div class="flex items-center w-full border border-slate-200 rounded-xl overflow-hidden">
+                <label class="bg-slate-50 px-4 py-3 border-r border-slate-200 text-sm font-semibold text-slate-600 cursor-pointer hover:bg-slate-100 shrink-0">
+                  Pilih PDF
+                  <input type="file" class="hidden" accept="application/pdf" @change="handleDokumenFileChange" />
+                </label>
+                <span class="px-4 py-3 text-sm text-slate-500 truncate flex-1 bg-white">
+                  {{ dokumenUpload.name || 'Belum ada file dipilih' }}
+                </span>
+              </div>
+            </div>
           </div>
         </div>
       </template>
@@ -381,9 +319,9 @@ function formatDate(dateStr: string) {
       <template #footer>
         <div class="flex items-center justify-center gap-3">
           <button @click="closeModal" class="px-8 py-3 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition-all uppercase tracking-widest shadow-sm">BATAL</button>
-          <button @click="handleSave" class="px-8 py-3 bg-blue-600 text-white rounded-xl text-xs font-bold hover:bg-blue-700 transition-all flex items-center gap-2 uppercase tracking-widest shadow-lg shadow-blue-200">
+          <button :disabled="submitting" @click="handleSave" class="px-8 py-3 bg-blue-600 text-white rounded-xl text-xs font-bold hover:bg-blue-700 transition-all flex items-center gap-2 uppercase tracking-widest shadow-lg shadow-blue-200 disabled:opacity-60">
             <Icon name="lucide:save" class="w-4 h-4" />
-            SIMPAN DATA
+            {{ submitting ? 'MENYIMPAN...' : submitButtonText }}
           </button>
         </div>
       </template>

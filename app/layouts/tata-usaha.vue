@@ -230,10 +230,12 @@ const expandedMenus = ref<string[]>([]);
 const pageTitle = computed(() => {
     const titles: Record<string, string> = {
         "/tata-usaha": "Dashboard",
+        "/tata-usaha/users": "Kelola Akun",
         "/tata-usaha/surat-masuk": "Surat Masuk",
         "/tata-usaha/surat-keluar": "Surat Keluar",
         "/tata-usaha/disposisi": "Disposisi",
         "/tata-usaha/surat-kesiswaan": "Surat Kesiswaan",
+        "/tata-usaha/ttd-digital": "TTD Digital",
         "/tata-usaha/master/siswa": "Data Siswa",
         "/tata-usaha/master/guru": "Data Guru",
         "/tata-usaha/settings": "Pengaturan",
@@ -259,6 +261,7 @@ interface MenuItem {
 
 const menuItems: MenuItem[] = [
     { to: "/tata-usaha", icon: "lucide:layout-dashboard", label: "Dashboard" },
+    { to: "/tata-usaha/users", icon: "lucide:user-cog", label: "Kelola Akun" },
     {
         icon: "lucide:mail",
         label: "Admin Surat",
@@ -301,6 +304,11 @@ const masterItems: MenuItem[] = [
         icon: "lucide:user-check",
         label: "Guru",
     },
+    {
+        to: "/tata-usaha/ttd-digital",
+        icon: "lucide:signature",
+        label: "Master TTD Digital",
+    },
 ];
 
 const bottomNavItems = [
@@ -308,7 +316,7 @@ const bottomNavItems = [
     { to: "/tata-usaha/surat-masuk", icon: "lucide:mail-open", label: "Masuk" },
     { to: "/tata-usaha/surat-keluar", icon: "lucide:send", label: "Keluar" },
     { to: "/tata-usaha/disposisi", icon: "lucide:file-signature", label: "Disposisi" },
-    { to: "/tata-usaha/master/siswa", icon: "lucide:database", label: "Master" },
+    { to: "/tata-usaha/ttd-digital", icon: "lucide:signature", label: "TTD" },
 ];
 
 const isActive = (path: string) => {

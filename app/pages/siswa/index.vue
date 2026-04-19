@@ -231,19 +231,6 @@
                     >
                 </NuxtLink>
                 <NuxtLink
-                    to="/siswa/laporan"
-                    class="flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-amber-50 transition-colors"
-                >
-                    <div
-                        class="w-12 h-12 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center"
-                    >
-                        <Icon name="lucide:file-text" class="w-6 h-6" />
-                    </div>
-                    <span class="text-xs font-medium text-slate-700 text-center"
-                        >Laporan Akhir</span
-                    >
-                </NuxtLink>
-                <NuxtLink
                     to="/siswa/nilai"
                     class="flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-purple-50 transition-colors"
                 >
@@ -254,19 +241,6 @@
                     </div>
                     <span class="text-xs font-medium text-slate-700 text-center"
                         >Nilai PKL</span
-                    >
-                </NuxtLink>
-                <NuxtLink
-                    to="/siswa/dokumen"
-                    class="flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-teal-50 transition-colors"
-                >
-                    <div
-                        class="w-12 h-12 rounded-xl bg-teal-100 text-teal-600 flex items-center justify-center"
-                    >
-                        <Icon name="lucide:folder" class="w-6 h-6" />
-                    </div>
-                    <span class="text-xs font-medium text-slate-700 text-center"
-                        >Dokumen</span
                     >
                 </NuxtLink>
             </div>

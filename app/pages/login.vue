@@ -155,6 +155,11 @@ const form = reactive({
 const isLoading = ref(false);
 const errorMessage = ref('');
 const showPassword = ref(false);
+let isUnmounted = false;
+
+onUnmounted(() => {
+  isUnmounted = true;
+});
 
 function togglePasswordVisibility() {
   showPassword.value = !showPassword.value;
@@ -198,13 +203,17 @@ async function handleSubmit() {
       }
     }
   } catch (error: any) {
-    await showError(
-      'Terjadi Kesalahan',
-      'Terjadi kesalahan sistem. Silakan coba lagi nanti.'
-    );
+    if (!isUnmounted) {
+      await showError(
+        'Terjadi Kesalahan',
+        'Terjadi kesalahan sistem. Silakan coba lagi nanti.'
+      );
+    }
     console.error('[Login] Error:', error);
   } finally {
-    isLoading.value = false;
+    if (!isUnmounted) {
+      isLoading.value = false;
+    }
   }
 }
 </script>

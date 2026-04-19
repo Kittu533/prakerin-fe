@@ -93,33 +93,6 @@
                 </div>
             </div>
 
-            <!-- Dokumen Section -->
-            <div class="mt-6">
-                <p
-                    v-show="!isMinimized"
-                    class="px-3 mb-2 text-[11px] font-semibold text-slate-400 uppercase tracking-wider"
-                >
-                    Dokumen
-                </p>
-                <div v-show="isMinimized" class="h-px bg-slate-200 mx-3 mb-3" />
-                <div class="space-y-1">
-                    <NavItem
-                        to="/siswa/dokumen"
-                        icon="lucide:folder"
-                        label="Dokumen PKL"
-                        :active="$route.path.startsWith('/siswa/dokumen')"
-                        :minimized="isMinimized"
-                    />
-                    <NavItem
-                        to="/siswa/laporan"
-                        icon="lucide:file-text"
-                        label="Laporan Akhir"
-                        :active="$route.path.startsWith('/siswa/laporan')"
-                        :minimized="isMinimized"
-                    />
-                </div>
-            </div>
-
             <!-- Info Section -->
             <div class="mt-6">
                 <p

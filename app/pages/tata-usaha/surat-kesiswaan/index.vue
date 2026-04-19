@@ -117,6 +117,17 @@
                                 />
                             </UFormField>
 
+                            <UFormField label="Penandatangan Guru" required>
+                                <USelect
+                                    v-model="form.penandatangan_guru_id"
+                                    :items="guruPenandatanganOptions"
+                                    :loading="loadingGuru"
+                                    placeholder="-- Pilih Guru Penandatangan --"
+                                    class="w-full mt-1"
+                                    icon="lucide:user-check"
+                                />
+                            </UFormField>
+
                             <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
                                 <UFormField label="Tempat Pelaksanaan">
                                     <UInput v-model="form.tempat" placeholder="Contoh: Hotel Horison" class="w-full bg-white font-medium rounded-xl" icon="lucide:map-pin" />
@@ -379,6 +390,32 @@
                                 {{ row.original.status }}
                             </UBadge>
                         </template>
+                        <template #dokumen-cell="{ row }">
+                            <div class="flex items-center gap-2 px-2">
+                                <UButton
+                                    variant="outline"
+                                    color="primary"
+                                    size="xs"
+                                    class="font-bold rounded-lg"
+                                    :disabled="!hasGeneratedFile(row.original, 'docx')"
+                                    @click="downloadGeneratedFile(row.original, 'docx')"
+                                >
+                                    <Icon name="lucide:file-text" class="w-3.5 h-3.5 mr-1" />
+                                    DOCX
+                                </UButton>
+                                <UButton
+                                    variant="outline"
+                                    color="error"
+                                    size="xs"
+                                    class="font-bold rounded-lg"
+                                    :disabled="!hasGeneratedFile(row.original, 'pdf')"
+                                    @click="downloadGeneratedFile(row.original, 'pdf')"
+                                >
+                                    <Icon name="lucide:file-type-2" class="w-3.5 h-3.5 mr-1" />
+                                    PDF
+                                </UButton>
+                            </div>
+                        </template>
                         <template #actions-cell="{ row }">
                             <div class="flex items-center gap-1">
                                 <UTooltip text="Lihat Detail">
@@ -439,7 +476,7 @@
 
         <!-- Detail Modal -->
         <UModal 
-            v-model:open="showDetailModal" 
+            v-model="showDetailModal" 
             title="Informasi Detail Surat" 
             description="Detail lengkap surat kesiswaan yang dipilih"
             size="lg"
@@ -505,7 +542,7 @@
             <template #footer>
                 <div class="flex justify-end gap-3 px-6 pb-6">
                     <UButton variant="soft" color="neutral" class="font-bold px-8 rounded-xl h-[44px]" @click="showDetailModal = false">Tutup Jendela</UButton>
-                    <UButton color="primary" class="font-bold px-10 shadow-lg shadow-blue-100 rounded-xl h-[44px]" @click="editSurat(selectedSurat!); showDetailModal = false">
+                    <UButton color="primary" class="font-bold px-10 shadow-lg shadow-blue-100 rounded-xl h-[44px]" @click="selectedSurat ? editSurat(selectedSurat) : null; showDetailModal = false">
                         <Icon name="lucide:pencil" class="w-4 h-4 mr-2" />
                         Edit Data Ini
                     </UButton>
@@ -516,332 +553,55 @@
 </template>
 
 <script setup lang="ts">
-import { useSuratKesiswaan, type SuratKesiswaan } from "~/composables/api/use-surat-kesiswaan";
-import { useSuratMasuk, type SuratMasuk } from "~/composables/api/use-surat-masuk";
-import { useKelasApi, useSiswaApi, type Siswa } from "~/composables/api/use-academic";
-import { useSweetAlert } from "~/composables/use-sweet-alert";
+import { useSuratKesiswaanPage } from "../../../composables/pages/tata-usaha/use-surat-kesiswaan-page";
 
-definePageMeta({ layout: "tata-usaha" });
+const vm = useSuratKesiswaanPage();
 
 const {
-    getTugas, createTugas, update, remove
-} = useSuratKesiswaan();
-const { getAll: getAllSuratMasuk } = useSuratMasuk();
-const { getAll: getAllKelas } = useKelasApi();
-const { getAll: getAllSiswa } = useSiswaApi();
-const { showConfirmation, showSuccess } = useSweetAlert();
+    loading,
+    loadingSiswa,
+    loadingSuratMasuk,
+    loadingGuru,
+    saving,
+    showDetailModal,
+    isEditing,
+    isFormExpanded,
+    isMonitoringExpanded,
+    selectedSurat,
+    suratKesiswaan,
+    pagination,
+    filters,
+    form,
+    filterSiswa,
+    selectedSiswa,
+    suratMasukOptions,
+    guruPenandatanganOptions,
+    tingkatOptions,
+    kelasOptions,
+    jenisDokumenOptions,
+    columns,
+    filteredSiswaList,
+    formatDate,
+    getStatusColor,
+    onDasarPenugasanChange,
+    toggleSiswa,
+    isSiswaSelected,
+    selectAllSiswa,
+    fetchData,
+    resetForm,
+    handleGenerate,
+    viewDetail,
+    editSurat,
+    confirmDelete,
+    changePage,
+    hasGeneratedFile,
+    downloadGeneratedFile,
+} = vm;
 
-const loading = ref(false);
-const loadingSiswa = ref(false);
-const loadingSuratMasuk = ref(false);
-const saving = ref(false);
-const showDetailModal = ref(false);
-const isEditing = ref(false);
-const isFormExpanded = ref(true);
-const isMonitoringExpanded = ref(false);
-const selectedSurat = ref<SuratKesiswaan | null>(null);
+// @ts-ignore Nuxt macro is auto-injected at runtime
+definePageMeta({ layout: "tata-usaha" });
 
-const suratKesiswaan = ref<SuratKesiswaan[]>([]);
-const rawSuratMasukList = ref<SuratMasuk[]>([]);
-const pagination = ref({ page: 1, limit: 10, total: 0 });
-const filters = ref({ search: "" });
-
-const form = ref({
-    jenis_dokumen: "Surat Tugas (Kegiatan Luar Sekolah)",
-    dasar_penugasan_id: undefined as string | undefined,
-    keperluan: "",
-    tempat: "",
-    alamat: "",
-    waktu_jam: "",
-    tgl_mulai: new Date().toISOString().split('T')[0],
-    tgl_selesai: "",
-});
-
-const filterSiswa = ref({
-    tingkat: "",
-    id_kelas: "",
-    search: "",
-});
-
-const siswaList = ref<Siswa[]>([]);
-const selectedSiswa = ref<Siswa[]>([]);
-
-const suratMasukOptions = ref<{ label: string, value: string }[]>([]);
-const tingkatOptions = [
-    { label: "Kelas X", value: "X" },
-    { label: "Kelas XI", value: "XI" },
-    { label: "Kelas XII", value: "XII" },
-];
-const kelasOptions = ref<{ label: string, value: string }[]>([]);
-
-const jenisDokumenOptions = [
-    { label: "Surat Tugas (Kegiatan Luar Sekolah)", value: "Surat Tugas (Kegiatan Luar Sekolah)" },
-    { label: "Surat Keterangan Siswa Aktif", value: "Surat Keterangan Siswa Aktif" },
-    { label: "Surat Izin / Dispensasi", value: "Surat Izin / Dispensasi" },
-];
-
-const columns = [
-    { accessorKey: "nomor_surat", header: "No. Surat" },
-    { accessorKey: "nama", header: "Nama / Personil" },
-    { accessorKey: "tanggal_surat", header: "Tgl Surat" },
-    { accessorKey: "status", header: "Status" },
-    { accessorKey: "actions", header: "Aksi" },
-];
-
-const filteredSiswaList = computed(() => {
-    if (!filterSiswa.value.search) return siswaList.value;
-    const search = filterSiswa.value.search.toLowerCase();
-    return siswaList.value.filter(s => 
-        s.nama_siswa.toLowerCase().includes(search) || 
-        s.nis.includes(search)
-    );
-});
-
-function formatDate(dateStr: string): string {
-    if (!dateStr) return "-";
-    return new Date(dateStr).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
-}
-
-function getStatusColor(status: string): string {
-    switch (status) {
-        case "selesai": return "success";
-        case "sedang_diproses": return "warning";
-        case "ditolak": return "error";
-        default: return "neutral";
-    }
-}
-
-async function fetchSuratMasuk() {
-    loadingSuratMasuk.value = true;
-    try {
-        const res = await getAllSuratMasuk({ limit: 100 });
-        if (res.success && res.data) {
-            rawSuratMasukList.value = res.data.data;
-            suratMasukOptions.value = res.data.data.map(s => ({
-                label: `${s.nomor_surat} - ${s.perkara || s.asal_surat}`,
-                value: String(s.id)
-            }));
-        }
-    } catch (err) {
-        console.error(err);
-    } finally {
-        loadingSuratMasuk.value = false;
-    }
-}
-
-function onDasarPenugasanChange(id: string) {
-    if (!id) return;
-    const selected = rawSuratMasukList.value.find(s => String(s.id) === id);
-    if (selected && !form.value.keperluan) {
-        form.value.keperluan = selected.perkara || `Menindaklanjuti surat dari ${selected.asal_surat}`;
-    }
-}
-
-async function fetchKelas() {
-    if (!filterSiswa.value.tingkat) return;
-    try {
-        const res = await getAllKelas({ limit: 100 });
-        if (res.success && res.data) {
-            kelasOptions.value = res.data.data
-                .filter(k => k.kode_tingkat === filterSiswa.value.tingkat)
-                .map(k => ({
-                    label: k.nama_kelas,
-                    value: k.id_kelas
-                }));
-        }
-    } catch (err) {
-        console.error(err);
-    }
-}
-
-async function fetchSiswa() {
-    if (!filterSiswa.value.id_kelas) return;
-    loadingSiswa.value = true;
-    try {
-        const res = await getAllSiswa({ id_kelas: filterSiswa.value.id_kelas, limit: 100 });
-        if (res.success && res.data) {
-            siswaList.value = res.data.data;
-        }
-    } catch (err) {
-        console.error(err);
-    } finally {
-        loadingSiswa.value = false;
-    }
-}
-
-function toggleSiswa(siswa: Siswa) {
-    if (isEditing.value) return;
-    const idx = selectedSiswa.value.findIndex(s => s.id_siswa === siswa.id_siswa);
-    if (idx > -1) {
-        selectedSiswa.value.splice(idx, 1);
-    } else {
-        selectedSiswa.value.push(siswa);
-    }
-}
-
-function isSiswaSelected(id: string) {
-    return selectedSiswa.value.some(s => s.id_siswa === id);
-}
-
-function selectAllSiswa() {
-    if (isEditing.value) return;
-    filteredSiswaList.value.forEach(s => {
-        if (!isSiswaSelected(s.id_siswa)) {
-            selectedSiswa.value.push(s);
-        }
-    });
-}
-
-async function fetchData() {
-    loading.value = true;
-    try {
-        const res = await getTugas({
-            page: pagination.value.page,
-            limit: pagination.value.limit,
-            search: filters.value.search || undefined
-        });
-        if (res.success && res.data) {
-            suratKesiswaan.value = res.data.data;
-            pagination.value.total = res.data.total;
-        }
-    } catch (err) {
-        console.error(err);
-    } finally {
-        loading.value = false;
-    }
-}
-
-function resetForm() {
-    form.value = {
-        jenis_dokumen: "Surat Tugas (Kegiatan Luar Sekolah)",
-        dasar_penugasan_id: undefined,
-        keperluan: "",
-        tempat: "",
-        alamat: "",
-        waktu_jam: "",
-        tgl_mulai: new Date().toISOString().split('T')[0],
-        tgl_selesai: "",
-    };
-    selectedSiswa.value = [];
-    isEditing.value = false;
-    selectedSurat.value = null;
-}
-
-async function handleGenerate() {
-    if (selectedSiswa.value.length === 0) {
-        await showConfirmation("Peringatan", "Silakan pilih setidaknya satu siswa untuk surat ini.", { showCancelButton: false });
-        return;
-    }
-
-    if (!form.value.keperluan) {
-        await showConfirmation("Data Tidak Lengkap", "Kolom Maksud / Keperluan harus diisi.", { showCancelButton: false });
-        return;
-    }
-
-    saving.value = true;
-    try {
-        if (isEditing.value && selectedSurat.value) {
-            const data = {
-                nomor_surat: selectedSurat.value.nomor_surat,
-                tanggal_surat: selectedSurat.value.tanggal_surat,
-                nama: selectedSiswa.value[0].nama_siswa,
-                kelas: selectedSiswa.value[0].kelas?.nama_kelas,
-                keperluan: form.value.keperluan,
-                waktu_mulai: new Date(form.value.tgl_mulai).toISOString(),
-                waktu_selesai: form.value.tgl_selesai ? new Date(form.value.tgl_selesai).toISOString() : undefined,
-                alamat: form.value.alamat,
-            };
-            const res = await update(selectedSurat.value.id, data);
-            if (res.success) {
-                await showSuccess("Berhasil", "Data surat berhasil diperbarui.");
-            }
-        } else {
-            for (const siswa of selectedSiswa.value) {
-                const payload = {
-                    jenis: form.value.jenis_dokumen,
-                    nama: siswa.nama_siswa,
-                    kelas: siswa.kelas?.nama_kelas,
-                    tanggal_surat: new Date().toISOString(),
-                    keperluan: form.value.keperluan,
-                    waktu_mulai: new Date(form.value.tgl_mulai).toISOString(),
-                    waktu_selesai: form.value.tgl_selesai ? new Date(form.value.tgl_selesai).toISOString() : undefined,
-                    alamat: form.value.alamat,
-                };
-                await createTugas(payload as any);
-            }
-            await showSuccess("Berhasil", `${selectedSiswa.value.length} Data surat berhasil dibuat dan dicatat.`);
-        }
-        
-        resetForm();
-        fetchData();
-        isFormExpanded.value = false;
-        isMonitoringExpanded.value = true;
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    } catch (err) {
-        console.error(err);
-    } finally {
-        saving.value = false;
-    }
-}
-
-function viewDetail(surat: SuratKesiswaan) {
-    selectedSurat.value = surat;
-    showDetailModal.value = true;
-}
-
-function editSurat(surat: SuratKesiswaan) {
-    selectedSurat.value = surat;
-    isEditing.value = true;
-    isFormExpanded.value = true;
-    form.value.keperluan = surat.keperluan;
-    form.value.tgl_mulai = surat.tanggal_surat.split('T')[0];
-    form.value.alamat = surat.alamat || "";
-    
-    // We create a dummy siswa object to show in the "Selected" area
-    selectedSiswa.value = [{
-        id_siswa: "temp",
-        nama_siswa: surat.nama,
-        nis: "-",
-        id_kelas: "temp",
-        kelas: { id_kelas: "temp", nama_kelas: surat.kelas || "-", kode_tingkat: "" }
-    }];
-    
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-}
-
-async function confirmDelete(surat: SuratKesiswaan) {
-    const result = await showConfirmation("Hapus Data", "Tindakan ini tidak dapat dibatalkan. Yakin ingin menghapus data surat ini?");
-    if (result.isConfirmed) {
-        const res = await remove(surat.id);
-        if (res.success) {
-            await showSuccess("Terhapus", "Data surat berhasil dihapus dari database.");
-            fetchData();
-        }
-    }
-}
-
-function changePage(page: number) {
-    pagination.value.page = page;
-    fetchData();
-}
-
-watch(() => filterSiswa.value.tingkat, () => {
-    filterSiswa.value.id_kelas = "";
-    kelasOptions.value = [];
-    siswaList.value = [];
-    fetchKelas();
-});
-
-watch(() => filterSiswa.value.id_kelas, () => {
-    siswaList.value = [];
-    fetchSiswa();
-});
-
-onMounted(() => {
-    fetchData();
-    fetchSuratMasuk();
-});
-
+// @ts-ignore Nuxt composable is auto-injected at runtime
 useHead({ title: "Surat Kesiswaan | Tata Usaha" });
 </script>
 

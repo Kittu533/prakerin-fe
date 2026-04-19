@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { ref, watch, computed } from "vue";
 import { usePeriodePKLApi } from "~/composables/api/use-periode-pkl";
-import { useTahunAjaranApi } from "~/composables/api/use-academic";
+import {
+    useTahunAjaranApi,
+    type TahunAjaran,
+} from "~/composables/api/use-academic";
 
 const emit = defineEmits<{
     close: [];
@@ -14,6 +17,16 @@ const toast = useToast();
 
 const loading = ref(false);
 const submitting = ref(false);
+const showQuickAddTAModal = ref(false);
+const quickAddSubmitting = ref(false);
+
+const quickAddTAForm = ref({
+    nama_tahun_ajaran: "",
+    tanggal_mulai: "",
+    tanggal_selesai: "",
+    status_aktif: false,
+});
+const quickAddTAErrors = ref<Record<string, string>>({});
 
 // Form state
 const formData = ref({
@@ -27,6 +40,7 @@ const formData = ref({
 
 // Options
 const tahunAjaranOptions = ref<{ label: string; value: string }[]>([]);
+const tahunAjaranList = ref<TahunAjaran[]>([]);
 
 const statusOptions = [
     { label: "Draft", value: "draft" },
@@ -35,6 +49,145 @@ const statusOptions = [
 
 // Validation errors
 const errors = ref<Record<string, string>>({});
+
+const validateQuickAddTAForm = () => {
+    quickAddTAErrors.value = {};
+
+    if (!quickAddTAForm.value.nama_tahun_ajaran.trim()) {
+        quickAddTAErrors.value.nama_tahun_ajaran =
+            "Nama tahun ajaran wajib diisi";
+    }
+
+    if (!quickAddTAForm.value.tanggal_mulai) {
+        quickAddTAErrors.value.tanggal_mulai = "Tanggal mulai wajib diisi";
+    }
+
+    if (!quickAddTAForm.value.tanggal_selesai) {
+        quickAddTAErrors.value.tanggal_selesai = "Tanggal selesai wajib diisi";
+    }
+
+    if (
+        quickAddTAForm.value.tanggal_mulai &&
+        quickAddTAForm.value.tanggal_selesai
+    ) {
+        const start = new Date(quickAddTAForm.value.tanggal_mulai);
+        const end = new Date(quickAddTAForm.value.tanggal_selesai);
+        if (end <= start) {
+            quickAddTAErrors.value.tanggal_selesai =
+                "Tanggal selesai harus setelah tanggal mulai";
+        }
+    }
+
+    return Object.keys(quickAddTAErrors.value).length === 0;
+};
+
+const resetQuickAddTAForm = () => {
+    quickAddTAForm.value = {
+        nama_tahun_ajaran: "",
+        tanggal_mulai: "",
+        tanggal_selesai: "",
+        status_aktif: false,
+    };
+    quickAddTAErrors.value = {};
+};
+
+const fillQuickAddTAByName = () => {
+    const match = quickAddTAForm.value.nama_tahun_ajaran
+        .trim()
+        .match(/(\d{4})\s*\/\s*(\d{4})/);
+
+    if (!match) return;
+
+    quickAddTAForm.value.tanggal_mulai = `${match[1]}-07-01`;
+    quickAddTAForm.value.tanggal_selesai = `${match[2]}-06-30`;
+};
+
+const fillQuickAddTANextAvailableRange = () => {
+    const list = [...tahunAjaranList.value]
+        .filter((item) => Boolean(item.tanggal_mulai) && Boolean(item.tanggal_selesai))
+        .sort((a, b) =>
+            new Date(a.tanggal_selesai || "1970-01-01").getTime() -
+            new Date(b.tanggal_selesai || "1970-01-01").getTime(),
+        );
+
+    const latest = list[list.length - 1];
+    if (!latest?.tanggal_selesai) return;
+
+    const end = new Date(latest.tanggal_selesai);
+    if (Number.isNaN(end.getTime())) return;
+
+    const nextStart = new Date(end);
+    nextStart.setDate(nextStart.getDate() + 1);
+
+    const nextEnd = new Date(nextStart);
+    nextEnd.setFullYear(nextEnd.getFullYear() + 1);
+    nextEnd.setDate(nextEnd.getDate() - 1);
+
+    const pad = (value: number) => String(value).padStart(2, "0");
+    const toDateInput = (value: Date) =>
+        `${value.getFullYear()}-${pad(value.getMonth() + 1)}-${pad(value.getDate())}`;
+
+    quickAddTAForm.value.tanggal_mulai = toDateInput(nextStart);
+    quickAddTAForm.value.tanggal_selesai = toDateInput(nextEnd);
+
+    if (!quickAddTAForm.value.nama_tahun_ajaran.trim()) {
+        quickAddTAForm.value.nama_tahun_ajaran = `${nextStart.getFullYear()}/${nextEnd.getFullYear()}`;
+    }
+};
+
+const openQuickAddTAModal = () => {
+    resetQuickAddTAForm();
+    showQuickAddTAModal.value = true;
+};
+
+const submitQuickAddTA = async () => {
+    if (!validateQuickAddTAForm()) return;
+
+    quickAddSubmitting.value = true;
+    try {
+        const response = await tahunAjaranApi.create({
+            nama_tahun_ajaran: quickAddTAForm.value.nama_tahun_ajaran.trim(),
+            tanggal_mulai: new Date(
+                quickAddTAForm.value.tanggal_mulai,
+            ).toISOString(),
+            tanggal_selesai: new Date(
+                quickAddTAForm.value.tanggal_selesai,
+            ).toISOString(),
+            status_aktif: quickAddTAForm.value.status_aktif,
+        });
+
+        if (!response.success || !response.data) {
+            throw new Error(response.message || "Gagal menambahkan tahun ajaran");
+        }
+
+        await fetchTahunAjaran();
+        formData.value.id_tahun_ajaran = response.data.id_tahun_ajaran;
+        showQuickAddTAModal.value = false;
+
+        toast.add({
+            title: "Tahun ajaran berhasil ditambahkan",
+            description: "Data tahun ajaran baru sudah otomatis dipilih",
+            color: "success",
+        });
+    } catch (error: any) {
+        const message = error?.message || "Terjadi kesalahan saat menyimpan";
+        const isOverlap = String(message).toLowerCase().includes("beririsan");
+
+        if (isOverlap) {
+            fillQuickAddTANextAvailableRange();
+        }
+
+        toast.add({
+            title: "Gagal menambahkan tahun ajaran",
+            description: isOverlap
+                ? "Rentang tanggal beririsan. Sistem sudah mengisi saran rentang tanggal berikutnya."
+                : message,
+            color: "error",
+        });
+    } finally {
+        quickAddSubmitting.value = false;
+    }
+};
 
 // Calculate duration
 const duration = computed(() => {
@@ -98,6 +251,7 @@ const fetchTahunAjaran = async () => {
     try {
         const response = await tahunAjaranApi.getAll({ limit: 100 });
         if (response.success) {
+            tahunAjaranList.value = response.data || [];
             tahunAjaranOptions.value = (response.data || []).map((ta) => ({
                 label: ta.nama_tahun_ajaran,
                 value: ta.id_tahun_ajaran,
@@ -275,6 +429,17 @@ fetchTahunAjaran();
                             <UButton
                                 type="button"
                                 variant="outline"
+                                color="primary"
+                                size="lg"
+                                :disabled="submitting"
+                                @click="openQuickAddTAModal"
+                                title="Tambah tahun ajaran cepat"
+                            >
+                                <Icon name="lucide:plus" class="w-4 h-4" />
+                            </UButton>
+                            <UButton
+                                type="button"
+                                variant="outline"
                                 color="neutral"
                                 size="lg"
                                 :disabled="
@@ -343,7 +508,7 @@ fetchTahunAjaran();
                     <!-- Duration indicator -->
                     <div
                         v-if="duration"
-                        class="bg-gradient-to-r from-sky-50 to-blue-50 rounded-lg p-3 border border-sky-100"
+                        class="bg-linear-to-r from-sky-50 to-blue-50 rounded-lg p-3 border border-sky-100"
                     >
                         <div class="flex items-center justify-between">
                             <div>
@@ -455,5 +620,116 @@ fetchTahunAjaran();
                 </div>
             </div>
         </div>
+
+        <UModal
+            :open="showQuickAddTAModal"
+            @update:open="showQuickAddTAModal = $event"
+            title="Quick Add Tahun Ajaran"
+            description="Tambahkan tahun ajaran baru tanpa keluar dari form periode"
+        >
+            <template #body>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">
+                            Nama Tahun Ajaran <span class="text-red-500">*</span>
+                        </label>
+                        <UInput
+                            v-model="quickAddTAForm.nama_tahun_ajaran"
+                            placeholder="Contoh: 2026/2027"
+                            :disabled="quickAddSubmitting"
+                            class="w-full"
+                        />
+                        <div class="mt-2 flex gap-2">
+                            <UButton
+                                type="button"
+                                size="xs"
+                                variant="outline"
+                                color="neutral"
+                                :disabled="quickAddSubmitting"
+                                @click="fillQuickAddTAByName"
+                            >
+                                Isi Tanggal dari Nama
+                            </UButton>
+                            <UButton
+                                type="button"
+                                size="xs"
+                                variant="outline"
+                                color="primary"
+                                :disabled="quickAddSubmitting"
+                                @click="fillQuickAddTANextAvailableRange"
+                            >
+                                Saran Rentang Aman
+                            </UButton>
+                        </div>
+                        <p v-if="quickAddTAErrors.nama_tahun_ajaran" class="text-xs text-red-500 mt-1">
+                            {{ quickAddTAErrors.nama_tahun_ajaran }}
+                        </p>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">
+                                Tanggal Mulai <span class="text-red-500">*</span>
+                            </label>
+                            <UInput
+                                v-model="quickAddTAForm.tanggal_mulai"
+                                type="date"
+                                :disabled="quickAddSubmitting"
+                                class="w-full"
+                            />
+                            <p v-if="quickAddTAErrors.tanggal_mulai" class="text-xs text-red-500 mt-1">
+                                {{ quickAddTAErrors.tanggal_mulai }}
+                            </p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">
+                                Tanggal Selesai <span class="text-red-500">*</span>
+                            </label>
+                            <UInput
+                                v-model="quickAddTAForm.tanggal_selesai"
+                                type="date"
+                                :disabled="quickAddSubmitting"
+                                class="w-full"
+                            />
+                            <p v-if="quickAddTAErrors.tanggal_selesai" class="text-xs text-red-500 mt-1">
+                                {{ quickAddTAErrors.tanggal_selesai }}
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <input
+                            id="quickAddTaActive"
+                            v-model="quickAddTAForm.status_aktif"
+                            type="checkbox"
+                            class="w-4 h-4 rounded border-slate-300"
+                            :disabled="quickAddSubmitting"
+                        />
+                        <label for="quickAddTaActive" class="text-sm text-slate-700">
+                            Jadikan tahun ajaran aktif
+                        </label>
+                    </div>
+                </div>
+            </template>
+            <template #footer>
+                <div class="flex justify-end gap-2 w-full">
+                    <UButton
+                        variant="outline"
+                        color="neutral"
+                        :disabled="quickAddSubmitting"
+                        @click="showQuickAddTAModal = false"
+                    >
+                        Batal
+                    </UButton>
+                    <UButton
+                        color="primary"
+                        :loading="quickAddSubmitting"
+                        @click="submitQuickAddTA"
+                    >
+                        Simpan Tahun Ajaran
+                    </UButton>
+                </div>
+            </template>
+        </UModal>
     </div>
 </template>

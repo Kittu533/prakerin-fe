@@ -321,6 +321,11 @@ export function usePeriodePKLApi() {
       { method: "PATCH", data: { status } },
       true,
     );
+
+    if (!data.success) {
+      throw new Error(data.message || "Gagal mengubah status periode");
+    }
+
     return data;
   }
 
@@ -352,7 +357,11 @@ export function usePeriodePKLApi() {
    */
   async function batchPenempatan(payload: {
     id_periode_pkl: string;
-    siswa_ids: string[];
+    siswa_ids?: string[];
+    siswa_penempatan?: Array<{
+      siswa_id: string;
+      durasi_bulan: number;
+    }>;
     perusahaan_id: string;
     guru_pembimbing_id?: string;
   }) {

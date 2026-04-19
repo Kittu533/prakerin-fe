@@ -11,18 +11,45 @@
  */
 import { apiFetch } from "~/composables/api-fetch";
 
+export type SuratKeluarTemplateJenis =
+  | "surat_tugas_murid"
+  | "surat_permohonan"
+  | "surat_perintah"
+  | "surat_undangan";
+
+export interface SuratKeluarTemplatePayload {
+  siswa?: Array<{
+    id_siswa?: string;
+    nama: string;
+    nis: string;
+    kelas: string;
+  }>;
+}
+
 export interface SuratKeluar {
   id: number;
   nomor_surat: string;
   tanggal_surat: string;
   ditujukan_kepada: string;
   alamat_tujuan: string;
-  perkara?: string;
+  perihal?: string;
   klasifikasi_surat: string;
   sifat_surat: string;
   isi_lampiran?: string;
   file_surat?: string;
+  file_surat_docx?: string;
+  file_surat_pdf?: string;
+  file_docx?: string;
+  file_pdf?: string;
+  template_jenis?: SuratKeluarTemplateJenis;
+  template_payload?: SuratKeluarTemplatePayload;
+  penandatangan_guru_id?: string;
   penandatangan: string;
+  penandatangan_guru?: {
+    id_guru: string;
+    nama_guru: string;
+    nip: string;
+  };
   tanggal_kirim?: string;
   bukti_pengiriman?: string;
   status: string;
@@ -34,13 +61,18 @@ export interface SuratKeluarCreate {
   nomor_surat: string;
   tanggal_surat: string;
   ditujukan_kepada: string;
-  alamat_tujuan: string;
-  perkara?: string;
+  alamat_tujuan?: string;
+  perihal?: string;
   klasifikasi_surat: string;
   sifat_surat: string;
   isi_lampiran?: string;
   file_surat?: string;
-  penandatangan: string;
+  file_surat_docx?: string;
+  file_surat_pdf?: string;
+  template_jenis?: SuratKeluarTemplateJenis;
+  template_payload?: SuratKeluarTemplatePayload;
+  penandatangan_guru_id: string;
+  penandatangan?: string;
   tanggal_kirim?: string;
   bukti_pengiriman?: string;
 }
@@ -50,11 +82,16 @@ export interface SuratKeluarUpdate {
   tanggal_surat?: string;
   ditujukan_kepada?: string;
   alamat_tujuan?: string;
-  perkara?: string;
+  perihal?: string;
   klasifikasi_surat?: string;
   sifat_surat?: string;
   isi_lampiran?: string;
   file_surat?: string;
+  file_surat_docx?: string;
+  file_surat_pdf?: string;
+  template_jenis?: SuratKeluarTemplateJenis;
+  template_payload?: SuratKeluarTemplatePayload;
+  penandatangan_guru_id?: string;
   penandatangan?: string;
   tanggal_kirim?: string;
   bukti_pengiriman?: string;
@@ -130,7 +167,56 @@ export function useSuratKeluar() {
     const queryString = searchParams.toString();
     const endpoint = queryString ? `/surat-keluar?${queryString}` : "/surat-keluar";
 
-    return safeFetch<SuratKeluarListResponse>("TataUsahaService", endpoint, { method: "GET" });
+    const result = await safeFetch<any>("TataUsahaService", endpoint, { method: "GET" });
+    if (!result.success) {
+      return { success: false, message: result.message };
+    }
+
+    const payload = result.data;
+    const fallbackPage = params?.page || 1;
+    const fallbackLimit = params?.limit || 10;
+
+    if (Array.isArray(payload)) {
+      return {
+        success: true,
+        message: result.message,
+        data: {
+          success: true,
+          data: payload,
+          page: fallbackPage,
+          limit: fallbackLimit,
+          total: payload.length,
+        },
+      };
+    }
+
+    if (payload && typeof payload === "object") {
+      const list = Array.isArray(payload.data) ? payload.data : [];
+      return {
+        success: true,
+        message: result.message,
+        data: {
+          success: payload.success ?? true,
+          data: list,
+          page: payload.page ?? fallbackPage,
+          limit: payload.limit ?? fallbackLimit,
+          total: payload.total ?? list.length,
+          message: payload.message,
+        },
+      };
+    }
+
+    return {
+      success: true,
+      message: result.message,
+      data: {
+        success: true,
+        data: [],
+        page: fallbackPage,
+        limit: fallbackLimit,
+        total: 0,
+      },
+    };
   }
 
   async function getById(id: number): Promise<{ success: boolean; data?: SuratKeluar; message: string }> {
@@ -155,11 +241,21 @@ export function useSuratKeluar() {
     return safeFetch<null>("TataUsahaService", `/surat-keluar/${id}`, { method: "DELETE" });
   }
 
+  async function generateNomor(jenis: string = "surat_keluar"): Promise<{ success: boolean; data?: { nomor_surat: string }; message: string }> {
+    const query = new URLSearchParams({ jenis }).toString();
+    return safeFetch<{ nomor_surat: string }>(
+      "TataUsahaService",
+      `/surat-keluar/generate-nomor?${query}`,
+      { method: "GET" },
+    );
+  }
+
   return {
     getAll,
     getById,
     create,
     update,
     remove,
+    generateNomor,
   };
 }

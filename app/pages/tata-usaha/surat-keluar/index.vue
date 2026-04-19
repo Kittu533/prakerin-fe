@@ -63,6 +63,7 @@
                                     <USelect
                                         v-model="form.template_id"
                                         :items="templateOptions"
+                                        :disabled="templateOptions.length === 0"
                                         placeholder="-- Pilih Template Surat --"
                                         class="flex-1"
                                         icon="lucide:file-text"
@@ -72,8 +73,21 @@
                                         Template Baru
                                     </UButton>
                                 </div>
+                                <p v-if="templateOptions.length === 0" class="text-xs text-amber-600 mt-2 font-medium">
+                                    Belum ada template tersedia. Tambahkan template baru terlebih dahulu.
+                                </p>
                             </UFormField>
                         </div>
+
+                        <UFormField label="Jenis Template Surat" required>
+                            <USelect
+                                v-model="form.template_jenis"
+                                :items="templateJenisOptions"
+                                placeholder="-- Pilih Jenis Template --"
+                                class="w-full mt-1"
+                                icon="lucide:layout-template"
+                            />
+                        </UFormField>
 
                         <UFormField label="Klasifikasi Surat" required>
                             <USelect
@@ -94,9 +108,20 @@
                             />
                         </UFormField>
 
+                        <UFormField label="Penandatangan Guru" required>
+                            <USelect
+                                v-model="form.penandatangan_guru_id"
+                                :items="guruPenandatanganOptions"
+                                :loading="loadingGuru"
+                                placeholder="-- Pilih Guru Penandatangan --"
+                                class="w-full mt-1"
+                                icon="lucide:user-check"
+                            />
+                        </UFormField>
+
                         <UFormField label="Perihal Surat" required class="lg:col-span-1">
                             <UTextarea 
-                                v-model="form.perkara" 
+                                v-model="form.perihal" 
                                 placeholder="Jelaskan isi singkat perihal surat..." 
                                 :rows="3"
                                 class="w-full mt-1"
@@ -110,6 +135,65 @@
                                 :rows="3"
                                 class="w-full mt-1"
                             />
+                        </UFormField>
+
+                        <UFormField
+                            v-if="form.template_jenis === 'surat_tugas_murid'"
+                            label="Peserta Didik Ditugaskan"
+                            required
+                            class="lg:col-span-2"
+                        >
+                            <USelect
+                                v-model="selectedSiswaTugasId"
+                                :items="siswaOptions"
+                                :loading="loadingSiswa"
+                                placeholder="-- Pilih satu siswa --"
+                                class="w-full mt-1"
+                                icon="lucide:user-round"
+                            />
+                            <p class="text-xs text-slate-500 mt-2">Data Nama, NIS, dan Kelas pada surat tugas akan terisi otomatis.</p>
+                        </UFormField>
+
+                        <UFormField
+                            v-if="form.template_jenis === 'surat_permohonan'"
+                            label="Daftar Siswa PKL"
+                            required
+                            class="lg:col-span-2"
+                        >
+                            <div class="space-y-2 mt-1">
+                                <div
+                                    v-for="(_, index) in form.siswa_ids"
+                                    :key="`siswa-row-${index}`"
+                                    class="flex items-center gap-2"
+                                >
+                                    <USelect
+                                        v-model="form.siswa_ids[index]"
+                                        :items="siswaOptions"
+                                        :loading="loadingSiswa"
+                                        :placeholder="`-- Pilih siswa #${index + 1} --`"
+                                        class="flex-1"
+                                        icon="lucide:users"
+                                    />
+                                    <UButton
+                                        variant="soft"
+                                        color="error"
+                                        icon="lucide:trash-2"
+                                        :disabled="form.siswa_ids.length === 1"
+                                        @click="removeSiswaRow(index)"
+                                    />
+                                </div>
+                                <div class="flex items-center justify-between pt-1">
+                                    <p class="text-xs text-slate-500">Tabel Nama, NIS, dan Kelas pada surat permohonan mengikuti daftar ini.</p>
+                                    <UButton
+                                        variant="soft"
+                                        color="primary"
+                                        icon="lucide:plus"
+                                        @click="addSiswaRow"
+                                    >
+                                        Tambah Siswa
+                                    </UButton>
+                                </div>
+                            </div>
                         </UFormField>
                     </div>
 
@@ -235,45 +319,86 @@
             </div>
 
             <UTable v-else :data="suratKeluar" :columns="columns" class="w-full">
-                <template #nomor_surat-cell="{ row }">
-                    <div class="flex flex-col">
-                        <span class="font-bold text-blue-700">{{ row.original.nomor_surat }}</span>
-                        <span class="text-[10px] text-slate-400 uppercase tracking-tighter">{{ row.original.klasifikasi_surat }}</span>
+                <template #row_number-cell="{ row }">
+                    <div class="inline-flex h-7 min-w-7 items-center justify-center rounded-md bg-indigo-50 px-2 text-xs font-bold text-indigo-700">
+                        {{ ((pagination.page - 1) * pagination.limit) + row.index + 1 }}
                     </div>
                 </template>
-                <template #tanggal_surat-cell="{ row }">
-                    <span class="text-slate-600 font-medium">{{ formatDate(row.original.tanggal_surat) }}</span>
+
+                <template #klasifikasi_surat-cell="{ row }">
+                    <span class="font-semibold uppercase text-slate-600 text-xs">
+                        {{ formatKlasifikasi(row.original.klasifikasi_surat) }}
+                    </span>
                 </template>
+
+                <template #nomor_surat-cell="{ row }">
+                    <div class="flex flex-col gap-1">
+                        <span class="font-bold text-blue-700">{{ row.original.nomor_surat }}</span>
+                        <span class="text-xs text-slate-500 inline-flex items-center gap-1">
+                            <Icon name="lucide:calendar" class="w-3.5 h-3.5" />
+                            {{ formatDate(row.original.tanggal_surat) }}
+                        </span>
+                    </div>
+                </template>
+
                 <template #ditujukan_kepada-cell="{ row }">
-                    <div class="max-w-[200px] truncate font-medium text-slate-700" :title="row.original.ditujukan_kepada">
+                    <div class="max-w-[220px] font-semibold text-slate-800" :title="row.original.ditujukan_kepada">
                         {{ row.original.ditujukan_kepada }}
                     </div>
                 </template>
-                <template #perkara-cell="{ row }">
-                    <div class="max-w-[300px] truncate text-slate-600 italic" :title="row.original.perkara">
-                        "{{ row.original.perkara }}"
+
+                <template #perihal-cell="{ row }">
+                    <div class="max-w-[260px] text-slate-600" :title="row.original.perihal || '-'">
+                        {{ row.original.perihal || '-' }}
                     </div>
                 </template>
-                <template #status-cell="{ row }">
-                    <UBadge :color="getStatusColor(row.original.status)" variant="subtle" size="sm" class="font-bold uppercase tracking-widest text-[10px]">
-                        {{ row.original.status }}
-                    </UBadge>
+
+                <template #isi_lampiran-cell="{ row }">
+                    <div class="max-w-[260px] text-cyan-600 italic" :title="row.original.isi_lampiran || '-'">
+                        {{ row.original.isi_lampiran ? `Dasar: ${row.original.isi_lampiran}` : '-' }}
+                    </div>
                 </template>
+
+                <template #berkas-cell="{ row }">
+                    <div class="flex items-center gap-2">
+                        <UTooltip text="Unduh DOCX">
+                            <UButton
+                                variant="soft"
+                                color="primary"
+                                size="xs"
+                                class="h-8 w-8 rounded-md border border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-600"
+                                :disabled="!hasGeneratedFile(row.original, 'docx')"
+                                @click="downloadGeneratedFile(row.original, 'docx')"
+                            >
+                                <Icon name="vscode-icons:file-type-word" class="w-4 h-4" />
+                            </UButton>
+                        </UTooltip>
+                        <UTooltip text="Unduh PDF">
+                            <UButton
+                                variant="soft"
+                                color="error"
+                                size="xs"
+                                class="h-8 w-8 rounded-md border border-red-200 bg-red-50 hover:bg-red-100 text-red-600"
+                                :disabled="!hasGeneratedFile(row.original, 'pdf')"
+                                @click="downloadGeneratedFile(row.original, 'pdf')"
+                            >
+                                <Icon name="vscode-icons:file-type-pdf2" class="w-4 h-4" />
+                            </UButton>
+                        </UTooltip>
+                    </div>
+                </template>
+
                 <template #actions-cell="{ row }">
-                    <div class="flex items-center gap-1">
-                        <UTooltip text="Lihat Detail">
-                            <UButton variant="ghost" color="neutral" size="xs" @click="viewDetail(row.original)">
-                                <Icon name="lucide:eye" class="w-4 h-4" />
-                            </UButton>
-                        </UTooltip>
+                    <div class="flex items-center justify-center">
                         <UTooltip text="Edit Surat">
-                            <UButton variant="ghost" color="neutral" size="xs" @click="editSurat(row.original)">
+                            <UButton
+                                variant="soft"
+                                color="warning"
+                                size="xs"
+                                class="h-8 w-8 rounded-md border border-amber-200 bg-amber-50 hover:bg-amber-100 text-amber-600"
+                                @click="editSurat(row.original)"
+                            >
                                 <Icon name="lucide:pencil" class="w-4 h-4" />
-                            </UButton>
-                        </UTooltip>
-                        <UTooltip text="Hapus">
-                            <UButton variant="ghost" color="error" size="xs" @click="confirmDelete(row.original)">
-                                <Icon name="lucide:trash-2" class="w-4 h-4" />
                             </UButton>
                         </UTooltip>
                     </div>
@@ -330,7 +455,8 @@
 
         <!-- Detail Modal -->
         <UModal 
-            v-model:open="showDetailModal" 
+            :open="showDetailModal"
+            @update:open="showDetailModal = $event"
             title="Detail Surat Keluar" 
             description="Informasi lengkap surat keluar yang dipilih"
             size="lg"
@@ -363,13 +489,13 @@
                         </div>
                         <div class="space-y-1">
                             <p class="text-[10px] uppercase tracking-widest text-slate-400 font-bold">Penandatangan</p>
-                            <p class="font-medium text-slate-700">{{ selectedSurat.penandatangan }}</p>
+                            <p class="font-medium text-slate-700">{{ selectedSurat.penandatangan_guru?.nama_guru || selectedSurat.penandatangan }}</p>
                         </div>
                     </div>
 
                     <div class="space-y-1 pt-4 border-t border-slate-100">
                         <p class="text-[10px] uppercase tracking-widest text-slate-400 font-bold">Perihal</p>
-                        <p class="text-slate-700 leading-relaxed">{{ selectedSurat.perkara || '-' }}</p>
+                        <p class="text-slate-700 leading-relaxed">{{ selectedSurat.perihal || '-' }}</p>
                     </div>
 
                     <div class="space-y-1 pt-4 border-t border-slate-100">
@@ -381,7 +507,7 @@
             <template #footer>
                 <div class="flex justify-end gap-3">
                     <UButton variant="soft" color="neutral" @click="showDetailModal = false">Tutup</UButton>
-                    <UButton color="primary" @click="editSurat(selectedSurat!); showDetailModal = false">
+                    <UButton color="primary" @click="selectedSurat && editSurat(selectedSurat); showDetailModal = false">
                         <Icon name="lucide:pencil" class="w-4 h-4 mr-2" />
                         Edit Data
                     </UButton>
@@ -391,7 +517,8 @@
 
         <!-- MODAL UNGGAH & KONVERSI TEMPLATE -->
         <UModal 
-            v-model:open="showTemplateModal" 
+            :open="showTemplateModal"
+            @update:open="showTemplateModal = $event"
             title="Unggah & Konversi Template" 
             description="Upload template surat dalam format Word (.docx) untuk dikonversi otomatis"
             size="md"
@@ -468,15 +595,21 @@
 </template>
 
 <script setup lang="ts">
-import { useSuratKeluar, type SuratKeluar } from "~/composables/api/use-surat-keluar";
+import { useSuratKeluar, type SuratKeluar, type SuratKeluarTemplateJenis } from "~/composables/api/use-surat-keluar";
+import { useGuruApi } from "~/composables/api/use-guru";
+import { useSiswaApi } from "~/composables/api/use-academic";
 import { useSweetAlert } from "~/composables/use-sweet-alert";
 
 definePageMeta({ layout: "tata-usaha" });
 
-const { getAll, create, update, remove } = useSuratKeluar();
-const { showConfirmation, showSuccess } = useSweetAlert();
+const { getAll, create, update, remove, generateNomor } = useSuratKeluar();
+const { getAllGuru } = useGuruApi();
+const { getAll: getAllSiswa } = useSiswaApi();
+const { showConfirmation, showSuccess, showWarning, showError } = useSweetAlert();
 
 const loading = ref(false);
+const loadingGuru = ref(false);
+const loadingSiswa = ref(false);
 const saving = ref(false);
 const showDetailModal = ref(false);
 const showTemplateModal = ref(false);
@@ -502,51 +635,248 @@ const filters = ref({
     end_date: "",
 });
 
+const guruPenandatanganOptions = ref<{ label: string; value: string }[]>([]);
+const siswaOptions = ref<Array<{ label: string; value: string; nama: string; nis: string; kelas: string }>>([]);
+
 const form = ref({
     nomor_surat: "",
     tanggal_surat: new Date().toISOString().split('T')[0],
     ditujukan_kepada: "",
     alamat_tujuan: "",
-    perkara: "",
+    perihal: "",
+    template_jenis: "surat_undangan" as SuratKeluarTemplateJenis,
     klasifikasi_surat: undefined,
     sifat_surat: "biasa",
     isi_lampiran: "",
-    penandatangan: "Admin TU",
+    siswa_ids: [""],
+    penandatangan_guru_id: "",
+    penandatangan: "",
     tanggal_kirim: "",
     bukti_pengiriman: "",
     template_id: undefined,
 });
 
 const columns = [
-    { accessorKey: "nomor_surat", header: "No. Surat" },
-    { accessorKey: "tanggal_surat", header: "Tanggal" },
+    { accessorKey: "row_number", header: "No" },
+    { accessorKey: "klasifikasi_surat", header: "Klasifikasi" },
+    { accessorKey: "nomor_surat", header: "Nomor Surat & Tanggal" },
     { accessorKey: "ditujukan_kepada", header: "Ditujukan" },
-    { accessorKey: "perkara", header: "Perihal" },
-    { accessorKey: "status", header: "Status" },
+    { accessorKey: "perihal", header: "Perihal" },
+    { accessorKey: "isi_lampiran", header: "Dasar" },
+    { accessorKey: "berkas", header: "Berkas" },
     { accessorKey: "actions", header: "Aksi" },
 ];
 
-const templateOptions = [
-    { label: 'Template Surat PKL', value: 'pkl' },
-    { label: 'Template Surat Izin', value: 'izin' },
+type TemplateOption = { label: string; value: string };
+type SiswaTemplateRow = { id_siswa?: string; nama: string; nis: string; kelas: string };
+
+const templateOptions = ref<TemplateOption[]>([]);
+
+const selectedSiswaTugasId = computed({
+    get: () => form.value.siswa_ids[0] || "",
+    set: (value: string) => {
+        form.value.siswa_ids = value ? [value] : [""];
+    },
+});
+
+const templateJenisOptions = [
+    { label: "Surat Tugas Murid", value: "surat_tugas_murid" },
+    { label: "Surat Permohonan", value: "surat_permohonan" },
+    { label: "Surat Perintah", value: "surat_perintah" },
+    { label: "Surat Undangan", value: "surat_undangan" },
 ];
 
 const klasifikasiOptions = [
-    { label: 'Biasa', value: 'biasa' },
-    { label: 'Penting', value: 'penting' },
-    { label: 'Segera', value: 'segera' },
-    { label: 'Rahasia', value: 'rahasia' },
+    { label: 'Undangan', value: 'undangan' },
+    { label: 'Edaran', value: 'ebaran' },
+    { label: 'Permohonan', value: 'permohonan' },
+    { label: 'Pemberitahuan', value: 'pemberitahuan' },
+    { label: 'Laporan', value: 'laporan' },
+    { label: 'Lainnya', value: 'lainnya' },
 ];
 
 const sifatOptions = [
     { value: "biasa", label: "Biasa" },
-    { value: "urgent", label: "Urgent" },
-    { value: "konfidensial", label: "Konfidensial" },
+    { value: "penting", label: "Penting" },
+    { value: "rahasia", label: "Rahasia" },
+    { value: "segera", label: "Segera" },
 ];
+
+const TEMPLATE_STORAGE_KEY = "tu_surat_keluar_templates";
+
+function loadTemplateOptions() {
+    if (typeof window === "undefined") return;
+    const raw = window.localStorage.getItem(TEMPLATE_STORAGE_KEY);
+    if (!raw) return;
+    try {
+        const parsed = JSON.parse(raw) as TemplateOption[];
+        if (Array.isArray(parsed)) {
+            templateOptions.value = parsed.filter((item) => item?.label && item?.value);
+        }
+    } catch (error) {
+        console.error("[SuratKeluar] Gagal membaca template tersimpan:", error);
+    }
+}
+
+function persistTemplateOptions() {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(TEMPLATE_STORAGE_KEY, JSON.stringify(templateOptions.value));
+}
 
 function formatDate(dateStr: string): string {
     if (!dateStr) return "-";
     return new Date(dateStr).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
+}
+
+function formatKlasifikasi(value?: string): string {
+    if (!value) return "-";
+    return value.replace(/_/g, " ").toUpperCase();
+}
+
+function inferTemplateJenisFromSurat(surat: SuratKeluar): SuratKeluarTemplateJenis {
+    const perihal = String(surat.perihal || "").toLowerCase();
+    if (surat.klasifikasi_surat === "permohonan") return "surat_permohonan";
+    if (surat.klasifikasi_surat === "undangan") return "surat_undangan";
+    if (perihal.includes("perintah")) return "surat_perintah";
+    if (perihal.includes("tugas")) return "surat_tugas_murid";
+    return "surat_undangan";
+}
+
+function resolveKlasifikasiByTemplate(
+    templateJenis: SuratKeluarTemplateJenis,
+    fallback?: string,
+): "undangan" | "permohonan" | "lainnya" {
+    if (templateJenis === "surat_permohonan") {
+        return "permohonan";
+    }
+    if (templateJenis === "surat_undangan") {
+        return "undangan";
+    }
+    if (fallback === "permohonan" || fallback === "undangan") {
+        return fallback;
+    }
+    return "lainnya";
+}
+
+function sanitizeFileName(value: string): string {
+    return value.replace(/[^a-zA-Z0-9-_]+/g, "_");
+}
+
+function normalizeFilePath(path?: string): string | null {
+    if (!path) return null;
+    const normalized = path.trim();
+    return normalized.length > 0 ? normalized : null;
+}
+
+function resolveVariantPath(sourcePath: string, extension: "docx" | "pdf"): string {
+    if (/\.(pdf|docx)$/i.test(sourcePath)) {
+        return sourcePath.replace(/\.(pdf|docx)$/i, `.${extension}`);
+    }
+    return `${sourcePath}.${extension}`;
+}
+
+function pickFirstFilePath(record: Record<string, unknown>, keys: string[]): string | null {
+    for (const key of keys) {
+        const value = record[key];
+        if (typeof value === "string") {
+            const normalized = normalizeFilePath(value);
+            if (normalized) {
+                return normalized;
+            }
+        }
+    }
+    return null;
+}
+
+function getGeneratedFilePath(surat: SuratKeluar, extension: "docx" | "pdf"): string | null {
+    const dynamicRecord = surat as unknown as Record<string, unknown>;
+    const explicitPath = extension === "docx"
+        ? pickFirstFilePath(dynamicRecord, [
+            "file_docx",
+            "file_surat_docx",
+            "docx_url",
+            "url_docx",
+            "file_docx_url",
+            "generated_docx",
+        ])
+        : pickFirstFilePath(dynamicRecord, [
+            "file_pdf",
+            "file_surat_pdf",
+            "pdf_url",
+            "url_pdf",
+            "file_pdf_url",
+            "generated_pdf",
+            "file_surat",
+        ]);
+
+    if (explicitPath) {
+        return explicitPath;
+    }
+
+    const fallbackPath = normalizeFilePath(surat.file_surat);
+    if (!fallbackPath) {
+        return null;
+    }
+
+    return resolveVariantPath(fallbackPath, extension);
+}
+
+function hasGeneratedFile(surat: SuratKeluar, extension: "docx" | "pdf"): boolean {
+    return Boolean(getGeneratedFilePath(surat, extension));
+}
+
+function buildFileUrl(filePath: string): string {
+    if (/^https?:\/\//i.test(filePath)) {
+        return filePath;
+    }
+
+    const config = useRuntimeConfig();
+    const apiUrl = String(config.public.apiUrl || "").replace(/\/+$/, "");
+    const baseOrigin = apiUrl.endsWith("/api") ? apiUrl.slice(0, -4) : apiUrl;
+    const cleanedPath = filePath.replace(/^\/+/, "");
+
+    if (!baseOrigin) {
+        return cleanedPath.startsWith("uploads/") ? `/${cleanedPath}` : `/uploads/${cleanedPath}`;
+    }
+
+    if (cleanedPath.startsWith("uploads/")) {
+        return `${baseOrigin}/${cleanedPath}`;
+    }
+
+    return `${baseOrigin}/uploads/${cleanedPath}`;
+}
+
+async function isFileAccessible(url: string): Promise<boolean> {
+    try {
+        const response = await fetch(url, { method: "HEAD" });
+        return response.ok;
+    } catch {
+        return false;
+    }
+}
+
+async function downloadGeneratedFile(surat: SuratKeluar, extension: "docx" | "pdf") {
+    const path = getGeneratedFilePath(surat, extension);
+    if (!path) {
+        await showWarning("Berkas belum tersedia", `File ${extension.toUpperCase()} untuk surat ini belum tersedia.`);
+        return;
+    }
+
+    const downloadUrl = buildFileUrl(path);
+    const available = await isFileAccessible(downloadUrl);
+    if (!available) {
+        await showWarning("Berkas tidak ditemukan", `File ${extension.toUpperCase()} belum tersedia di server.`);
+        return;
+    }
+
+    const link = document.createElement("a");
+    link.href = downloadUrl;
+    link.target = "_blank";
+    link.rel = "noopener";
+    link.download = `${sanitizeFileName(surat.nomor_surat)}.${extension}`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
 }
 
 function getStatusColor(status: string): string {
@@ -564,11 +894,14 @@ function resetForm() {
         tanggal_surat: new Date().toISOString().split('T')[0],
         ditujukan_kepada: "",
         alamat_tujuan: "",
-        perkara: "",
+        perihal: "",
+        template_jenis: "surat_undangan",
         klasifikasi_surat: undefined,
         sifat_surat: "biasa",
         isi_lampiran: "",
-        penandatangan: "Admin TU",
+        siswa_ids: [""],
+        penandatangan_guru_id: "",
+        penandatangan: "",
         tanggal_kirim: "",
         bukti_pengiriman: "",
         template_id: undefined,
@@ -608,12 +941,94 @@ async function fetchData() {
     }
 }
 
+async function fetchGuruPenandatangan() {
+    loadingGuru.value = true;
+    try {
+        const result = await getAllGuru({ page: 1, limit: 100, penandatangan: true });
+        if (result.success && result.data) {
+            guruPenandatanganOptions.value = (result.data.data || [])
+                .filter((guru: any) => guru.status_aktif !== false)
+                .map((guru: any) => ({
+                    label: `${guru.nama_guru} (${guru.nip}) - ${guru.id_guru}`,
+                    value: guru.id_guru,
+                }));
+        }
+    } catch (err) {
+        console.error("[SuratKeluar] Error fetching guru:", err);
+    } finally {
+        loadingGuru.value = false;
+    }
+}
+
+async function fetchSiswaOptions() {
+    loadingSiswa.value = true;
+    try {
+        const result = await getAllSiswa({ page: 1, limit: 500 });
+        const list = Array.isArray((result as any)?.data)
+            ? (result as any).data
+            : Array.isArray((result as any)?.response)
+                ? (result as any).response
+                : [];
+
+        siswaOptions.value = list
+            .filter((siswa: any) => siswa && siswa.id_siswa && siswa.nama_siswa && siswa.nis)
+            .map((siswa: any) => {
+                const kelasNama = siswa?.kelas?.nama_kelas || "-";
+                const jurusanNama = siswa?.kelas?.jurusan?.nama_jurusan || "";
+                const kelasLabel = jurusanNama ? `${kelasNama} ${jurusanNama}` : kelasNama;
+
+                return {
+                    value: siswa.id_siswa,
+                    label: `${siswa.nama_siswa} | ${siswa.nis} | ${kelasLabel}`,
+                    nama: siswa.nama_siswa,
+                    nis: siswa.nis,
+                    kelas: kelasLabel,
+                };
+            });
+    } catch (err) {
+        console.error("[SuratKeluar] Error fetching siswa:", err);
+        siswaOptions.value = [];
+    } finally {
+        loadingSiswa.value = false;
+    }
+}
+
+function addSiswaRow() {
+    if (form.value.siswa_ids.length >= 30) return;
+    form.value.siswa_ids = [...form.value.siswa_ids, ""];
+}
+
+function removeSiswaRow(index: number) {
+    const nextRows = form.value.siswa_ids.filter((_, idx) => idx !== index);
+    form.value.siswa_ids = nextRows.length > 0 ? nextRows : [""];
+}
+
+function buildTemplateSiswaPayload(): SiswaTemplateRow[] {
+    const optionMap = new Map<string, (typeof siswaOptions.value)[number]>();
+    for (const item of siswaOptions.value) {
+        optionMap.set(item.value, item);
+    }
+    const selectedIds = (Array.isArray(form.value.siswa_ids) ? form.value.siswa_ids : []) as string[];
+    const uniqueIds = Array.from(new Set(selectedIds.map((id) => String(id).trim()).filter((id) => id.length > 0)));
+
+    return uniqueIds
+        .map((id) => optionMap.get(id))
+        .filter((item): item is NonNullable<typeof item> => Boolean(item))
+        .map((item) => ({
+            id_siswa: item.value,
+            nama: item.nama,
+            nis: item.nis,
+            kelas: item.kelas,
+        }));
+}
+
 function viewDetail(surat: SuratKeluar) {
     selectedSurat.value = surat;
     showDetailModal.value = true;
 }
 
 function editSurat(surat: SuratKeluar) {
+    const templateJenis = inferTemplateJenisFromSurat(surat);
     selectedSurat.value = surat;
     isEditing.value = true;
     isFormExpanded.value = true;
@@ -622,10 +1037,13 @@ function editSurat(surat: SuratKeluar) {
         tanggal_surat: surat.tanggal_surat.split("T")[0],
         ditujukan_kepada: surat.ditujukan_kepada,
         alamat_tujuan: surat.alamat_tujuan || "",
-        perkara: surat.perkara || "",
+        perihal: surat.perihal || "",
+        template_jenis: templateJenis,
         klasifikasi_surat: surat.klasifikasi_surat as any,
         sifat_surat: surat.sifat_surat,
         isi_lampiran: surat.isi_lampiran || "",
+        siswa_ids: templateJenis === "surat_permohonan" ? ["", ""] : [""],
+        penandatangan_guru_id: surat.penandatangan_guru_id || "",
         penandatangan: surat.penandatangan,
         tanggal_kirim: surat.tanggal_kirim?.split("T")[0] || "",
         bukti_pengiriman: surat.bukti_pengiriman || "",
@@ -637,17 +1055,56 @@ function editSurat(surat: SuratKeluar) {
 }
 
 async function saveSurat() {
-    if (!form.value.ditujukan_kepada || !form.value.klasifikasi_surat) {
-        // Simple validation check before saving
+    if (!form.value.ditujukan_kepada || !form.value.perihal || !form.value.template_jenis || !form.value.penandatangan_guru_id) {
+        await showWarning("Data belum lengkap", "Tujuan, perihal, jenis template, dan penandatangan wajib diisi.");
+        return;
+    }
+
+    const templateSiswaPayload = buildTemplateSiswaPayload();
+    const isNeedSiswa =
+        form.value.template_jenis === "surat_permohonan" ||
+        form.value.template_jenis === "surat_tugas_murid";
+
+    if (isNeedSiswa && templateSiswaPayload.length === 0) {
+        await showWarning("Data siswa belum dipilih", "Silakan pilih siswa agar Nama, NIS, dan Kelas terisi otomatis di surat.");
+        return;
+    }
+
+    if (formMetode.value === "otomatis" && !form.value.template_id) {
+        await showWarning("Template wajib dipilih", "Pilih template yang tersedia untuk metode otomatis.");
         return;
     }
 
     saving.value = true;
     try {
+        if (!isEditing.value && !form.value.nomor_surat) {
+            const nomorResult = await generateNomor("surat_keluar");
+            if (!nomorResult.success || !nomorResult.data?.nomor_surat) {
+                await showError("Gagal generate nomor", nomorResult.message || "Nomor surat tidak berhasil dibuat.");
+                return;
+            }
+            form.value.nomor_surat = nomorResult.data.nomor_surat;
+        }
+
         const data = {
-            ...form.value,
+            nomor_surat: form.value.nomor_surat,
             tanggal_surat: new Date(form.value.tanggal_surat).toISOString(),
+            ditujukan_kepada: form.value.ditujukan_kepada,
+            alamat_tujuan: form.value.alamat_tujuan || undefined,
+            perihal: form.value.perihal,
+            template_jenis: form.value.template_jenis,
+            klasifikasi_surat: resolveKlasifikasiByTemplate(
+                form.value.template_jenis,
+                form.value.klasifikasi_surat,
+            ),
+            sifat_surat: form.value.sifat_surat,
+            isi_lampiran: form.value.isi_lampiran || undefined,
+            template_payload: templateSiswaPayload.length > 0
+                ? { siswa: templateSiswaPayload }
+                : undefined,
+            penandatangan_guru_id: form.value.penandatangan_guru_id,
             tanggal_kirim: form.value.tanggal_kirim ? new Date(form.value.tanggal_kirim).toISOString() : undefined,
+            bukti_pengiriman: form.value.bukti_pengiriman || undefined,
         };
 
         let result;
@@ -661,9 +1118,12 @@ async function saveSurat() {
             await showSuccess("Berhasil", `Surat keluar berhasil ${isEditing.value ? "diperbarui" : "disimpan"}`);
             resetForm();
             fetchData();
+        } else {
+            await showError("Gagal menyimpan", result.message || "Terjadi kesalahan validasi data.");
         }
     } catch (err) {
         console.error("[SuratKeluar] Error saving:", err);
+        await showError("Gagal menyimpan", "Terjadi kesalahan saat menyimpan surat keluar.");
     } finally {
         saving.value = false;
     }
@@ -698,6 +1158,7 @@ function handleFileChange(event: any) {
 
 async function handleUploadTemplate() {
     if (!templateForm.value.nama || !templateForm.value.file) {
+        await showWarning("Data template belum lengkap", "Nama template dan file .docx wajib diisi.");
         return;
     }
 
@@ -705,18 +1166,53 @@ async function handleUploadTemplate() {
     try {
         // Simulating upload process
         await new Promise(resolve => setTimeout(resolve, 1500));
+
+        const optionValue = `tpl_${Date.now()}`;
+        templateOptions.value = [
+            ...templateOptions.value,
+            {
+                label: templateForm.value.nama,
+                value: optionValue,
+            },
+        ];
+        persistTemplateOptions();
+        form.value.template_id = optionValue;
+
         await showSuccess("Berhasil", "Template berhasil diunggah dan dikonversi");
         showTemplateModal.value = false;
         templateForm.value = { nama: "", file: null };
     } catch (err) {
         console.error("Upload error:", err);
+        await showError("Gagal upload template", "Terjadi kesalahan saat mengunggah template.");
     } finally {
         uploadingTemplate.value = false;
     }
 }
 
+watch(
+    () => form.value.template_jenis,
+    (jenis) => {
+        if (jenis === "surat_tugas_murid") {
+            form.value.siswa_ids = [form.value.siswa_ids.find(Boolean) || ""];
+        } else if (jenis === "surat_permohonan") {
+            if (form.value.siswa_ids.length === 0) {
+                form.value.siswa_ids = ["", ""];
+            } else if (form.value.siswa_ids.length === 1) {
+                form.value.siswa_ids = [...form.value.siswa_ids, ""];
+            }
+        } else {
+            form.value.siswa_ids = [""];
+        }
+
+        form.value.klasifikasi_surat = resolveKlasifikasiByTemplate(jenis, form.value.klasifikasi_surat);
+    },
+);
+
 onMounted(() => {
+    loadTemplateOptions();
     fetchData();
+    fetchGuruPenandatangan();
+    fetchSiswaOptions();
 });
 
 useHead({ title: "Surat Keluar | Tata Usaha" });

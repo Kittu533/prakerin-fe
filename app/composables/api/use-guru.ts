@@ -18,6 +18,7 @@ export interface GuruProfile {
   tanggal_lahir?: string;
   alamat?: string;
   status_aktif?: boolean;
+  is_penandatangan?: boolean;
 }
 
 export interface GuruListResponse {
@@ -116,11 +117,17 @@ export function useGuruApi() {
     page?: number;
     limit?: number;
     search?: string;
+    kelompok?: string;
+    penandatangan?: boolean;
   }): Promise<{ success: boolean; data?: GuruListResponse; message: string }> {
     const searchParams = new URLSearchParams();
     if (params?.page) searchParams.append("page", params.page.toString());
     if (params?.limit) searchParams.append("limit", params.limit.toString());
     if (params?.search) searchParams.append("search", params.search);
+    if (params?.kelompok) searchParams.append("kelompok", params.kelompok);
+    if (typeof params?.penandatangan === "boolean") {
+      searchParams.append("penandatangan", String(params.penandatangan));
+    }
 
     const queryString = searchParams.toString();
     const endpoint = queryString ? `/guru?${queryString}` : "/guru";

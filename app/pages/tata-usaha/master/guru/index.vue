@@ -6,10 +6,22 @@
             entity-name="Personil"
             :loading="uploading"
             @upload="handleUpload"
-            @download-template="downloadTemplate"
-            @export-filtered="() => {}"
-            @export-all="() => {}"
+            @download-template="handleDownloadTemplate"
+            @export-filtered="exportFiltered"
+            @export-all="exportAll"
         />
+
+        <div class="flex justify-end">
+            <UButton
+                to="/tata-usaha/ttd-digital"
+                color="primary"
+                variant="soft"
+                class="font-bold"
+            >
+                <Icon name="lucide:signature" class="w-4 h-4 mr-2" />
+                Buka Master TTD Digital
+            </UButton>
+        </div>
 
         <!-- Filters Section -->
         <div class="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
@@ -71,7 +83,7 @@
             </div>
             <UTable
                 v-else
-                :data="guruListWithMock"
+                :data="guruListView"
                 :columns="columns"
                 :ui="{
                     th: {
@@ -217,65 +229,73 @@
         </div>
 
         <!-- Detail Modal -->
-        <UModal v-model:open="showDetailModal" title="Detail Guru" size="lg">
-            <div v-if="selectedGuru" class="p-4 space-y-3">
-                <div class="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                        <p class="text-slate-500 font-medium mb-1">NIP</p>
-                        <p class="font-bold text-slate-900">
-                            {{ selectedGuru.nip }}
-                        </p>
-                    </div>
-                    <div>
-                        <p class="text-slate-500 font-medium mb-1">Nama</p>
-                        <p class="font-bold text-slate-900">
-                            {{ selectedGuru.nama_guru }}
-                        </p>
-                    </div>
-                    <div>
-                        <p class="text-slate-500 font-medium mb-1">Jabatan</p>
-                        <p class="font-bold text-slate-900">
-                            {{ selectedGuru.jabatan || "-" }}
-                        </p>
-                    </div>
-                    <div>
-                        <p class="text-slate-500 font-medium mb-1">Kelompok</p>
-                        <UBadge
-                            v-if="selectedGuru.kelompok"
-                            color="primary"
-                            variant="subtle"
-                            size="sm"
-                        >
-                            {{ selectedGuru.kelompok }}
-                        </UBadge>
-                        <p v-else class="font-bold text-slate-900">-</p>
-                    </div>
-                    <div>
-                        <p class="text-slate-500 font-medium mb-1">Pangkat</p>
-                        <p class="font-bold text-slate-900">
-                            {{ selectedGuru.pangkat || "-" }}
-                        </p>
-                    </div>
-                    <div>
-                        <p class="text-slate-500 font-medium mb-1">Gol/Ruang</p>
-                        <p class="font-bold text-slate-900">
-                            {{ selectedGuru.golongan || "-" }}
-                        </p>
-                    </div>
-                    <div>
-                        <p class="text-slate-500 font-medium mb-1">No. HP</p>
-                        <p class="font-bold text-slate-900">
-                            {{ selectedGuru.no_hp || "-" }}
-                        </p>
-                    </div>
-                    <div>
-                        <p class="text-slate-500 font-medium mb-1">Email</p>
-                        <p class="font-bold text-slate-900">
-                            {{ selectedGuru.email || "-" }}
-                        </p>
+        <UModal
+            :open="showDetailModal"
+            @update:open="showDetailModal = $event"
+            title="Detail Guru"
+            description="Informasi lengkap data guru yang dipilih."
+            size="lg"
+        >
+            <template #body>
+                <div v-if="selectedGuru" class="p-4 space-y-3">
+                    <div class="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                            <p class="text-slate-500 font-medium mb-1">NIP</p>
+                            <p class="font-bold text-slate-900">
+                                {{ selectedGuru.nip }}
+                            </p>
+                        </div>
+                        <div>
+                            <p class="text-slate-500 font-medium mb-1">Nama</p>
+                            <p class="font-bold text-slate-900">
+                                {{ selectedGuru.nama_guru }}
+                            </p>
+                        </div>
+                        <div>
+                            <p class="text-slate-500 font-medium mb-1">Jabatan</p>
+                            <p class="font-bold text-slate-900">
+                                {{ selectedGuru.jabatan || "-" }}
+                            </p>
+                        </div>
+                        <div>
+                            <p class="text-slate-500 font-medium mb-1">Kelompok</p>
+                            <UBadge
+                                v-if="selectedGuru.kelompok"
+                                color="primary"
+                                variant="subtle"
+                                size="sm"
+                            >
+                                {{ selectedGuru.kelompok }}
+                            </UBadge>
+                            <p v-else class="font-bold text-slate-900">-</p>
+                        </div>
+                        <div>
+                            <p class="text-slate-500 font-medium mb-1">Pangkat</p>
+                            <p class="font-bold text-slate-900">
+                                {{ selectedGuru.pangkat || "-" }}
+                            </p>
+                        </div>
+                        <div>
+                            <p class="text-slate-500 font-medium mb-1">Gol/Ruang</p>
+                            <p class="font-bold text-slate-900">
+                                {{ selectedGuru.golongan || "-" }}
+                            </p>
+                        </div>
+                        <div>
+                            <p class="text-slate-500 font-medium mb-1">No. HP</p>
+                            <p class="font-bold text-slate-900">
+                                {{ selectedGuru.no_hp || "-" }}
+                            </p>
+                        </div>
+                        <div>
+                            <p class="text-slate-500 font-medium mb-1">Email</p>
+                            <p class="font-bold text-slate-900">
+                                {{ selectedGuru.email || "-" }}
+                            </p>
+                        </div>
                     </div>
                 </div>
-            </div>
+            </template>
             <template #footer>
                 <div class="flex justify-end">
                     <UButton variant="neutral" @click="showDetailModal = false"
@@ -288,150 +308,31 @@
 </template>
 
 <script setup lang="ts">
-import { useGuruApi } from "~/composables/api/use-academic";
-import { useSweetAlert } from "~/composables/use-sweet-alert";
+import { useMasterGuruPage } from "~/composables/tata-usaha/use-master-guru-page";
 import MassManagementCard from "~/components/master/MassManagementCard.vue";
 
 definePageMeta({ layout: "tata-usaha" });
 
-const { getAll: getAllGuru, importExcel, downloadTemplate } = useGuruApi();
-const toast = useToast();
-const { showSuccess, showError } = useSweetAlert();
-
-const massCard = ref<InstanceType<typeof MassManagementCard> | null>(null);
-const loading = ref(false);
-const uploading = ref(false);
-
-const showDetailModal = ref(false);
-const selectedGuru = ref<any | null>(null);
-
-const guruList = ref<any[]>([]);
-const pagination = ref({ page: 1, limit: 20, total: 0 });
-
-const filters = ref({
-    search: "",
-    kelompok: "Semua Kelompok",
-});
-
-const kelompokOptions = [
-    "Semua Kelompok",
-    "Manajemen",
-    "Guru Produktif",
-    "Guru Umum",
-    "Tata Usaha",
-];
-
-const columns = [
-    { accessorKey: "index", header: "No" },
-    { accessorKey: "nama_guru", header: "Nama & NIP" },
-    { accessorKey: "jabatan", header: "Jabatan / Kelompok" },
-    { accessorKey: "pangkat", header: "Pangkat" },
-    { accessorKey: "golongan", header: "Gol/Ruang" },
-    { accessorKey: "no_hp", header: "WhatsApp" },
-    { accessorKey: "actions", header: "Aksi" },
-];
-
-// Computed list with mock data for missing fields if necessary
-const guruListWithMock = computed(() => {
-    return guruList.value.map((guru, index) => ({
-        ...guru,
-        jabatan:
-            guru.jabatan ||
-            (index === 0
-                ? "Kepala Sekolah"
-                : index === 1
-                  ? "Kepala Sub Bagian Tata Usaha"
-                  : index === 2
-                    ? "Waka Kurikulum"
-                    : "Waka Kesiswaan"),
-        kelompok: guru.kelompok || "Manajemen",
-        pangkat:
-            guru.pangkat ||
-            (index === 0
-                ? "Pembina Utama Muda"
-                : index === 1
-                  ? "Penata Tingkat I"
-                  : "Penata Muda"),
-        golongan:
-            guru.golongan ||
-            (index === 0 ? "IV/c" : index === 1 ? "III/d" : "IX"),
-        no_hp: guru.no_hp || "6285741255521",
-    }));
-});
-
-async function fetchData() {
-    loading.value = true;
-    try {
-        const result = await getAllGuru({
-            page: pagination.value.page,
-            limit: pagination.value.limit,
-            search: filters.value.search || undefined,
-        });
-
-        if (result.success && result.data) {
-            guruList.value = Array.isArray(result.data)
-                ? result.data
-                : result.data.data || [];
-            const meta = result.data.meta || result.data.pagination;
-            pagination.value.total = meta?.total || 0;
-        }
-    } catch (err) {
-        console.error("[MasterGuru] Error fetching:", err);
-    } finally {
-        loading.value = false;
-    }
-}
-
-async function handleUpload(file: File, mode: "append" | "replace") {
-    uploading.value = true;
-    try {
-        const result = await importExcel(file, mode);
-
-        if (result.success) {
-            toast.add({
-                title: "Berhasil",
-                description: result.message || "Data guru berhasil diunggah",
-                color: "success",
-            });
-            massCard.value?.reset();
-            fetchData();
-        } else {
-            toast.add({
-                title: "Gagal",
-                description: result.message || "Gagal mengunggah data guru",
-                color: "error",
-            });
-        }
-    } catch (err: any) {
-        console.error("[MasterGuru] Error uploading:", err);
-        toast.add({
-            title: "Error",
-            description:
-                err.message || "Terjadi kesalahan sistem saat mengunggah",
-            color: "error",
-        });
-    } finally {
-        uploading.value = false;
-    }
-}
-
-function viewDetail(guru: any) {
-    selectedGuru.value = guru;
-    showDetailModal.value = true;
-}
-
-function confirmDelete(guru: any) {
-    console.log("Delete guru:", guru.id_guru);
-}
-
-function changePage(page: number) {
-    pagination.value.page = page;
-    fetchData();
-}
-
-onMounted(() => {
-    fetchData();
-});
+const {
+    massCard,
+    loading,
+    uploading,
+    showDetailModal,
+    selectedGuru,
+    guruListView,
+    pagination,
+    filters,
+    kelompokOptions,
+    columns,
+    fetchData,
+    handleUpload,
+    handleDownloadTemplate,
+    exportFiltered,
+    exportAll,
+    viewDetail,
+    confirmDelete,
+    changePage,
+} = useMasterGuruPage();
 
 useHead({ title: "Data Guru | Tata Usaha" });
 </script>

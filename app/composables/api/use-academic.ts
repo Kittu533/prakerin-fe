@@ -90,6 +90,7 @@ export interface Guru {
   kelompok?: string;
   pangkat?: string;
   golongan?: string;
+  is_penandatangan?: boolean;
   status_aktif: boolean;
   created_at?: string;
   updated_at?: string;
@@ -161,12 +162,14 @@ export function useSiswaApi() {
     limit?: number;
     id_kelas?: string;
     search?: string;
+    pkl_status?: "placed" | "unplaced";
   }) {
     const query = new URLSearchParams();
     if (params?.page) query.append("page", String(params.page));
     if (params?.limit) query.append("limit", String(params.limit));
     if (params?.id_kelas) query.append("id_kelas", String(params.id_kelas));
     if (params?.search) query.append("search", params.search);
+    if (params?.pkl_status) query.append("pkl_status", params.pkl_status);
 
     const { data } = await apiFetch<PaginatedResponse<Siswa>>(
       "CoreService",
@@ -188,7 +191,8 @@ export function useSiswaApi() {
     if (params?.page) query.append("page", String(params.page));
     if (params?.limit) query.append("limit", String(params.limit));
     if (params?.id_kelas) query.append("id_kelas", String(params.id_kelas));
-    if (params?.id_tahun_ajaran) query.append("id_tahun_ajaran", String(params.id_tahun_ajaran));
+    if (params?.id_tahun_ajaran)
+      query.append("id_tahun_ajaran", String(params.id_tahun_ajaran));
     if (params?.search) query.append("search", params.search);
 
     const { data } = await apiFetch<PaginatedResponse<any>>(
@@ -271,44 +275,66 @@ export function useSiswaApi() {
   async function importExcel(file: File, mode: "append" | "replace") {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
-      
+
       reader.onload = async (e) => {
         try {
-          const XLSX = await import('xlsx').then(m => m.default || m);
-          
+          const XLSX = await import("xlsx").then((m) => m.default || m);
+
           const data = e.target?.result;
-          const workbook = XLSX.read(data, { type: 'array' });
+          const workbook = XLSX.read(data, { type: "array" });
           const sheet = workbook.Sheets[workbook.SheetNames[0]];
           const rows = XLSX.utils.sheet_to_json(sheet);
 
           // Transform rows to expected format using flexible mapping
-          const formattedData = rows.map((row: any) => {
-            const findValue = (possibleKeys: string[]) => {
-              const key = Object.keys(row).find(k => 
-                possibleKeys.some(pk => k.toLowerCase().trim().replace(/_/g, ' ') === pk.toLowerCase().trim().replace(/_/g, ' '))
-              );
-              return key ? String(row[key]).trim() : '';
-            };
+          const formattedData = rows
+            .map((row: any) => {
+              const findValue = (possibleKeys: string[]) => {
+                const key = Object.keys(row).find((k) =>
+                  possibleKeys.some(
+                    (pk) =>
+                      k.toLowerCase().trim().replace(/_/g, " ") ===
+                      pk.toLowerCase().trim().replace(/_/g, " "),
+                  ),
+                );
+                return key ? String(row[key]).trim() : "";
+              };
 
-            return {
-              nis: findValue(['nis', 'n_i_s']),
-              nisn: findValue(['nisn', 'n_i_s_n']),
-              nama_siswa: findValue(['nama lengkap', 'nama', 'nama_siswa']),
-              jenis_kelamin: findValue(['gender', 'jenis kelamin', 'jk', 'l/p']),
-              tempat_lahir: findValue(['tempat lahir', 'tempat_lahir']),
-              tanggal_lahir: findValue(['tanggal lahir', 'tanggal_lahir']),
-              alamat: findValue(['alamat']),
-              no_hp: findValue(['whats app siswa', 'no hp', 'whatsapp', 'no_hp', 'telepon']),
-              nama_kelas: findValue(['kelas']),
-              tingkat: findValue(['tingkat']),
-              nama_jurusan: findValue(['program keahlian', 'program_keahlian', 'jurusan']),
-            };
-          }).filter((r: any) => r.nis && r.nama_siswa && r.nama_kelas);
+              return {
+                nis: findValue(["nis", "n_i_s"]),
+                nisn: findValue(["nisn", "n_i_s_n"]),
+                nama_siswa: findValue(["nama lengkap", "nama", "nama_siswa"]),
+                jenis_kelamin: findValue([
+                  "gender",
+                  "jenis kelamin",
+                  "jk",
+                  "l/p",
+                ]),
+                tempat_lahir: findValue(["tempat lahir", "tempat_lahir"]),
+                tanggal_lahir: findValue(["tanggal lahir", "tanggal_lahir"]),
+                alamat: findValue(["alamat"]),
+                no_hp: findValue([
+                  "whats app siswa",
+                  "no hp",
+                  "whatsapp",
+                  "no_hp",
+                  "telepon",
+                ]),
+                nama_kelas: findValue(["kelas"]),
+                tingkat: findValue(["tingkat"]),
+                nama_jurusan: findValue([
+                  "program keahlian",
+                  "program_keahlian",
+                  "jurusan",
+                ]),
+              };
+            })
+            .filter((r: any) => r.nis && r.nama_siswa && r.nama_kelas);
 
           if (formattedData.length === 0) {
             resolve({
               success: false,
-              message: 'Tidak ada data valid dalam file. Pastikan ada kolom NIS, NAMA LENGKAP, dan KELAS.',
+              message:
+                "Tidak ada data valid dalam file. Pastikan ada kolom NIS, NAMA LENGKAP, dan KELAS.",
             });
             return;
           }
@@ -333,7 +359,8 @@ export function useSiswaApi() {
           console.error("[SiswaAPI] Import error:", err);
           reject({
             success: false,
-            message: err instanceof Error ? err.message : 'Gagal mengimport data',
+            message:
+              err instanceof Error ? err.message : "Gagal mengimport data",
           });
         }
       };
@@ -341,7 +368,7 @@ export function useSiswaApi() {
       reader.onerror = () => {
         reject({
           success: false,
-          message: 'Gagal membaca file',
+          message: "Gagal membaca file",
         });
       };
 
@@ -351,29 +378,29 @@ export function useSiswaApi() {
 
   async function downloadTemplate() {
     try {
-      const XLSX = await import('xlsx').then(m => m.default || m);
-      
+      const XLSX = await import("xlsx").then((m) => m.default || m);
+
       const templateData = [
         {
-          "NO": 1,
-          "TINGKAT": "XI",
-          "PROGRAM_KEAHLIAN": "Teknik Komputer dan Jaringan",
-          "KELAS": "XI TKJ 1",
-          "NIS": "2223001",
-          "NISN": "0071234567",
+          NO: 1,
+          TINGKAT: "XI",
+          PROGRAM_KEAHLIAN: "Teknik Komputer dan Jaringan",
+          KELAS: "XI TKJ 1",
+          NIS: "2223001",
+          NISN: "0071234567",
           "NAMA LENGKAP": "Asep Sunandar",
-          "GENDER": "L",
+          GENDER: "L",
           "TEMPAT LAHIR": "Bandung",
           "TANGGAL LAHIR": "2007-05-20",
-          "ALAMAT": "Jl. Merdeka No. 123",
-          "WHATS APP SISWA": "081234567890"
-        }
+          ALAMAT: "Jl. Merdeka No. 123",
+          "WHATS APP SISWA": "081234567890",
+        },
       ];
 
       const worksheet = XLSX.utils.json_to_sheet(templateData);
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, "Template Siswa");
-      
+
       XLSX.writeFile(workbook, "Template_Siswa.xlsx");
       return { success: true };
     } catch (err) {
@@ -382,7 +409,17 @@ export function useSiswaApi() {
     }
   }
 
-  return { getAll, getPklStudents, getById, create, update, remove, resetPassword, importExcel, downloadTemplate };
+  return {
+    getAll,
+    getPklStudents,
+    getById,
+    create,
+    update,
+    remove,
+    resetPassword,
+    importExcel,
+    downloadTemplate,
+  };
 }
 
 // =============================================
@@ -393,11 +430,18 @@ export function useGuruApi() {
     page?: number;
     limit?: number;
     search?: string;
+    kelompok?: string;
+    penandatangan?: boolean;
   }) {
     const query = new URLSearchParams();
     if (params?.page) query.append("page", String(params.page));
     if (params?.limit) query.append("limit", String(params.limit));
     if (params?.search) query.append("search", params.search);
+    if (params?.kelompok && params.kelompok !== "Semua Kelompok") query.append("kelompok", params.kelompok);
+    if (typeof params?.penandatangan === "boolean") {
+      query.append("penandatangan", String(params.penandatangan));
+    }
+    query.append("_ts", String(Date.now()));
 
     const { data } = await apiFetch<PaginatedResponse<Guru>>(
       "CoreService",
@@ -437,6 +481,7 @@ export function useGuruApi() {
     kelompok?: string;
     pangkat?: string;
     golongan?: string;
+    is_penandatangan?: boolean;
   }) {
     const { data } = await apiFetch<SingleResponse<Guru>>(
       "CoreService",
@@ -458,6 +503,7 @@ export function useGuruApi() {
       kelompok: string;
       pangkat: string;
       golongan: string;
+      is_penandatangan: boolean;
     }>,
   ) {
     const { data } = await apiFetch<SingleResponse<Guru>>(
@@ -506,64 +552,87 @@ export function useGuruApi() {
   async function importExcel(file: File, mode: "append" | "replace") {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
-      
+
       reader.onload = async (e) => {
         try {
           // Dynamic import of xlsx
-          const XLSX = await import('xlsx').then(m => m.default || m);
-          
+          const XLSX = await import("xlsx").then((m) => m.default || m);
+
           const data = e.target?.result;
-          const workbook = XLSX.read(data, { type: 'array' });
+          const workbook = XLSX.read(data, { type: "array" });
           const sheet = workbook.Sheets[workbook.SheetNames[0]];
           const rows = XLSX.utils.sheet_to_json(sheet);
 
           // Transform rows to expected format
-          const formattedData = rows.map((row: any) => {
-            // Find keys that contain NIP or Nama to handle various Excel headers
-            const findValue = (possibleKeys: string[]) => {
-              const key = Object.keys(row).find(k => 
-                possibleKeys.some(pk => k.toLowerCase().trim() === pk.toLowerCase().trim())
-              );
-              return key ? String(row[key]).trim() : '';
-            };
+          const formattedData = rows
+            .map((row: any) => {
+              // Find keys that contain NIP or Nama to handle various Excel headers
+              const findValue = (possibleKeys: string[]) => {
+                const key = Object.keys(row).find((k) =>
+                  possibleKeys.some(
+                    (pk) => k.toLowerCase().trim() === pk.toLowerCase().trim(),
+                  ),
+                );
+                return key ? String(row[key]).trim() : "";
+              };
 
-            const nipValue = findValue(['nip', 'n_i_p', 'nomor induk pegawai', 'nama & nip']);
-            const namaValue = findValue(['nama_guru', 'nama', 'nama lengkap', 'nama & nip']);
-            
-            // If NIP and Nama are in the same column like "Asep - 192031"
-            let finalNip = nipValue;
-            let finalNama = namaValue;
+              const nipValue = findValue([
+                "nip",
+                "n_i_p",
+                "nomor induk pegawai",
+                "nama & nip",
+              ]);
+              const namaValue = findValue([
+                "nama_guru",
+                "nama",
+                "nama lengkap",
+                "nama & nip",
+              ]);
 
-            if (nipValue === namaValue && nipValue.includes(' - ')) {
-              const parts = nipValue.split(' - ');
-              if (parts.length >= 2) {
-                // Usually Name - NIP or NIP - Name
-                // Check if one part is numeric/long
-                if (/^\d+$/.test(parts[1].trim())) {
-                  finalNama = parts[0].trim();
-                  finalNip = parts[1].trim();
-                } else {
-                  finalNip = parts[0].trim();
-                  finalNama = parts[1].trim();
+              // If NIP and Nama are in the same column like "Asep - 192031"
+              let finalNip = nipValue;
+              let finalNama = namaValue;
+
+              if (nipValue === namaValue && nipValue.includes(" - ")) {
+                const parts = nipValue.split(" - ");
+                if (parts.length >= 2) {
+                  // Usually Name - NIP or NIP - Name
+                  // Check if one part is numeric/long
+                  if (/^\d+$/.test(parts[1].trim())) {
+                    finalNama = parts[0].trim();
+                    finalNip = parts[1].trim();
+                  } else {
+                    finalNip = parts[0].trim();
+                    finalNama = parts[1].trim();
+                  }
                 }
               }
-            }
 
-            return {
-              nip: finalNip,
-              nama_guru: finalNama,
-              email: findValue(['email', 'surel']) || null,
-              no_hp: findValue(['no_hp', 'no hp', 'whatsapp', 'telepon', 'hp', 'no. hp']) || null,
-              jabatan: findValue(['jabatan', 'jabatan / kelompok']) || null,
-              pangkat: findValue(['pangkat']) || null,
-              golongan: findValue(['golongan', 'gol/ruang']) || null,
-            };
-          }).filter((r: any) => r.nip && r.nama_guru);
+              return {
+                nip: finalNip,
+                nama_guru: finalNama,
+                email: findValue(["email", "surel"]) || null,
+                no_hp:
+                  findValue([
+                    "no_hp",
+                    "no hp",
+                    "whatsapp",
+                    "telepon",
+                    "hp",
+                    "no. hp",
+                  ]) || null,
+                jabatan: findValue(["jabatan", "jabatan / kelompok"]) || null,
+                pangkat: findValue(["pangkat"]) || null,
+                golongan: findValue(["golongan", "gol/ruang"]) || null,
+              };
+            })
+            .filter((r: any) => r.nip && r.nama_guru);
 
           if (formattedData.length === 0) {
             resolve({
               success: false,
-              message: 'Tidak ada data valid dalam file. Pastikan ada kolom NIP dan Nama_Guru.',
+              message:
+                "Tidak ada data valid dalam file. Pastikan ada kolom NIP dan Nama_Guru.",
             });
             return;
           }
@@ -582,7 +651,7 @@ export function useGuruApi() {
             "/guru/import",
             {
               method: "POST",
-              data: { data: formattedData },
+              data: { data: formattedData, mode },
             },
             true,
           );
@@ -592,7 +661,8 @@ export function useGuruApi() {
           console.error("[GuruAPI] Import error:", err);
           reject({
             success: false,
-            message: err instanceof Error ? err.message : 'Gagal mengimport data',
+            message:
+              err instanceof Error ? err.message : "Gagal mengimport data",
           });
         }
       };
@@ -600,7 +670,7 @@ export function useGuruApi() {
       reader.onerror = () => {
         reject({
           success: false,
-          message: 'Gagal membaca file',
+          message: "Gagal membaca file",
         });
       };
 
@@ -609,8 +679,8 @@ export function useGuruApi() {
   }
 
   async function exportGuru(ids?: string[]) {
-    const query = ids && ids.length > 0 ? `?ids=${ids.join(',')}` : '';
-    
+    const query = ids && ids.length > 0 ? `?ids=${ids.join(",")}` : "";
+
     const { data } = await apiFetch<SingleResponse<any[]>>(
       "CoreService",
       `/guru/export${query}`,
@@ -622,25 +692,25 @@ export function useGuruApi() {
 
   async function downloadTemplate() {
     try {
-      const XLSX = await import('xlsx').then(m => m.default || m);
-      
+      const XLSX = await import("xlsx").then((m) => m.default || m);
+
       const templateData = [
         {
-          "NO": 1,
+          NO: 1,
           "NAMA LENGKAP": "Hj. Ratna Dewi, A.Ma.",
-          "NIP": "198501012020012001",
+          NIP: "198501012020012001",
           "JABATAN / KELOMPOK": "Kepala Sub Bagian Tata Usaha",
-          "PANGKAT": "Penata Tingkat I",
+          PANGKAT: "Penata Tingkat I",
           "GOL/RUANG": "III/d",
-          "WHATSAPP": "081234567890",
-          "EMAIL": "ratna.dewi@sekolah.sch.id"
-        }
+          WHATSAPP: "081234567890",
+          EMAIL: "ratna.dewi@sekolah.sch.id",
+        },
       ];
 
       const worksheet = XLSX.utils.json_to_sheet(templateData);
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, "Template Guru");
-      
+
       XLSX.writeFile(workbook, "Template_Guru.xlsx");
       return { success: true };
     } catch (err) {
@@ -649,7 +719,19 @@ export function useGuruApi() {
     }
   }
 
-  return { getAll, getMe, getById, create, update, remove, resetPassword, syncAccounts, importExcel, exportGuru, downloadTemplate };
+  return {
+    getAll,
+    getMe,
+    getById,
+    create,
+    update,
+    remove,
+    resetPassword,
+    syncAccounts,
+    importExcel,
+    exportGuru,
+    downloadTemplate,
+  };
 }
 
 // =============================================

@@ -228,6 +228,11 @@ const {
 
 const loading = ref(true);
 const apiError = ref(false);
+let isUnmounted = false;
+
+onUnmounted(() => {
+    isUnmounted = true;
+});
 
 // Stats data
 const stats = ref([
@@ -413,6 +418,7 @@ async function fetchDashboardData() {
 
         // Process stats - backend returns snake_case fields
         if (
+            !isUnmounted &&
             statsRes.status === "fulfilled" &&
             statsRes.value?.success &&
             statsRes.value.data
@@ -434,6 +440,7 @@ async function fetchDashboardData() {
 
         // Process penempatan per jurusan
         if (
+            !isUnmounted &&
             penempatanRes.status === "fulfilled" &&
             penempatanRes.value?.success
         ) {
@@ -449,7 +456,7 @@ async function fetchDashboardData() {
         }
 
         // Process trend pengajuan
-        if (trendRes.status === "fulfilled" && trendRes.value?.success) {
+        if (!isUnmounted && trendRes.status === "fulfilled" && trendRes.value?.success) {
             const data = trendRes.value.data as TrendPengajuan[];
             if (data.length > 0) {
                 trendChartOptions.xaxis.categories = data.map((d) => d.bulan);
@@ -461,7 +468,7 @@ async function fetchDashboardData() {
         }
 
         // Process status siswa
-        if (statusRes.status === "fulfilled" && statusRes.value?.success) {
+        if (!isUnmounted && statusRes.status === "fulfilled" && statusRes.value?.success) {
             const data = statusRes.value.data as StatusSiswa[];
             if (data.length > 0) {
                 statusChartOptions.labels = data.map((d) => d.status);
@@ -470,7 +477,7 @@ async function fetchDashboardData() {
         }
 
         // Process recent pengajuan
-        if (recentRes.status === "fulfilled" && recentRes.value?.success) {
+        if (!isUnmounted && recentRes.status === "fulfilled" && recentRes.value?.success) {
             const data = recentRes.value.data;
             // Handle different response formats
             if (Array.isArray(data)) {
@@ -489,7 +496,9 @@ async function fetchDashboardData() {
         // Use dummy data as fallback
         useDummyData();
     } finally {
-        loading.value = false;
+        if (!isUnmounted) {
+            loading.value = false;
+        }
     }
 }
 

@@ -117,8 +117,6 @@ const pageTitle = computed(() => {
     '/siswa': 'Dashboard',
     '/siswa/logbook': 'Logbook Harian',
     '/siswa/absensi': 'Absensi',
-    '/siswa/dokumen': 'Dokumen PKL',
-    '/siswa/laporan': 'Laporan Akhir',
     '/siswa/nilai': 'Nilai PKL',
     '/siswa/profil': 'Profil Saya',
     '/siswa/ubah-password': 'Ubah Password'
@@ -137,7 +135,6 @@ const bottomNavItems = [
   { to: '/siswa', icon: 'lucide:home', label: 'Home' },
   { to: '/siswa/logbook', icon: 'lucide:book-open', label: 'Logbook', badge: 2 },
   { to: '/siswa/absensi', icon: 'lucide:map-pin', label: 'Absensi', dot: true },
-  { to: '/siswa/dokumen', icon: 'lucide:folder', label: 'Dokumen' },
   { to: '/siswa/profil', icon: 'lucide:user', label: 'Profil' }
 ]
 

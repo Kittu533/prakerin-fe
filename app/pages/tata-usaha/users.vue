@@ -3,7 +3,7 @@ import { useUserApi, type User } from "~/composables/api/use-identity";
 import { h } from "vue";
 import type { ColumnDef } from "@tanstack/vue-table";
 
-definePageMeta({ layout: "admin" });
+definePageMeta({ layout: "tata-usaha" });
 
 const toast = useToast();
 const userApi = useUserApi();
@@ -356,7 +356,7 @@ watch([filterRole], () => {
 
 onMounted(fetchData);
 
-useHead({ title: "Kelola Akun | Admin" });
+useHead({ title: "Kelola Akun | Tata Usaha" });
 </script>
 
 <template>

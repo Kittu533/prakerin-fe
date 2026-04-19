@@ -266,6 +266,21 @@ export function usePenempatanApi() {
     return data;
   }
 
+  async function complete(id: string) {
+    const { data } = await apiFetch<SingleResponse<Penempatan>>(
+      "PlacementService",
+      `/penempatan/${id}/complete`,
+      { method: "POST" },
+      true,
+    );
+
+    if (!data.success) {
+      throw new Error(data.message || "Gagal menyelesaikan penempatan");
+    }
+
+    return data;
+  }
+
   // Mentor-specific: Get students at mentor's company
   // Guru-specific: Get students mentored by this guru
   async function getMyStudents(params?: {
@@ -319,6 +334,36 @@ export function usePenempatanApi() {
     return data;
   }
 
+  async function getMentorStudents(params?: {
+    page?: number;
+    limit?: number;
+    status_penempatan?: string;
+  }) {
+    const query = new URLSearchParams();
+    if (params?.page) query.append("page", String(params.page));
+    if (params?.limit) query.append("limit", String(params.limit));
+    if (params?.status_penempatan)
+      query.append("status_penempatan", params.status_penempatan);
+
+    const { data } = await apiFetch<PaginatedResponse<Penempatan>>(
+      "PlacementService",
+      `/penempatan/mentor/me?${query.toString()}`,
+      { method: "GET" },
+      true,
+    );
+    return data;
+  }
+
+  async function getMentorStudentDetail(id: string) {
+    const { data } = await apiFetch<SingleResponse<Penempatan>>(
+      "PlacementService",
+      `/penempatan/mentor/me/${id}`,
+      { method: "GET" },
+      true,
+    );
+    return data;
+  }
+
   async function getSmartDraft(tahunAjaranId: string) {
     const { data } = await apiFetch<SingleResponse<{
       summary: {
@@ -367,6 +412,7 @@ export function usePenempatanApi() {
     getById,
     create,
     update,
+    complete,
     delete: remove,
     getMentorStudents,
     getMentorStudentDetail,

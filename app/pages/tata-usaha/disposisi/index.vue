@@ -111,8 +111,8 @@
                 />
                 <UInput v-model="form.tanggal_disposisi" type="date" label="Tanggal Disposisi" required />
                 <UInput v-model="form.penerima_disposisi" label="Penerima Disposisi" placeholder="Nama penerima" required />
-                <UTextarea v-model="form.instruksi" label="Instruksi" placeholder="Instruksi disposisi" rows="3" required />
-                <UTextarea v-model="form.instruksi_tambahan" label="Instruksi Tambahan" placeholder="Instruksi tambahan (opsional)" rows="2" />
+                <UTextarea v-model="form.instruksi" label="Instruksi" placeholder="Instruksi disposisi" :rows="3" required />
+                <UTextarea v-model="form.instruksi_tambahan" label="Instruksi Tambahan" placeholder="Instruksi tambahan (opsional)" :rows="2" />
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <UInput v-model="form.batas_waktu" type="date" label="Batas Waktu" />
                     <USelect

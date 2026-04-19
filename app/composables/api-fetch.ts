@@ -32,6 +32,7 @@ export async function apiFetch<T>(
     PartnerService: '',       // Perusahaan, mentor
     PlacementService: '',     // Pengajuan, penempatan, absensi, logbook
     ReportingService: '',     // Dashboard, reports
+    TataUsahaService: '',     // Surat masuk/keluar, disposisi, TU settings
   };
 
   // Get path prefix for service

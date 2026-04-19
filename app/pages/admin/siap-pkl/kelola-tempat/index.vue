@@ -1,334 +1,462 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, onMounted, ref, watch } from "vue";
+import { useGuruApi } from "~/composables/api/use-academic";
+import { usePerusahaanApi } from "~/composables/api/use-partner";
+import { usePeriodePKLApi } from "~/composables/api/use-periode-pkl";
 
 definePageMeta({
-  layout: 'admin'
-})
+  layout: "admin",
+});
 
-// Mock Data for mapping
-const mappingData = ref([
-  {
-    id: 1,
-    nama: 'AHMAD ULINNUHA',
-    nis: '232519156',
-    kelas: 'XII TME 3',
-    industri: 'PT. UNGARAN SARI GARMENT',
-    alamat: 'Jl. Diponegoro No.235, Genuk Timur, Ungaran, Kec. Ungaran Bar., Kabupaten Semarang, Jawa Tengah 50512',
-    periodeMulai: '31 Oktober 2025',
-    periodeSelesai: '30 Maret 2026',
-    durasi: '6 Bulan',
-    pembimbing: 'Made Mangku, M.Pd',
-    selected: false
+interface PlotItem {
+  id_siswa: string;
+  nama_siswa: string;
+  nis: string;
+  kelas: string;
+  jurusan: string;
+  durasi_bulan: number;
+  selected: boolean;
+}
+
+const toast = useToast();
+
+const guruApi = useGuruApi();
+const perusahaanApi = usePerusahaanApi();
+const periodeApi = usePeriodePKLApi();
+
+const loading = ref(false);
+const plotting = ref(false);
+
+const search = ref("");
+const selectedKelas = ref("");
+const selectedMitra = ref("");
+const selectedGuru = ref("");
+
+const activePeriodeId = ref("");
+const activePeriodeLabel = ref("-");
+const activeTahunAjaranId = ref("");
+const activeTanggalMulai = ref("");
+const activeTanggalSelesai = ref("");
+const defaultDurasiBulan = ref(1);
+
+const siswaItems = ref<PlotItem[]>([]);
+
+const mitraOptions = ref<Array<{ value: string; label: string }>>([]);
+const guruOptions = ref<Array<{ value: string; label: string }>>([]);
+
+const kelasOptions = computed(() => {
+  const unique = new Set(siswaItems.value.map((item) => item.kelas));
+  return Array.from(unique).sort((a, b) => a.localeCompare(b));
+});
+
+const filteredRows = computed(() => {
+  const keyword = search.value.trim().toLowerCase();
+
+  return siswaItems.value.filter((item) => {
+    const matchKeyword =
+      !keyword ||
+      item.nama_siswa.toLowerCase().includes(keyword) ||
+      item.nis.toLowerCase().includes(keyword);
+
+    const matchKelas = !selectedKelas.value || item.kelas === selectedKelas.value;
+
+    return matchKeyword && matchKelas;
+  });
+});
+
+const selectedCount = computed(
+  () => filteredRows.value.filter((item) => item.selected).length,
+);
+
+const totalSelectedCount = computed(
+  () => siswaItems.value.filter((item) => item.selected).length,
+);
+
+const isAllFilteredSelected = computed({
+  get: () =>
+    filteredRows.value.length > 0 &&
+    filteredRows.value.every((item) => item.selected),
+  set: (checked: boolean) => {
+    filteredRows.value.forEach((item) => {
+      item.selected = checked;
+    });
   },
-  {
-    id: 2,
-    nama: 'ALDINO ALIF SUBARJA',
-    nis: '232519157',
-    kelas: 'XII TME 3',
-    industri: 'PT. UNGARAN SARI GARMENT',
-    alamat: 'Jl. Diponegoro No.235, Genuk Timur, Ungaran, Kec. Ungaran Bar., Kabupaten Semarang, Jawa Tengah 50512',
-    periodeMulai: '1 November 2025',
-    periodeSelesai: '31 Maret 2026',
-    durasi: '5 Bulan',
-    pembimbing: 'Made Mangku, M.Pd',
-    selected: false
-  },
-  {
-    id: 3,
-    nama: 'EVANIA CALISTA DANISWARA',
-    nis: '232519169',
-    kelas: 'XII TME 3',
-    industri: 'PT. UNGARAN SARI GARMENT',
-    alamat: 'Jl. Diponegoro No.235, Genuk Timur, Ungaran, Kec. Ungaran Bar., Kabupaten Semarang, Jawa Tengah 50512',
-    periodeMulai: '1 November 2025',
-    periodeSelesai: '31 Maret 2026',
-    durasi: '5 Bulan',
-    pembimbing: 'Made Mangku, M.Pd',
-    selected: false
-  },
-  {
-    id: 4,
-    nama: 'FADIL SURYA MAULANA',
-    nis: '232519170',
-    kelas: 'XII TME 3',
-    industri: 'PT. Madukoro Engineering',
-    alamat: 'Kawasan Industri Candi Blok B 2-9 B2073 Ngaliyan Semarang',
-    periodeMulai: '1 November 2025',
-    periodeSelesai: '31 Maret 2026',
-    durasi: '5 Bulan',
-    pembimbing: 'Komariyanto, S.Pd',
-    selected: false
+});
+
+function formatDateId(dateString: string) {
+  const date = new Date(dateString);
+  if (Number.isNaN(date.getTime())) return "-";
+
+  return new Intl.DateTimeFormat("id-ID", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  }).format(date);
+}
+
+function calculateDefaultDurationMonths(startDate: string, endDate: string) {
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return 1;
+
+  const months = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth()) + 1;
+  return Math.max(1, Math.min(12, months));
+}
+
+function calculatePreviewEndDate(startDate: string, durasiBulan: number) {
+  const start = new Date(startDate);
+  if (Number.isNaN(start.getTime())) return null;
+
+  const months = Math.max(1, Math.min(12, Number(durasiBulan) || 1));
+  const end = new Date(start);
+  end.setMonth(end.getMonth() + months);
+  end.setDate(end.getDate() - 1);
+  return end;
+}
+
+function getDurasiRangePreview(durasiBulan: number) {
+  if (!activeTanggalMulai.value) return "-";
+
+  const endDate = calculatePreviewEndDate(activeTanggalMulai.value, durasiBulan);
+  if (!endDate) return "-";
+
+  return `${formatDateId(activeTanggalMulai.value)} - ${formatDateId(endDate.toISOString())}`;
+}
+
+async function loadInitialData() {
+  loading.value = true;
+
+  try {
+    const [periodeRes, mitraRes, guruRes] = await Promise.all([
+      periodeApi.getActive(),
+      perusahaanApi.getAll({
+        limit: 1000,
+        status_kerjasama: true,
+        mou_aktif: true,
+        arsip: false,
+      }),
+      guruApi.getAll({ limit: 1000 }),
+    ]);
+
+    if (!periodeRes.success || !periodeRes.data) {
+      throw new Error(
+        periodeRes.message ||
+          "Periode PKL aktif belum tersedia. Aktifkan periode terlebih dahulu.",
+      );
+    }
+
+    const active = periodeRes.data;
+    activePeriodeId.value = active.id_periode_pkl;
+    activePeriodeLabel.value = active.nama_periode;
+    activeTahunAjaranId.value = active.id_tahun_ajaran;
+    activeTanggalMulai.value = active.tanggal_mulai;
+    activeTanggalSelesai.value = active.tanggal_selesai;
+    defaultDurasiBulan.value = calculateDefaultDurationMonths(
+      active.tanggal_mulai,
+      active.tanggal_selesai,
+    );
+
+    if (mitraRes.success) {
+      mitraOptions.value = (mitraRes.data || []).map((mitra) => ({
+        value: mitra.id_perusahaan,
+        label: mitra.nama_perusahaan,
+      }));
+    }
+
+    if (guruRes.success) {
+      guruOptions.value = (guruRes.data || [])
+        .filter((guru) => guru.status_aktif !== false)
+        .map((guru) => ({
+          value: guru.id_guru,
+          label: guru.nama_guru,
+        }));
+    }
+
+    await loadSiswaAvailable();
+  } catch (error: any) {
+    toast.add({
+      title: "Gagal memuat data kelola tempat",
+      description: error?.message || "Terjadi kesalahan saat memuat data",
+      color: "error",
+    });
+  } finally {
+    loading.value = false;
   }
-])
-
-const selectAll = ref(false)
-const toggleSelectAll = () => {
-  mappingData.value.forEach(item => item.selected = selectAll.value)
 }
 
-// Edit Modal State
-const isEditModalOpen = ref(false)
-const editingStudent = ref<any>(null)
+async function loadSiswaAvailable() {
+  if (!activePeriodeId.value) {
+    siswaItems.value = [];
+    return;
+  }
 
-const handleEdit = (row: any) => {
-  editingStudent.value = { ...row }
-  isEditModalOpen.value = true
+  const siswaRes = await periodeApi.getSiswaAvailable(activePeriodeId.value);
+
+  if (!siswaRes.success) {
+    throw new Error(siswaRes.message || "Gagal memuat siswa tersedia");
+  }
+
+  siswaItems.value = (siswaRes.data || []).map((item) => ({
+    id_siswa: item.id_siswa,
+    nama_siswa: item.nama_siswa,
+    nis: item.nis,
+    kelas: item.kelas?.nama_kelas || "-",
+    jurusan: item.kelas?.jurusan?.nama_jurusan || "-",
+    durasi_bulan: defaultDurasiBulan.value,
+    selected: false,
+  }));
 }
 
-const handleUpdate = () => {
-  // Logic to update data
-  isEditModalOpen.value = false
+async function handlePlotSelected() {
+  if (!activePeriodeId.value || !activeTahunAjaranId.value) {
+    toast.add({
+      title: "Periode aktif belum tersedia",
+      color: "error",
+    });
+    return;
+  }
+
+  if (!selectedMitra.value) {
+    toast.add({
+      title: "Pilih mitra terlebih dahulu",
+      color: "warning",
+    });
+    return;
+  }
+
+  const selectedItems = siswaItems.value.filter((item) => item.selected);
+  const siswaIds = selectedItems.map((item) => item.id_siswa);
+
+  if (siswaIds.length === 0) {
+    toast.add({
+      title: "Pilih minimal 1 siswa",
+      color: "warning",
+    });
+    return;
+  }
+
+  const invalidDurasi = selectedItems.find(
+    (item) => Number(item.durasi_bulan) < 1 || Number(item.durasi_bulan) > 12,
+  );
+
+  if (invalidDurasi) {
+    toast.add({
+      title: "Durasi tidak valid",
+      description: "Durasi magang per siswa wajib 1 sampai 12 bulan",
+      color: "error",
+    });
+    return;
+  }
+
+  plotting.value = true;
+
+  try {
+    const response = await periodeApi.batchPenempatan({
+      id_periode_pkl: activePeriodeId.value,
+      siswa_penempatan: selectedItems.map((item) => ({
+        siswa_id: item.id_siswa,
+        durasi_bulan: Number(item.durasi_bulan),
+      })),
+      perusahaan_id: selectedMitra.value,
+      guru_pembimbing_id: selectedGuru.value || undefined,
+    });
+
+    if (!response.success) {
+      throw new Error(response.message || "Gagal membuat plot penempatan");
+    }
+
+    toast.add({
+      title: "Plot siswa berhasil",
+      description:
+        response.message || `${siswaIds.length} siswa berhasil ditempatkan`,
+      color: "success",
+    });
+
+    await loadSiswaAvailable();
+  } catch (error: any) {
+    toast.add({
+      title: "Gagal melakukan plot siswa",
+      description: error?.message || "Terjadi kesalahan saat memproses plot",
+      color: "error",
+    });
+  } finally {
+    plotting.value = false;
+  }
 }
+
+watch(selectedKelas, () => {
+  isAllFilteredSelected.value = false;
+});
+
+onMounted(() => {
+  loadInitialData();
+});
+
+useHead({
+  title: "Kelola Tempat PKL | Admin",
+});
 </script>
 
 <template>
   <div class="p-6 space-y-6 bg-slate-50 min-h-screen font-sans">
-    <!-- Header Section -->
     <div class="bg-white rounded-3xl shadow-sm p-8 border border-slate-100 space-y-6">
-      <div class="flex items-center gap-6">
-        <div class="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center overflow-hidden border-2 border-blue-100 shadow-inner">
-          <img src="/assets/img/logo-skanda.png" alt="Logo" class="w-14 h-14 object-contain" />
-        </div>
+      <div class="flex items-center justify-between gap-4 flex-wrap">
         <div class="space-y-1">
-          <h1 class="text-3xl font-black text-blue-600 tracking-tight uppercase">REKAP DAN MAPPING DATA PKL</h1>
-          <div class="flex items-center gap-3">
-            <span class="bg-blue-600 text-white text-[10px] px-4 py-1 rounded font-black uppercase tracking-widest">SMK Gita Laras</span>
-            <div class="flex items-center gap-1.5 text-slate-500 font-bold text-sm">
-              <Icon name="lucide:calendar" class="w-4 h-4" />
-              Tahun Ajaran 2025/2026
-            </div>
-          </div>
+          <h1 class="text-2xl font-black text-blue-600 tracking-tight uppercase">
+            Kelola Tempat PKL
+          </h1>
+          <p class="text-sm text-slate-500">
+            Plot siswa siap PKL ke mitra yang memiliki MoU aktif.
+          </p>
+        </div>
+        <div class="text-sm font-semibold text-slate-600 bg-blue-50 px-4 py-2 rounded-xl">
+          Periode Aktif: {{ activePeriodeLabel }}
+          <span class="text-slate-400">({{ formatDateId(activeTanggalMulai) }} - {{ formatDateId(activeTanggalSelesai) }})</span>
         </div>
       </div>
 
-      <!-- Alert Info -->
-      <div class="bg-amber-50 border-l-4 border-amber-400 p-4 flex items-start gap-3 rounded-r-xl">
-        <Icon name="lucide:alert-circle" class="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-        <p class="text-xs text-amber-800 leading-relaxed font-bold">
-          <span class="text-red-600 uppercase">Penting:</span> Pastikan saat melakukan editing data sudah benar pilihannya.
-        </p>
+      <div class="bg-amber-50 border-l-4 border-amber-400 p-4 rounded-r-xl text-sm text-amber-800">
+        Hanya mitra dengan MoU aktif yang tampil. Siswa yang sudah terplot pada periode aktif tidak ditampilkan.
+      </div>
+      <div class="bg-blue-50 border-l-4 border-blue-400 p-4 rounded-r-xl text-sm text-blue-800">
+        Durasi magang diisi per siswa (1-12 bulan). Tanggal selesai dihitung otomatis dari tanggal mulai periode aktif.
       </div>
     </div>
 
-    <!-- Filter & Mapping Section -->
     <div class="bg-white rounded-2xl shadow-sm p-6 border border-slate-100 space-y-6">
-      <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div class="space-y-2">
-          <label class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Cari Nama/NIS</label>
-          <input type="text" placeholder="Ketik..." class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition-all" />
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+        <div class="space-y-2 lg:col-span-2">
+          <label class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Cari Nama/NIS</label>
+          <input
+            v-model="search"
+            type="text"
+            placeholder="Ketik nama atau NIS"
+            class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+          />
         </div>
+
         <div class="space-y-2">
-          <label class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Kelas</label>
-          <select class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none cursor-pointer">
-            <option>Semua Kelas</option>
+          <label class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Kelas</label>
+          <select
+            v-model="selectedKelas"
+            class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none"
+          >
+            <option value="">Semua Kelas</option>
+            <option v-for="kelas in kelasOptions" :key="kelas" :value="kelas">
+              {{ kelas }}
+            </option>
           </select>
         </div>
+
         <div class="space-y-2">
-          <label class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Status Industri</label>
-          <select class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none cursor-pointer">
-            <option>Semua</option>
+          <label class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Mitra PKL</label>
+          <select
+            v-model="selectedMitra"
+            class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none"
+          >
+            <option value="">Pilih Mitra</option>
+            <option v-for="mitra in mitraOptions" :key="mitra.value" :value="mitra.value">
+              {{ mitra.label }}
+            </option>
           </select>
         </div>
+
         <div class="space-y-2">
-          <label class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Plot Pembimbing</label>
-          <div class="flex gap-2">
-            <select class="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none cursor-pointer">
-              <option>-- Plot Pembimbing --</option>
-            </select>
-            <button class="bg-green-700 hover:bg-green-800 text-white px-4 py-2.5 rounded-xl font-bold text-xs flex items-center gap-2 transition-all">
-              <Icon name="lucide:users" class="w-4 h-4" />
-              Plot
-            </button>
-          </div>
+          <label class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Guru Pembimbing</label>
+          <select
+            v-model="selectedGuru"
+            class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none"
+          >
+            <option value="">Auto Pilih Sistem</option>
+            <option v-for="guru in guruOptions" :key="guru.value" :value="guru.value">
+              {{ guru.label }}
+            </option>
+          </select>
         </div>
       </div>
-      
-      <div class="flex justify-end border-t border-slate-100 pt-4">
-        <button class="border border-blue-600 text-blue-600 hover:bg-blue-50 px-6 py-2.5 rounded-xl font-bold text-xs flex items-center gap-2 transition-all">
-          <Icon name="lucide:layout-grid" class="w-4 h-4" />
-          Plot Industri Massal
+
+      <div class="flex items-center justify-between border-t border-slate-100 pt-4 flex-wrap gap-3">
+        <p class="text-sm text-slate-500">
+          Terpilih: <span class="font-bold text-slate-800">{{ totalSelectedCount }}</span> siswa
+        </p>
+        <button
+          :disabled="plotting || totalSelectedCount === 0"
+          @click="handlePlotSelected"
+          class="bg-green-700 hover:bg-green-800 disabled:bg-slate-300 disabled:cursor-not-allowed text-white px-6 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2"
+        >
+          <Icon name="lucide:users" class="w-4 h-4" />
+          {{ plotting ? "Memproses..." : "Plot Siswa ke Mitra" }}
         </button>
       </div>
     </div>
 
-    <!-- Table Section -->
     <div class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
-      <!-- Table Nav -->
-      <div class="px-8 py-4 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between">
-        <div class="flex items-center gap-4">
-          <div class="flex items-center gap-2 text-xs font-medium text-slate-500">
-            Tampilkan: 
-            <select class="bg-white border border-slate-200 rounded-lg px-2 py-1 text-slate-700 outline-none">
-              <option>10</option>
-            </select>
-          </div>
-          <span class="text-xs text-slate-400">Menampilkan 10 dari 95 Murid</span>
-        </div>
-        
-        <!-- Pagination -->
-        <div class="flex items-center gap-1">
-          <button class="px-3 py-1.5 text-xs font-bold text-slate-400 hover:text-slate-600 disabled:opacity-50" disabled>Prev</button>
-          <button class="w-8 h-8 flex items-center justify-center bg-blue-600 text-white rounded-lg text-xs font-bold shadow-md">1</button>
-          <button class="w-8 h-8 flex items-center justify-center text-slate-600 hover:bg-slate-100 rounded-lg text-xs font-bold">2</button>
-          <span class="px-2 text-slate-300">...</span>
-          <button class="w-8 h-8 flex items-center justify-center text-slate-600 hover:bg-slate-100 rounded-lg text-xs font-bold">10</button>
-          <button class="px-3 py-1.5 text-xs font-bold text-blue-600 hover:text-blue-700">Next</button>
-        </div>
+      <div class="px-6 py-4 bg-slate-50/60 border-b border-slate-100 flex items-center justify-between">
+        <span class="text-sm text-slate-600 font-medium">
+          Menampilkan {{ filteredRows.length }} siswa siap PKL
+        </span>
+        <span class="text-xs text-slate-400">
+          Tercentang (filter aktif): {{ selectedCount }}
+        </span>
       </div>
 
-      <!-- Main Table -->
       <div class="overflow-x-auto">
         <table class="w-full text-left border-collapse">
           <thead>
-            <tr class="text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-100 bg-slate-50/30">
-              <th class="px-8 py-5 w-12"><input type="checkbox" v-model="selectAll" @change="toggleSelectAll" class="w-4 h-4 rounded border-slate-300 text-blue-600" /></th>
-              <th class="px-4 py-5 w-16 text-center">No</th>
-              <th class="px-4 py-5">NIS & Nama</th>
-              <th class="px-4 py-5 text-center">Kelas</th>
-              <th class="px-6 py-5">Industri & Alamat</th>
-              <th class="px-6 py-5">Periode</th>
-              <th class="px-6 py-5">Pembimbing</th>
-              <th class="px-6 py-5 text-center">Aksi</th>
+            <tr class="text-[11px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-100 bg-slate-50/30">
+              <th class="px-6 py-4 w-10">
+                <input v-model="isAllFilteredSelected" type="checkbox" class="w-4 h-4 rounded border-slate-300 text-blue-600" />
+              </th>
+              <th class="px-4 py-4 w-16 text-center">No</th>
+              <th class="px-4 py-4">Nama Siswa</th>
+              <th class="px-4 py-4">NIS</th>
+              <th class="px-4 py-4">Kelas</th>
+              <th class="px-4 py-4">Jurusan</th>
+              <th class="px-4 py-4 w-40">Durasi (Bulan)</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-100">
-            <tr v-for="(row, index) in mappingData" :key="row.id" class="group hover:bg-slate-50/50 transition-colors">
-              <td class="px-8 py-6"><input type="checkbox" v-model="row.selected" class="w-4 h-4 rounded border-slate-300 text-blue-600" /></td>
-              <td class="px-4 py-6 text-center font-bold text-slate-400 text-sm">{{ index + 1 }}</td>
-              <td class="px-4 py-6">
-                <div class="space-y-1">
-                  <div class="font-black text-slate-800 text-sm tracking-tight">{{ row.nama }}</div>
-                  <div class="text-[10px] font-bold text-slate-400">{{ row.nis }}</div>
+            <tr v-if="loading">
+              <td colspan="7" class="px-6 py-10 text-center text-slate-500">Memuat data...</td>
+            </tr>
+            <tr v-else-if="filteredRows.length === 0">
+              <td colspan="7" class="px-6 py-10 text-center text-slate-500">
+                Tidak ada siswa siap PKL yang cocok dengan filter.
+              </td>
+            </tr>
+            <tr
+              v-for="(row, index) in filteredRows"
+              v-else
+              :key="row.id_siswa"
+              class="hover:bg-slate-50/50 transition-colors"
+            >
+              <td class="px-6 py-4">
+                <input v-model="row.selected" type="checkbox" class="w-4 h-4 rounded border-slate-300 text-blue-600" />
+              </td>
+              <td class="px-4 py-4 text-center text-sm text-slate-500">{{ index + 1 }}</td>
+              <td class="px-4 py-4 font-semibold text-slate-800">{{ row.nama_siswa }}</td>
+              <td class="px-4 py-4 text-slate-600">{{ row.nis }}</td>
+              <td class="px-4 py-4 text-slate-600">{{ row.kelas }}</td>
+              <td class="px-4 py-4 text-slate-600">{{ row.jurusan }}</td>
+              <td class="px-4 py-4">
+                <div class="space-y-1.5">
+                  <input
+                    v-model.number="row.durasi_bulan"
+                    type="number"
+                    min="1"
+                    max="12"
+                    :disabled="!row.selected"
+                    class="w-24 bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-100 disabled:text-slate-400"
+                  />
+                  <p class="text-[10px] leading-tight" :class="row.selected ? 'text-blue-700 font-semibold' : 'text-slate-400'">
+                    {{ getDurasiRangePreview(row.durasi_bulan) }}
+                  </p>
                 </div>
-              </td>
-              <td class="px-4 py-6 text-center">
-                <span class="px-3 py-1 bg-slate-100 text-slate-600 rounded-lg text-[9px] font-black uppercase border border-slate-200">{{ row.kelas }}</span>
-              </td>
-              <td class="px-6 py-6">
-                <div class="space-y-1.5 max-w-[300px]">
-                  <div class="font-bold text-slate-800 text-sm tracking-tight">{{ row.industri }}</div>
-                  <div class="flex items-start gap-1 text-[9px] text-red-500 font-bold leading-relaxed italic">
-                    <Icon name="lucide:map-pin" class="w-3 h-3 shrink-0 mt-0.5" />
-                    {{ row.alamat }}
-                  </div>
-                </div>
-              </td>
-              <td class="px-6 py-6">
-                <div class="space-y-1">
-                  <div class="font-bold text-blue-600 text-[11px] leading-tight">
-                    {{ row.periodeMulai }}<br>
-                    <span class="text-slate-400 text-[9px]">s/d</span> {{ row.periodeSelesai }}
-                  </div>
-                  <span class="inline-block bg-blue-50 text-blue-600 px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider">{{ row.durasi }}</span>
-                </div>
-              </td>
-              <td class="px-6 py-6">
-                <div class="font-black text-slate-800 text-xs tracking-tight">{{ row.pembimbing }}</div>
-              </td>
-              <td class="px-6 py-6 text-center">
-                <button 
-                  @click="handleEdit(row)"
-                  class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg text-xs font-bold transition-all shadow-md active:scale-95"
-                >
-                  Edit
-                </button>
               </td>
             </tr>
           </tbody>
         </table>
       </div>
-    </div>
-
-    <!-- Edit Placement Modal -->
-    <UModal 
-      v-model:open="isEditModalOpen" 
-      title="Edit Penempatan Murid" 
-      description="Ubah data penempatan siswa PKL"
-      size="lg"
-    >
-      <template #body>
-        <div class="space-y-5" v-if="editingStudent">
-          <div class="space-y-1.5">
-            <label class="text-sm font-bold text-slate-700">Nama Murid</label>
-            <input 
-              v-model="editingStudent.nama"
-              type="text" 
-              class="w-full border border-slate-200 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-            />
-          </div>
-
-          <div class="space-y-1.5">
-            <label class="text-sm font-bold text-slate-700">Industri (IDUKA)</label>
-            <input 
-              v-model="editingStudent.industri"
-              type="text" 
-              class="w-full border border-slate-200 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-            />
-          </div>
-
-          <div class="space-y-1.5">
-            <label class="text-sm font-bold text-slate-700">Alamat Industri</label>
-            <textarea 
-              v-model="editingStudent.alamat"
-              rows="3"
-              class="w-full border border-slate-200 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all resize-none"
-            ></textarea>
-          </div>
-
-          <div class="grid grid-cols-2 gap-4">
-            <div class="space-y-1.5">
-              <label class="text-sm font-bold text-slate-700">Tgl Mulai</label>
-              <input 
-                type="date" 
-                class="w-full border border-slate-200 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-              />
-            </div>
-            <div class="space-y-1.5">
-              <label class="text-sm font-bold text-slate-700">Tgl Selesai</label>
-              <input 
-                type="date" 
-                class="w-full border border-slate-200 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-              />
-            </div>
-          </div>
-
-          <div class="space-y-1.5">
-            <label class="text-sm font-bold text-slate-700">Pembimbing (Kolom P)</label>
-            <div class="relative">
-              <select 
-                v-model="editingStudent.pembimbing"
-                class="w-full appearance-none border border-slate-200 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all cursor-pointer bg-white"
-              >
-                <option>Made Mangku, M.Pd</option>
-                <option>Komariyanto, S.Pd</option>
-              </select>
-              <Icon name="lucide:chevron-down" class="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-            </div>
-          </div>
-        </div>
-      </template>
-
-      <template #footer>
-        <div class="flex justify-end gap-3">
-          <button 
-            @click="isEditModalOpen = false"
-            class="px-6 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-medium transition-all"
-          >
-            Batal
-          </button>
-          <button 
-            @click="handleUpdate"
-            class="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-all"
-          >
-            Update Data
-          </button>
-        </div>
-      </template>
-    </UModal>
-
-    <!-- Footer -->
-    <div class="text-center py-4">
-      <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">TIM KEMITRAAN &copy; 2026 | SMKN 7 SEMARANG</p>
     </div>
   </div>
 </template>
@@ -338,13 +466,16 @@ const handleUpdate = () => {
   width: 6px;
   height: 6px;
 }
+
 ::-webkit-scrollbar-track {
   background: transparent;
 }
+
 ::-webkit-scrollbar-thumb {
   background: #e2e8f0;
   border-radius: 10px;
 }
+
 ::-webkit-scrollbar-thumb:hover {
   background: #cbd5e1;
 }

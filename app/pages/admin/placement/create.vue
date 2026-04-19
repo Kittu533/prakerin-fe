@@ -135,7 +135,7 @@ const fetchInitialData = async () => {
         ] = await Promise.all([
             jurusanApi.getAll({ limit: 100 }),
             kelasApi.getAll({ limit: 100 }),
-            perusahaanApi.getAll({ limit: 100 }),
+            perusahaanApi.getAll({ limit: 100, mou_aktif: true }),
             guruApi.getAll({ limit: 100 }),
             penempatanApi.getAll({ limit: 1000 }),
             periodePKLApi.getAll({ limit: 100 }),

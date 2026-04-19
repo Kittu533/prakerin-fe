@@ -12,12 +12,13 @@
 import { apiFetch } from "~/composables/api-fetch";
 
 export interface SuratMasuk {
-  id: number;
+  id: string;
   nomor_agenda: string;
   nomor_surat: string;
   tanggal_surat: string;
   tanggal_diterima: string;
   asal_surat: string;
+  perihal: string;
   perkara?: string;
   klasifikasi_surat: string;
   sifat_surat: string;
@@ -35,12 +36,13 @@ export interface SuratMasukCreate {
   tanggal_surat: string;
   tanggal_diterima: string;
   asal_surat: string;
-  perkara?: string;
+  perihal: string;
   klasifikasi_surat: string;
   sifat_surat: string;
   ditujukan_kepada: string;
   file_surat?: string;
   keterangan?: string;
+  teruskan_ke?: string[];
 }
 
 export interface SuratMasukUpdate {
@@ -49,55 +51,65 @@ export interface SuratMasukUpdate {
   tanggal_surat?: string;
   tanggal_diterima?: string;
   asal_surat?: string;
-  perkara?: string;
+  perihal?: string;
   klasifikasi_surat?: string;
   sifat_surat?: string;
   ditujukan_kepada?: string;
   file_surat?: string;
   keterangan?: string;
+  teruskan_ke?: string[];
   status?: string;
 }
 
 export interface SuratMasukListResponse {
-  success: boolean;
   data: SuratMasuk[];
   page: number;
   limit: number;
   total: number;
-  message?: string;
 }
 
-async function safeFetch<T>(
+interface ApiResult<T> {
+  success: boolean;
+  data?: T;
+  message: string;
+}
+
+function mapSuratMasuk(raw: any): SuratMasuk {
+  return {
+    ...raw,
+    perihal: raw?.perihal ?? raw?.perkara ?? "",
+    perkara: raw?.perkara ?? raw?.perihal ?? "",
+  };
+}
+
+async function safeFetchData<T>(
   service: string,
   endpoint: string,
   options: any = {},
   withToken: boolean = true,
-): Promise<{ success: boolean; data?: T; message: string }> {
+  keepEnvelope: boolean = false,
+): Promise<ApiResult<T>> {
   try {
     const response = await apiFetch<any>(service, endpoint, options, withToken);
+    const responseData = response?.data ?? {};
+    const ok = response.status >= 200 && response.status < 300;
 
-    if (response.status >= 200 && response.status < 300) {
-      const responseData = response.data;
-      if (responseData && typeof responseData === "object") {
-        return {
-          success: true,
-          data: responseData.response ?? responseData.data ?? responseData,
-          message: responseData.message ?? "Success",
-        };
-      }
-      return { success: true, data: undefined, message: "Success" };
-    } else {
+    if (!ok) {
       return {
         success: false,
-        data: undefined,
-        message: response.data?.message ?? `HTTP ${response.status}`,
+        message: responseData?.message ?? `HTTP ${response.status}`,
       };
     }
+
+    return {
+      success: responseData?.success ?? true,
+      data: (keepEnvelope ? responseData : (responseData?.data ?? responseData)) as T,
+      message: responseData?.message ?? "Success",
+    };
   } catch (error: any) {
     console.error(`[SafeFetch] Error for ${service} → ${endpoint}:`, error);
     return {
       success: false,
-      data: undefined,
       message: error?.message || "Network error",
     };
   }
@@ -113,7 +125,7 @@ export function useSuratMasuk() {
     klasifikasi_surat?: string;
     sifat_surat?: string;
     status?: string;
-  }): Promise<{ success: boolean; data?: SuratMasukListResponse; message: string }> {
+  }): Promise<ApiResult<SuratMasukListResponse>> {
     const searchParams = new URLSearchParams();
     if (params?.page) searchParams.append("page", params.page.toString());
     if (params?.limit) searchParams.append("limit", params.limit.toString());
@@ -123,33 +135,129 @@ export function useSuratMasuk() {
     if (params?.klasifikasi_surat) searchParams.append("klasifikasi_surat", params.klasifikasi_surat);
     if (params?.sifat_surat) searchParams.append("sifat_surat", params.sifat_surat);
     if (params?.status) searchParams.append("status", params.status);
+    searchParams.append("_ts", Date.now().toString());
 
     const queryString = searchParams.toString();
     const endpoint = queryString ? `/surat-masuk?${queryString}` : "/surat-masuk";
 
-    return safeFetch<SuratMasukListResponse>("TataUsahaService", endpoint, { method: "GET" });
+    const result = await safeFetchData<any>(
+      "TataUsahaService",
+      endpoint,
+      { method: "GET" },
+      true,
+      true,
+    );
+    if (!result.success || !result.data) {
+      return {
+        success: false,
+        message: result.message,
+      };
+    }
+
+    const payload = result.data as any;
+    const rows = Array.isArray(payload?.data)
+      ? payload.data
+      : Array.isArray(payload)
+        ? payload
+        : [];
+
+    return {
+      success: true,
+      message: result.message,
+      data: {
+        data: rows.map(mapSuratMasuk),
+        page: Number(payload?.page ?? payload?.meta?.page ?? params?.page ?? 1),
+        limit: Number(payload?.limit ?? payload?.meta?.limit ?? params?.limit ?? 10),
+        total: Number(payload?.total ?? payload?.meta?.total ?? rows.length),
+      },
+    };
   }
 
-  async function getById(id: number): Promise<{ success: boolean; data?: SuratMasuk; message: string }> {
-    return safeFetch<SuratMasuk>("TataUsahaService", `/surat-masuk/${id}`, { method: "GET" });
+  async function getById(id: string): Promise<ApiResult<SuratMasuk>> {
+    const result = await safeFetchData<any>("TataUsahaService", `/surat-masuk/${id}`, { method: "GET" });
+    if (!result.success || !result.data) {
+      return {
+        success: false,
+        message: result.message,
+      };
+    }
+
+    return {
+      success: true,
+      message: result.message,
+      data: mapSuratMasuk(result.data),
+    };
   }
 
-  async function create(data: SuratMasukCreate): Promise<{ success: boolean; data?: SuratMasuk; message: string }> {
-    return safeFetch<SuratMasuk>("TataUsahaService", "/surat-masuk", {
+  async function create(data: SuratMasukCreate): Promise<ApiResult<SuratMasuk>> {
+    const result = await safeFetchData<any>("TataUsahaService", "/surat-masuk", {
       method: "POST",
       data,
     });
+    if (!result.success || !result.data) {
+      return {
+        success: false,
+        message: result.message,
+      };
+    }
+    return {
+      success: true,
+      message: result.message,
+      data: mapSuratMasuk(result.data),
+    };
   }
 
-  async function update(id: number, data: SuratMasukUpdate): Promise<{ success: boolean; data?: SuratMasuk; message: string }> {
-    return safeFetch<SuratMasuk>("TataUsahaService", `/surat-masuk/${id}`, {
+  async function update(id: string, data: SuratMasukUpdate): Promise<ApiResult<SuratMasuk>> {
+    const result = await safeFetchData<any>("TataUsahaService", `/surat-masuk/${id}`, {
       method: "PUT",
       data,
     });
+    if (!result.success || !result.data) {
+      return {
+        success: false,
+        message: result.message,
+      };
+    }
+    return {
+      success: true,
+      message: result.message,
+      data: mapSuratMasuk(result.data),
+    };
   }
 
-  async function remove(id: number): Promise<{ success: boolean; message: string }> {
-    return safeFetch<null>("TataUsahaService", `/surat-masuk/${id}`, { method: "DELETE" });
+  async function remove(id: string): Promise<ApiResult<null>> {
+    return safeFetchData<null>("TataUsahaService", `/surat-masuk/${id}`, { method: "DELETE" });
+  }
+
+  async function getPdfById(id: string): Promise<ApiResult<Blob>> {
+    try {
+      const response = await apiFetch<Blob>(
+        "TataUsahaService",
+        `/surat-masuk/${id}/pdf`,
+        {
+          method: "GET",
+          responseType: "blob",
+        },
+      );
+
+      if (response.status >= 200 && response.status < 300) {
+        return {
+          success: true,
+          data: response.data,
+          message: "Success",
+        };
+      }
+
+      return {
+        success: false,
+        message: `HTTP ${response.status}`,
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        message: error?.message || "Gagal mengambil PDF surat",
+      };
+    }
   }
 
   return {
@@ -158,5 +266,6 @@ export function useSuratMasuk() {
     create,
     update,
     remove,
+    getPdfById,
   };
 }

@@ -161,7 +161,7 @@
             <h3 class="font-semibold text-slate-900 mb-4">
                 Aksi Cepat
             </h3>
-            <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <div class="grid grid-cols-2 lg:grid-cols-6 gap-3">
                 <NuxtLink
                     to="/tata-usaha/surat-masuk"
                     class="flex flex-col items-center gap-2 p-4 rounded-lg bg-slate-50 hover:bg-slate-100 transition-colors"
@@ -197,6 +197,24 @@
                         <Icon name="lucide:graduation-cap" class="w-6 h-6 text-purple-600" />
                     </div>
                     <span class="text-sm font-medium text-slate-700">Surat Kesiswaan</span>
+                </NuxtLink>
+                <NuxtLink
+                    to="/tata-usaha/users"
+                    class="flex flex-col items-center gap-2 p-4 rounded-lg bg-slate-50 hover:bg-slate-100 transition-colors"
+                >
+                    <div class="w-12 h-12 rounded-lg bg-sky-100 flex items-center justify-center">
+                        <Icon name="lucide:user-cog" class="w-6 h-6 text-sky-600" />
+                    </div>
+                    <span class="text-sm font-medium text-slate-700">Kelola Akun</span>
+                </NuxtLink>
+                <NuxtLink
+                    to="/tata-usaha/ttd-digital"
+                    class="flex flex-col items-center gap-2 p-4 rounded-lg bg-slate-50 hover:bg-slate-100 transition-colors"
+                >
+                    <div class="w-12 h-12 rounded-lg bg-indigo-100 flex items-center justify-center">
+                        <Icon name="lucide:signature" class="w-6 h-6 text-indigo-600" />
+                    </div>
+                    <span class="text-sm font-medium text-slate-700">TTD Digital</span>
                 </NuxtLink>
             </div>
         </div>
