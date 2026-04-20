@@ -355,12 +355,61 @@
                                         getAbsensiLabel(abs.status_absensi)
                                     }}</UBadge
                                 >
+                                <UButton
+                                    v-if="abs.foto_absensi"
+                                    size="xs"
+                                    variant="outline"
+                                    color="neutral"
+                                    @click="openSelfie(abs)"
+                                >
+                                    <Icon
+                                        name="lucide:image"
+                                        class="w-3 h-3 mr-1"
+                                    />
+                                    Selfie
+                                </UButton>
+                                <span v-else class="text-xs text-slate-400"
+                                    >Tanpa selfie</span
+                                >
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
         </template>
+
+        <UModal v-model="selfieModalOpen">
+            <template #content>
+                <UCard>
+                    <template #header>
+                        <div class="flex items-center justify-between">
+                            <h3 class="text-base font-semibold text-slate-900">
+                                Foto Selfie Absensi
+                            </h3>
+                            <UButton
+                                variant="ghost"
+                                color="neutral"
+                                size="xs"
+                                @click="selfieModalOpen = false"
+                            >
+                                <Icon name="lucide:x" class="w-4 h-4" />
+                            </UButton>
+                        </div>
+                    </template>
+
+                    <div
+                        class="w-full max-w-sm mx-auto rounded-xl overflow-hidden border border-slate-200"
+                    >
+                        <img
+                            v-if="selectedSelfieUrl"
+                            :src="selectedSelfieUrl"
+                            alt="Selfie siswa"
+                            class="w-full aspect-9/16 object-cover"
+                        />
+                    </div>
+                </UCard>
+            </template>
+        </UModal>
     </div>
 </template>
 
@@ -378,6 +427,8 @@ const loadingLogbook = ref(false);
 const loadingAbsensi = ref(false);
 const error = ref<string | null>(null);
 const activeTab = ref("info");
+const selfieModalOpen = ref(false);
+const selectedSelfieUrl = ref("");
 
 // Penempatan data from backend - already includes nested siswa, perusahaan, guru
 const penempatan = ref<any>(null);
@@ -438,6 +489,29 @@ const formatPeriode = computed(() => {
         return "-";
     return `${formatDate(penempatan.value.tanggal_mulai)} - ${formatDate(penempatan.value.tanggal_selesai)}`;
 });
+
+async function openSelfie(absensi: { id_absensi: string; foto_absensi?: string }) {
+    if (!absensi?.id_absensi) return;
+    try {
+        const result = await guruApi.getAbsensiSelfieSignedUrl(absensi.id_absensi);
+        if (!result?.data?.url) {
+            toast.add({
+                title: "Selfie tidak tersedia",
+                color: "warning",
+            });
+            return;
+        }
+
+        selectedSelfieUrl.value = result.data.url;
+        selfieModalOpen.value = true;
+    } catch (error: any) {
+        toast.add({
+            title: "Gagal membuka selfie",
+            description: error?.message || "Tidak dapat mengambil signed URL selfie",
+            color: "error",
+        });
+    }
+}
 
 // Helper functions
 function formatDate(dateStr?: string) {

@@ -149,9 +149,9 @@
 
         <!-- Logbook -->
         <SidebarItem
-          to="/siswa/logbook"
+          to="/siswa/aktivitas-harian"
           icon="i-heroicons-book-open"
-          label="Logbook"
+          label="Flow Harian"
           :active="activeMain === 'logbook'"
           :minimized="isMinimized"
         />
@@ -240,7 +240,7 @@ const activeMain = computed(() => {
   const path = route.path
   if (path.startsWith('/siswa/profile')) return 'profile'
   if (path.startsWith('/siswa/program')) return 'program'
-  if (path.startsWith('/siswa/logbook')) return 'logbook'
+  if (path.startsWith('/siswa/aktivitas-harian')) return 'logbook'
   return ''
 })
 

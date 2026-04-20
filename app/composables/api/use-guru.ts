@@ -448,6 +448,16 @@ export function useGuruApi() {
     return data;
   }
 
+  async function getAbsensiSelfieSignedUrl(idAbsensi: string) {
+    const { data } = await apiFetch<SingleResponse<{ url: string; expiresAt: string }>>(
+      'PlacementService',
+      `/absensi/${idAbsensi}/selfie-signed-url`,
+      { method: 'GET' },
+      true,
+    );
+    return data;
+  }
+
   /**
    * Get stats for specific penempatan (kehadiran, logbook count, etc)
    */
@@ -483,6 +493,7 @@ export function useGuruApi() {
     getDetailSiswaBimbingan,
     getLogbookByPenempatan,
     getAbsensiByPenempatan,
+    getAbsensiSelfieSignedUrl,
     getStatsByPenempatan,
   };
 }

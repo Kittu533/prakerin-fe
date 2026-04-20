@@ -115,8 +115,7 @@ provide('siswaProfile', { userName, userInitials, userClass })
 const pageTitle = computed(() => {
   const titles: Record<string, string> = {
     '/siswa': 'Dashboard',
-    '/siswa/logbook': 'Logbook Harian',
-    '/siswa/absensi': 'Absensi',
+    '/siswa/aktivitas-harian': 'Flow Harian Siswa',
     '/siswa/nilai': 'Nilai PKL',
     '/siswa/profil': 'Profil Saya',
     '/siswa/ubah-password': 'Ubah Password'
@@ -133,8 +132,7 @@ const pageTitle = computed(() => {
 
 const bottomNavItems = [
   { to: '/siswa', icon: 'lucide:home', label: 'Home' },
-  { to: '/siswa/logbook', icon: 'lucide:book-open', label: 'Logbook', badge: 2 },
-  { to: '/siswa/absensi', icon: 'lucide:map-pin', label: 'Absensi', dot: true },
+  { to: '/siswa/aktivitas-harian', icon: 'lucide:list-checks', label: 'Flow', badge: 1 },
   { to: '/siswa/profil', icon: 'lucide:user', label: 'Profil' }
 ]
 

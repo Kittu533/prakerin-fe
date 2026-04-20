@@ -7,7 +7,7 @@ import { useDataStore } from "~/stores/data-store";
 
 export default defineNuxtRouteMiddleware((to) => {
   // Skip middleware for login and public pages
-  const publicPages = ["/login", "/register", "/", "/about"];
+  const publicPages = ["/login", "/register", "/", "/about", "/storage-health"];
   if (publicPages.includes(to.path) || !import.meta.client) {
     return;
   }

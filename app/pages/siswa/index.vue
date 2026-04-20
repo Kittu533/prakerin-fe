@@ -56,7 +56,7 @@
                         v-if="!attendance.checkedIn"
                         color="neutral"
                         size="sm"
-                        @click="navigateTo('/siswa/absensi')"
+                        @click="navigateTo('/siswa/aktivitas-harian')"
                     >
                         <Icon name="lucide:map-pin" class="w-4 h-4 mr-1" />
                         Absen Sekarang
@@ -192,20 +192,20 @@
             </div>
             <div class="p-4 grid grid-cols-3 sm:grid-cols-6 gap-3">
                 <NuxtLink
-                    to="/siswa/logbook/create"
+                    to="/siswa/aktivitas-harian"
                     class="flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-sky-50 transition-colors"
                 >
                     <div
                         class="w-12 h-12 rounded-xl bg-sky-100 text-sky-600 flex items-center justify-center"
                     >
-                        <Icon name="lucide:plus" class="w-6 h-6" />
+                        <Icon name="lucide:list-checks" class="w-6 h-6" />
                     </div>
                     <span class="text-xs font-medium text-slate-700 text-center"
-                        >Tulis Logbook</span
+                        >Flow Harian</span
                     >
                 </NuxtLink>
                 <NuxtLink
-                    to="/siswa/absensi"
+                    to="/siswa/aktivitas-harian"
                     class="flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-green-50 transition-colors"
                 >
                     <div
@@ -214,7 +214,7 @@
                         <Icon name="lucide:map-pin" class="w-6 h-6" />
                     </div>
                     <span class="text-xs font-medium text-slate-700 text-center"
-                        >Absensi</span
+                        >Absen + Logbook</span
                     >
                 </NuxtLink>
                 <NuxtLink
@@ -253,7 +253,7 @@
             >
                 <h2 class="font-semibold text-slate-900">Logbook Terbaru</h2>
                 <UButton
-                    to="/siswa/logbook"
+                    to="/siswa/aktivitas-harian"
                     variant="ghost"
                     color="primary"
                     size="xs"

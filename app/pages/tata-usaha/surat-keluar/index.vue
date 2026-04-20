@@ -597,19 +597,16 @@
 <script setup lang="ts">
 import { useSuratKeluar, type SuratKeluar, type SuratKeluarTemplateJenis } from "~/composables/api/use-surat-keluar";
 import { useGuruApi } from "~/composables/api/use-guru";
-import { useSiswaApi } from "~/composables/api/use-academic";
 import { useSweetAlert } from "~/composables/use-sweet-alert";
 
 definePageMeta({ layout: "tata-usaha" });
 
 const { getAll, create, update, remove, generateNomor } = useSuratKeluar();
 const { getAllGuru } = useGuruApi();
-const { getAll: getAllSiswa } = useSiswaApi();
 const { showConfirmation, showSuccess, showWarning, showError } = useSweetAlert();
 
 const loading = ref(false);
 const loadingGuru = ref(false);
-const loadingSiswa = ref(false);
 const saving = ref(false);
 const showDetailModal = ref(false);
 const showTemplateModal = ref(false);
@@ -636,7 +633,6 @@ const filters = ref({
 });
 
 const guruPenandatanganOptions = ref<{ label: string; value: string }[]>([]);
-const siswaOptions = ref<Array<{ label: string; value: string; nama: string; nis: string; kelas: string }>>([]);
 
 const form = ref({
     nomor_surat: "",
@@ -648,7 +644,6 @@ const form = ref({
     klasifikasi_surat: undefined,
     sifat_surat: "biasa",
     isi_lampiran: "",
-    siswa_ids: [""],
     penandatangan_guru_id: "",
     penandatangan: "",
     tanggal_kirim: "",
@@ -668,16 +663,8 @@ const columns = [
 ];
 
 type TemplateOption = { label: string; value: string };
-type SiswaTemplateRow = { id_siswa?: string; nama: string; nis: string; kelas: string };
 
 const templateOptions = ref<TemplateOption[]>([]);
-
-const selectedSiswaTugasId = computed({
-    get: () => form.value.siswa_ids[0] || "",
-    set: (value: string) => {
-        form.value.siswa_ids = value ? [value] : [""];
-    },
-});
 
 const templateJenisOptions = [
     { label: "Surat Tugas Murid", value: "surat_tugas_murid" },
@@ -899,7 +886,6 @@ function resetForm() {
         klasifikasi_surat: undefined,
         sifat_surat: "biasa",
         isi_lampiran: "",
-        siswa_ids: [""],
         penandatangan_guru_id: "",
         penandatangan: "",
         tanggal_kirim: "",
@@ -960,75 +946,12 @@ async function fetchGuruPenandatangan() {
     }
 }
 
-async function fetchSiswaOptions() {
-    loadingSiswa.value = true;
-    try {
-        const result = await getAllSiswa({ page: 1, limit: 500 });
-        const list = Array.isArray((result as any)?.data)
-            ? (result as any).data
-            : Array.isArray((result as any)?.response)
-                ? (result as any).response
-                : [];
-
-        siswaOptions.value = list
-            .filter((siswa: any) => siswa && siswa.id_siswa && siswa.nama_siswa && siswa.nis)
-            .map((siswa: any) => {
-                const kelasNama = siswa?.kelas?.nama_kelas || "-";
-                const jurusanNama = siswa?.kelas?.jurusan?.nama_jurusan || "";
-                const kelasLabel = jurusanNama ? `${kelasNama} ${jurusanNama}` : kelasNama;
-
-                return {
-                    value: siswa.id_siswa,
-                    label: `${siswa.nama_siswa} | ${siswa.nis} | ${kelasLabel}`,
-                    nama: siswa.nama_siswa,
-                    nis: siswa.nis,
-                    kelas: kelasLabel,
-                };
-            });
-    } catch (err) {
-        console.error("[SuratKeluar] Error fetching siswa:", err);
-        siswaOptions.value = [];
-    } finally {
-        loadingSiswa.value = false;
-    }
-}
-
-function addSiswaRow() {
-    if (form.value.siswa_ids.length >= 30) return;
-    form.value.siswa_ids = [...form.value.siswa_ids, ""];
-}
-
-function removeSiswaRow(index: number) {
-    const nextRows = form.value.siswa_ids.filter((_, idx) => idx !== index);
-    form.value.siswa_ids = nextRows.length > 0 ? nextRows : [""];
-}
-
-function buildTemplateSiswaPayload(): SiswaTemplateRow[] {
-    const optionMap = new Map<string, (typeof siswaOptions.value)[number]>();
-    for (const item of siswaOptions.value) {
-        optionMap.set(item.value, item);
-    }
-    const selectedIds = (Array.isArray(form.value.siswa_ids) ? form.value.siswa_ids : []) as string[];
-    const uniqueIds = Array.from(new Set(selectedIds.map((id) => String(id).trim()).filter((id) => id.length > 0)));
-
-    return uniqueIds
-        .map((id) => optionMap.get(id))
-        .filter((item): item is NonNullable<typeof item> => Boolean(item))
-        .map((item) => ({
-            id_siswa: item.value,
-            nama: item.nama,
-            nis: item.nis,
-            kelas: item.kelas,
-        }));
-}
-
 function viewDetail(surat: SuratKeluar) {
     selectedSurat.value = surat;
     showDetailModal.value = true;
 }
 
 function editSurat(surat: SuratKeluar) {
-    const templateJenis = inferTemplateJenisFromSurat(surat);
     selectedSurat.value = surat;
     isEditing.value = true;
     isFormExpanded.value = true;
@@ -1038,11 +961,10 @@ function editSurat(surat: SuratKeluar) {
         ditujukan_kepada: surat.ditujukan_kepada,
         alamat_tujuan: surat.alamat_tujuan || "",
         perihal: surat.perihal || "",
-        template_jenis: templateJenis,
+        template_jenis: inferTemplateJenisFromSurat(surat),
         klasifikasi_surat: surat.klasifikasi_surat as any,
         sifat_surat: surat.sifat_surat,
         isi_lampiran: surat.isi_lampiran || "",
-        siswa_ids: templateJenis === "surat_permohonan" ? ["", ""] : [""],
         penandatangan_guru_id: surat.penandatangan_guru_id || "",
         penandatangan: surat.penandatangan,
         tanggal_kirim: surat.tanggal_kirim?.split("T")[0] || "",
@@ -1057,16 +979,6 @@ function editSurat(surat: SuratKeluar) {
 async function saveSurat() {
     if (!form.value.ditujukan_kepada || !form.value.perihal || !form.value.template_jenis || !form.value.penandatangan_guru_id) {
         await showWarning("Data belum lengkap", "Tujuan, perihal, jenis template, dan penandatangan wajib diisi.");
-        return;
-    }
-
-    const templateSiswaPayload = buildTemplateSiswaPayload();
-    const isNeedSiswa =
-        form.value.template_jenis === "surat_permohonan" ||
-        form.value.template_jenis === "surat_tugas_murid";
-
-    if (isNeedSiswa && templateSiswaPayload.length === 0) {
-        await showWarning("Data siswa belum dipilih", "Silakan pilih siswa agar Nama, NIS, dan Kelas terisi otomatis di surat.");
         return;
     }
 
@@ -1099,9 +1011,6 @@ async function saveSurat() {
             ),
             sifat_surat: form.value.sifat_surat,
             isi_lampiran: form.value.isi_lampiran || undefined,
-            template_payload: templateSiswaPayload.length > 0
-                ? { siswa: templateSiswaPayload }
-                : undefined,
             penandatangan_guru_id: form.value.penandatangan_guru_id,
             tanggal_kirim: form.value.tanggal_kirim ? new Date(form.value.tanggal_kirim).toISOString() : undefined,
             bukti_pengiriman: form.value.bukti_pengiriman || undefined,
@@ -1189,30 +1098,10 @@ async function handleUploadTemplate() {
     }
 }
 
-watch(
-    () => form.value.template_jenis,
-    (jenis) => {
-        if (jenis === "surat_tugas_murid") {
-            form.value.siswa_ids = [form.value.siswa_ids.find(Boolean) || ""];
-        } else if (jenis === "surat_permohonan") {
-            if (form.value.siswa_ids.length === 0) {
-                form.value.siswa_ids = ["", ""];
-            } else if (form.value.siswa_ids.length === 1) {
-                form.value.siswa_ids = [...form.value.siswa_ids, ""];
-            }
-        } else {
-            form.value.siswa_ids = [""];
-        }
-
-        form.value.klasifikasi_surat = resolveKlasifikasiByTemplate(jenis, form.value.klasifikasi_surat);
-    },
-);
-
 onMounted(() => {
     loadTemplateOptions();
     fetchData();
     fetchGuruPenandatangan();
-    fetchSiswaOptions();
 });
 
 useHead({ title: "Surat Keluar | Tata Usaha" });

@@ -73,22 +73,13 @@
                 <div v-show="isMinimized" class="h-px bg-slate-200 mx-3 mb-3" />
                 <div class="space-y-1">
                     <NavItem
-                        to="/siswa/logbook"
-                        icon="lucide:book-open"
-                        label="Logbook Harian"
-                        :active="$route.path.startsWith('/siswa/logbook')"
+                        to="/siswa/aktivitas-harian"
+                        icon="lucide:list-checks"
+                        label="Flow Harian"
+                        :active="$route.path.startsWith('/siswa/aktivitas-harian')"
                         :minimized="isMinimized"
                         :badge="pendingLogbook"
                         badge-color="warning"
-                    />
-                    <NavItem
-                        to="/siswa/absensi"
-                        icon="lucide:map-pin"
-                        label="Absensi"
-                        :active="$route.path.startsWith('/siswa/absensi')"
-                        :minimized="isMinimized"
-                        :show-dot="!todayCheckedIn"
-                        dot-color="error"
                     />
                 </div>
             </div>

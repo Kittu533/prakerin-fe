@@ -136,6 +136,7 @@ export interface SiswaAbsensi {
   longitude_masuk?: number;
   latitude_keluar?: number;
   longitude_keluar?: number;
+  foto_absensi?: string;
   keterangan?: string;
   validasi_mentor?: boolean;
   validasi_guru?: boolean;
@@ -401,6 +402,7 @@ export function useSiswaAbsensiApi() {
     payload: {
       waktu_keluar?: string;
       status_absensi?: "hadir" | "izin" | "sakit" | "alpa";
+      foto_absensi?: string;
       keterangan?: string;
     },
   ) {
@@ -412,7 +414,41 @@ export function useSiswaAbsensiApi() {
     );
   }
 
-  return { getAll, getById, create, update };
+  async function uploadSelfie(file: File) {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await apiFetch<any>(
+      'PlacementService',
+      '/absensi/upload-selfie',
+      {
+        method: 'POST',
+        data: formData,
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      },
+      true,
+    );
+
+    const ok = response.status >= 200 && response.status < 300;
+    return {
+      success: ok,
+      data: response.data?.response ?? response.data?.data,
+      message: response.data?.message ?? (ok ? 'Upload selfie berhasil' : 'Upload selfie gagal'),
+    };
+  }
+
+  async function resetDailyFlowDev() {
+    return await safeFetch<{ deletedLogbook: number; deletedAbsensi: number }>(
+      'PlacementService',
+      '/absensi/dev/reset-harian',
+      { method: 'POST' },
+      true,
+    );
+  }
+
+  return { getAll, getById, create, update, uploadSelfie, resetDailyFlowDev };
 }
 
 // =============================================
