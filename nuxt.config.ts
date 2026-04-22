@@ -1,7 +1,9 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
+const devtoolsEnabled = process.env.NUXT_ENABLE_DEVTOOLS === "true";
+
 export default defineNuxtConfig({
   compatibilityDate: "2025-07-15",
-  devtools: { enabled: true },
+  devtools: { enabled: devtoolsEnabled },
 
   devServer: {
     port: 3001,

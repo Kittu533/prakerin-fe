@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from "vue";
 import { usePenempatanApi } from "~/composables/api/use-internship";
 import { useSuratKeluar, type SuratKeluar } from "~/composables/api/use-surat-keluar";
 import { useGuruApi } from "~/composables/api/use-guru";
+import { buildStoredFileUrl, normalizeStoredFileRef } from "~/utils/stored-file";
 
 definePageMeta({
   layout: "admin",
@@ -25,7 +26,6 @@ interface StudentRow {
 }
 
 const toast = useToast();
-const config = useRuntimeConfig();
 
 const penempatanApi = usePenempatanApi();
 const suratKeluarApi = useSuratKeluar();
@@ -109,30 +109,13 @@ function calculateDuration(startDate: string, endDate: string) {
 }
 
 function normalizeFilePath(path?: string | null) {
-  const value = String(path || "").trim();
-  return value.length > 0 ? value : undefined;
-}
-
-function buildFileUrl(filePath: string) {
-  if (/^https?:\/\//i.test(filePath)) return filePath;
-
-  const apiUrl = String(config.public.apiUrl || "").replace(/\/+$/, "");
-  const baseOrigin = apiUrl.endsWith("/api") ? apiUrl.slice(0, -4) : apiUrl;
-  const cleanedPath = filePath.replace(/^\/+/, "");
-
-  if (!baseOrigin) {
-    return cleanedPath.startsWith("uploads/") ? `/${cleanedPath}` : `/uploads/${cleanedPath}`;
-  }
-
-  return cleanedPath.startsWith("uploads/")
-    ? `${baseOrigin}/${cleanedPath}`
-    : `${baseOrigin}/uploads/${cleanedPath}`;
+  return normalizeStoredFileRef(path);
 }
 
 function downloadFile(path?: string) {
   if (!path) return;
   const link = document.createElement("a");
-  link.href = buildFileUrl(path);
+  link.href = buildStoredFileUrl(path);
   link.target = "_blank";
   link.rel = "noopener";
   document.body.appendChild(link);

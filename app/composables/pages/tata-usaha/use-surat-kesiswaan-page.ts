@@ -4,7 +4,7 @@ import { useSuratMasuk, type SuratMasuk } from "~/composables/api/use-surat-masu
 import { useSiswaApi, type Siswa } from "~/composables/api/use-academic";
 import { useGuruApi } from "~/composables/api/use-guru";
 import { useSweetAlert } from "~/composables/use-sweet-alert";
-import { useRuntimeConfig } from "#imports";
+import { buildStoredFileUrl, normalizeStoredFileRef, resolveStoredFileUrl } from "~/utils/stored-file";
 
 const DEFAULT_JENIS_DOKUMEN = "Surat Tugas (Kegiatan Luar Sekolah)";
 const MAX_LOCATION_LENGTH = 200;
@@ -36,8 +36,6 @@ export function useSuratKesiswaanPage() {
   const { getAll: getAllSiswa } = useSiswaApi();
   const { getAllGuru } = useGuruApi();
   const { showConfirmation, showSuccess, showLoading, closeLoading, showWarning } = useSweetAlert();
-  const config = useRuntimeConfig();
-
   const loading = ref(false);
   const loadingSiswa = ref(false);
   const loadingSuratMasuk = ref(false);
@@ -116,11 +114,6 @@ export function useSuratKesiswaanPage() {
     }
   }
 
-  function normalizeFilePath(value?: string): string | null {
-    const normalized = String(value || "").trim();
-    return normalized.length > 0 ? normalized : null;
-  }
-
   function resolveVariantPath(sourcePath: string, extension: "docx" | "pdf"): string {
     if (/\.(pdf|docx)$/i.test(sourcePath)) {
       return sourcePath.replace(/\.(pdf|docx)$/i, `.${extension}`);
@@ -130,9 +123,9 @@ export function useSuratKesiswaanPage() {
 
   function pickFirstFilePath(record: Record<string, unknown>, keys: string[]): string | null {
     for (const key of keys) {
-      const value = record[key];
+        const value = record[key];
       if (typeof value === "string") {
-        const normalized = normalizeFilePath(value);
+        const normalized = normalizeStoredFileRef(value) || null;
         if (normalized) {
           return normalized;
         }
@@ -144,14 +137,14 @@ export function useSuratKesiswaanPage() {
   function getGeneratedFilePath(surat: SuratKesiswaan, extension: "docx" | "pdf"): string | null {
     const record = surat as unknown as Record<string, unknown>;
     const explicitPath = extension === "docx"
-      ? pickFirstFilePath(record, ["file_docx", "file_surat_docx"])
-      : pickFirstFilePath(record, ["file_pdf", "file_surat_pdf", "file_surat"]);
+      ? pickFirstFilePath(record, ["file_surat_docx"])
+      : pickFirstFilePath(record, ["file_surat_pdf", "file_surat"]);
 
     if (explicitPath) {
       return explicitPath;
     }
 
-    const fallbackPath = normalizeFilePath(surat.file_surat);
+    const fallbackPath = normalizeStoredFileRef(surat.file_surat) || null;
     if (!fallbackPath) {
       return null;
     }
@@ -161,26 +154,6 @@ export function useSuratKesiswaanPage() {
 
   function hasGeneratedFile(surat: SuratKesiswaan, extension: "docx" | "pdf"): boolean {
     return Boolean(getGeneratedFilePath(surat, extension));
-  }
-
-  function buildFileUrl(filePath: string): string {
-    if (/^https?:\/\//i.test(filePath)) {
-      return filePath;
-    }
-
-    const apiUrl = String(config.public.apiUrl || "").replace(/\/+$/, "");
-    const baseOrigin = apiUrl.endsWith("/api") ? apiUrl.slice(0, -4) : apiUrl;
-    const cleanedPath = filePath.replace(/^\/+/, "");
-
-    if (!baseOrigin) {
-      return cleanedPath.startsWith("uploads/") ? `/${cleanedPath}` : `/uploads/${cleanedPath}`;
-    }
-
-    if (cleanedPath.startsWith("uploads/")) {
-      return `${baseOrigin}/${cleanedPath}`;
-    }
-
-    return `${baseOrigin}/uploads/${cleanedPath}`;
   }
 
   async function isFileAccessible(url: string): Promise<boolean> {
@@ -199,7 +172,10 @@ export function useSuratKesiswaanPage() {
       return;
     }
 
-    const downloadUrl = buildFileUrl(path);
+    const downloadField = extension === "docx" ? "file_surat_docx_download_url" : "file_surat_pdf_download_url";
+    const downloadUrl =
+      resolveStoredFileUrl(surat as unknown as Record<string, unknown>, `file_surat_${extension}`, downloadField) ||
+      buildStoredFileUrl(path);
     const available = await isFileAccessible(downloadUrl);
     if (!available) {
       await showWarning("Berkas tidak ditemukan", `File ${extension.toUpperCase()} belum tersedia di server.`);

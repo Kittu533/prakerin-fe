@@ -144,6 +144,7 @@ const pageTitle = computed(() => {
         "/admin/verification": "Verifikasi Pengajuan",
         "/admin/placement": "Penempatan Siswa",
         "/admin/monitoring": "Monitoring PKL",
+        "/admin/master/companies": "Master Perusahaan",
         "/admin/users": "Kelola Akun",
         "/admin/reporting/placement": "Master Penempatan",
         "/admin/reporting/attendance": "Rekap Absensi",
@@ -217,9 +218,9 @@ const menuItems: MenuItem[] = [
         label: "Data Mitra",
         children: [
             {
-                to: "/admin/mitra/dudi",
-                icon: "lucide:building-2",
-                label: "Data DUDI PKL",
+                to: "/admin/master/companies",
+                icon: "lucide:database",
+                label: "Data DUDI / Perusahaan",
             },
             {
                 to: "/admin/mitra/mou",

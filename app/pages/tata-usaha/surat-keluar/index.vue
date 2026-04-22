@@ -598,6 +598,7 @@
 import { useSuratKeluar, type SuratKeluar, type SuratKeluarTemplateJenis } from "~/composables/api/use-surat-keluar";
 import { useGuruApi } from "~/composables/api/use-guru";
 import { useSweetAlert } from "~/composables/use-sweet-alert";
+import { buildStoredFileUrl, normalizeStoredFileRef, resolveStoredFileUrl } from "~/utils/stored-file";
 
 definePageMeta({ layout: "tata-usaha" });
 
@@ -749,12 +750,6 @@ function sanitizeFileName(value: string): string {
     return value.replace(/[^a-zA-Z0-9-_]+/g, "_");
 }
 
-function normalizeFilePath(path?: string): string | null {
-    if (!path) return null;
-    const normalized = path.trim();
-    return normalized.length > 0 ? normalized : null;
-}
-
 function resolveVariantPath(sourcePath: string, extension: "docx" | "pdf"): string {
     if (/\.(pdf|docx)$/i.test(sourcePath)) {
         return sourcePath.replace(/\.(pdf|docx)$/i, `.${extension}`);
@@ -766,7 +761,7 @@ function pickFirstFilePath(record: Record<string, unknown>, keys: string[]): str
     for (const key of keys) {
         const value = record[key];
         if (typeof value === "string") {
-            const normalized = normalizeFilePath(value);
+            const normalized = normalizeStoredFileRef(value) || null;
             if (normalized) {
                 return normalized;
             }
@@ -779,20 +774,10 @@ function getGeneratedFilePath(surat: SuratKeluar, extension: "docx" | "pdf"): st
     const dynamicRecord = surat as unknown as Record<string, unknown>;
     const explicitPath = extension === "docx"
         ? pickFirstFilePath(dynamicRecord, [
-            "file_docx",
             "file_surat_docx",
-            "docx_url",
-            "url_docx",
-            "file_docx_url",
-            "generated_docx",
         ])
         : pickFirstFilePath(dynamicRecord, [
-            "file_pdf",
             "file_surat_pdf",
-            "pdf_url",
-            "url_pdf",
-            "file_pdf_url",
-            "generated_pdf",
             "file_surat",
         ]);
 
@@ -800,7 +785,7 @@ function getGeneratedFilePath(surat: SuratKeluar, extension: "docx" | "pdf"): st
         return explicitPath;
     }
 
-    const fallbackPath = normalizeFilePath(surat.file_surat);
+    const fallbackPath = normalizeStoredFileRef(surat.file_surat) || null;
     if (!fallbackPath) {
         return null;
     }
@@ -810,27 +795,6 @@ function getGeneratedFilePath(surat: SuratKeluar, extension: "docx" | "pdf"): st
 
 function hasGeneratedFile(surat: SuratKeluar, extension: "docx" | "pdf"): boolean {
     return Boolean(getGeneratedFilePath(surat, extension));
-}
-
-function buildFileUrl(filePath: string): string {
-    if (/^https?:\/\//i.test(filePath)) {
-        return filePath;
-    }
-
-    const config = useRuntimeConfig();
-    const apiUrl = String(config.public.apiUrl || "").replace(/\/+$/, "");
-    const baseOrigin = apiUrl.endsWith("/api") ? apiUrl.slice(0, -4) : apiUrl;
-    const cleanedPath = filePath.replace(/^\/+/, "");
-
-    if (!baseOrigin) {
-        return cleanedPath.startsWith("uploads/") ? `/${cleanedPath}` : `/uploads/${cleanedPath}`;
-    }
-
-    if (cleanedPath.startsWith("uploads/")) {
-        return `${baseOrigin}/${cleanedPath}`;
-    }
-
-    return `${baseOrigin}/uploads/${cleanedPath}`;
 }
 
 async function isFileAccessible(url: string): Promise<boolean> {
@@ -849,7 +813,10 @@ async function downloadGeneratedFile(surat: SuratKeluar, extension: "docx" | "pd
         return;
     }
 
-    const downloadUrl = buildFileUrl(path);
+    const downloadField = extension === "docx" ? "file_surat_docx_download_url" : "file_surat_pdf_download_url";
+    const downloadUrl =
+        resolveStoredFileUrl(surat as unknown as Record<string, unknown>, `file_surat_${extension}`, downloadField) ||
+        buildStoredFileUrl(path);
     const available = await isFileAccessible(downloadUrl);
     if (!available) {
         await showWarning("Berkas tidak ditemukan", `File ${extension.toUpperCase()} belum tersedia di server.`);

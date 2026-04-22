@@ -1,5 +1,6 @@
 import { computed, onMounted, ref, watch } from "vue";
 import { useMouApi, usePerusahaanApi, type Mou, type Perusahaan } from "~/composables/api/use-partner";
+import { resolveStoredFileUrl } from "~/utils/stored-file";
 
 interface MouRow {
   id: string;
@@ -98,8 +99,8 @@ export function useMitraMouPage() {
       status: item.status || "AKTIF",
       pic_nama: item.pic_nama || "-",
       pic_telepon: item.pic_telepon || "-",
-      link_maps: item.link_maps || "",
-      link_dokumen: resolvePublicFileUrl(item.link_dokumen || ""),
+      link_maps: resolveMapUrl(item.link_maps, item.perusahaan),
+      link_dokumen: resolveMouDocumentUrl(item),
     }));
   });
 
@@ -113,6 +114,23 @@ export function useMitraMouPage() {
   const modalTitle = computed(() => (isEditing.value ? "Kelola Data MoU" : "Tambah Data MoU"));
   const submitButtonText = computed(() => (isEditing.value ? "SIMPAN PERUBAHAN" : "SIMPAN DATA"));
 
+  function isExternalUrl(value?: string | null) {
+    return /^https?:\/\//i.test(String(value || "").trim());
+  }
+
+  function buildCompanyMapLink(company?: Pick<Perusahaan, "alamat"> | null) {
+    const address = String(company?.alamat || "").trim();
+    if (!address) return "";
+
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
+  }
+
+  function resolveMapUrl(pathOrUrl?: string | null, company?: Pick<Perusahaan, "alamat"> | null) {
+    const normalized = String(pathOrUrl || "").trim();
+    if (isExternalUrl(normalized)) return normalized;
+    return buildCompanyMapLink(company);
+  }
+
   function buildQueryParams() {
     return {
       nama: filters.value.nama || undefined,
@@ -125,23 +143,14 @@ export function useMitraMouPage() {
     };
   }
 
-  function resolvePublicFileUrl(pathOrUrl: string) {
-    const normalized = String(pathOrUrl || "").trim();
-    if (!normalized) return "";
-    if (/^https?:\/\//i.test(normalized)) return normalized;
-
-    const config = useRuntimeConfig();
-    const apiUrl = String(config.public.apiUrl || "").replace(/\/+$/, "");
-    const baseOrigin = apiUrl.endsWith("/api") ? apiUrl.slice(0, -4) : apiUrl;
-    const cleanedPath = normalized.replace(/^\/+/, "");
-
-    if (!baseOrigin) {
-      return cleanedPath.startsWith("uploads/") ? `/${cleanedPath}` : `/uploads/${cleanedPath}`;
-    }
-
-    return cleanedPath.startsWith("uploads/")
-      ? `${baseOrigin}/${cleanedPath}`
-      : `${baseOrigin}/uploads/${cleanedPath}`;
+  function resolveMouDocumentUrl(item: Mou) {
+    return (
+      resolveStoredFileUrl(
+        item as unknown as Record<string, unknown>,
+        "link_dokumen",
+        "link_dokumen_download_url",
+      ) || ""
+    );
   }
 
   function normalizeListResponse(raw: any): { rows: Mou[]; meta?: { page: number; limit: number; total: number; totalPages: number } } {
@@ -310,6 +319,12 @@ export function useMitraMouPage() {
       return;
     }
 
+    const normalizedMapUrl = String(form.value.link_maps || "").trim();
+    if (normalizedMapUrl && !isExternalUrl(normalizedMapUrl)) {
+      toast.add({ title: "Link Google Maps harus diawali http:// atau https://", color: "error" });
+      return;
+    }
+
     submitting.value = true;
     try {
       let linkDokumen = form.value.link_dokumen || undefined;
@@ -332,7 +347,7 @@ export function useMitraMouPage() {
         kompetensi_keahlian: form.value.kompetensi || undefined,
         pic_nama: form.value.pic_nama || undefined,
         pic_telepon: form.value.pic_telepon || undefined,
-        link_maps: form.value.link_maps || undefined,
+        link_maps: normalizedMapUrl || undefined,
         link_dokumen: linkDokumen,
       };
 

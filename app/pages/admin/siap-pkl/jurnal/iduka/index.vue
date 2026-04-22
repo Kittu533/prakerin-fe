@@ -1,506 +1,1069 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, onMounted, ref } from "vue";
+import { usePerusahaanApi, type Perusahaan } from "~/composables/api/use-partner";
+import { useSiswaApi, useTahunAjaranApi, type Siswa } from "~/composables/api/use-academic";
+import { useGuruApi, type GuruProfile } from "~/composables/api/use-guru";
+import {
+  useSuratKeluar,
+  type SuratKeluar,
+  type SuratKeluarStatus,
+} from "~/composables/api/use-surat-keluar";
+import { buildStoredFileUrl, normalizeStoredFileRef } from "~/utils/stored-file";
 
 definePageMeta({
-  layout: 'admin'
-})
+  layout: "admin",
+});
 
-// Sections state
-const isFormOpen = ref(true)
-const isDataOpen = ref(true)
-const isDashboardOpen = ref(true)
+interface SelectedStudent {
+  id_siswa: string;
+  nama: string;
+  nis: string;
+  kelas: string;
+}
 
-// Form State
+const toast = useToast();
+
+const perusahaanApi = usePerusahaanApi();
+const siswaApi = useSiswaApi();
+const tahunAjaranApi = useTahunAjaranApi();
+const guruApi = useGuruApi();
+const suratKeluarApi = useSuratKeluar();
+
+const loadingData = ref(true);
+const loadingLetters = ref(false);
+const submitting = ref(false);
+
+const perusahaanList = ref<Perusahaan[]>([]);
+const siswaList = ref<Siswa[]>([]);
+const penandatanganList = ref<GuruProfile[]>([]);
+const suratRows = ref<SuratKeluar[]>([]);
+const tahunAjaranAktif = ref("-");
+
+const selectedStudentIds = ref<string[]>([]);
+const suratSearch = ref("");
+const activeStatusFilter = ref<"semua" | SuratKeluarStatus>("semua");
+
 const form = ref({
-  namaIndustri: '',
-  alamatIndustri: '',
-  filterKelas: '',
-  tahunPelajaran: '2025/2026',
-  periodeMulai: '',
-  periodeSelesai: ''
-})
+  perusahaanId: "",
+  penandatanganGuruId: "",
+  filterKelas: "",
+  searchSiswa: "",
+  periodeMulai: "",
+  periodeSelesai: "",
+  perihal: "",
+  isiLampiran: "",
+});
 
-// Table Data
-const tableData = ref([
-  {
-    id: 1,
-    nomorSurat: {
-      prm: '400.14.5 / 0007 / 2026',
-      png: '400.14.5 / 0009 / 2026',
-      trk: '400.14.5 / 0009 / 2026'
-    },
-    tanggal: {
-      prm: '22 Maret 2026',
-      png: '28 Maret 2026',
-      trk: '30 Maret 2026'
-    },
-    periode: '25 Maret 2026 - 25 Juli 2026',
-    durasi: '5 Bln',
-    industri: 'PT. PP (Persero) Tbk. (Proyek Jalan Tol Semarang-Demak I B)',
-    alamat: 'Jl. Karangjati, Kec. Bergas',
-    siswaCount: 2,
-    kelas: 'XII TEK 2',
-    status: 'Ditarik'
-  },
-  {
-    id: 2,
-    nomorSurat: {
-      prm: '400.14.5 / 0006 / 2026',
-      png: '-',
-      trk: '-'
-    },
-    tanggal: {
-      prm: '22 Maret 2026',
-      png: '',
-      trk: ''
-    },
-    periode: '23 Maret 2026 - 22 Juni 2026',
-    durasi: '4 Bln',
-    industri: 'PT. Wijaya Karya (Persero) Tbk.',
-    alamat: 'Jl. Tambakrejo, Kec. Gay...',
-    siswaCount: 2,
-    kelas: 'XII TKR 1',
-    status: 'Diajukan'
+const statusOptions: Array<{ label: string; value: "semua" | SuratKeluarStatus }> = [
+  { label: "Semua", value: "semua" },
+  { label: "Draft", value: "draft" },
+  { label: "Dikirim", value: "dikirim" },
+  { label: "Diterima", value: "diterima" },
+];
+
+const selectedCompany = computed(() =>
+  perusahaanList.value.find((item) => item.id_perusahaan === form.value.perusahaanId),
+);
+
+const selectedSigner = computed(() =>
+  penandatanganList.value.find((item) => item.id_guru === form.value.penandatanganGuruId),
+);
+
+const classOptions = computed(() => {
+  const classes = new Set<string>();
+
+  for (const siswa of siswaList.value) {
+    const classLabel = getStudentClassLabel(siswa);
+    if (classLabel !== "-") {
+      classes.add(classLabel);
+    }
   }
-])
 
-// Charts Placeholder Data (using plain div/svg for now as per image)
-const stats = ref({
-  industriAktif: 4,
-  totalSiswa: 8,
-  berkasSurat: 4
-})
+  return Array.from(classes).sort((left, right) => left.localeCompare(right));
+});
 
-const activeTab = ref('Diajukan')
-const tabs = [
-  { label: 'Diajukan', count: 3 },
-  { label: 'Disetujui', count: 0 },
-  { label: 'Diterjunkan', count: 0 },
-  { label: 'Ditarik', count: 1 }
-]
+const selectedStudents = computed<SelectedStudent[]>(() => {
+  return selectedStudentIds.value
+    .map((id) => siswaList.value.find((item) => item.id_siswa === id))
+    .filter((item): item is Siswa => Boolean(item))
+    .map((item) => ({
+      id_siswa: item.id_siswa,
+      nama: item.nama_siswa,
+      nis: item.nis,
+      kelas: getStudentClassLabel(item),
+    }));
+});
+
+const activeStudentRequestIds = computed(() => {
+  const ids = new Set<string>();
+
+  for (const surat of suratRows.value) {
+    if (surat.status === "diterima" || !isSuratPermohonan(surat)) {
+      continue;
+    }
+
+    for (const siswa of extractStudentsFromSurat(surat)) {
+      if (siswa.id_siswa) {
+        ids.add(siswa.id_siswa);
+      }
+    }
+  }
+
+  return ids;
+});
+
+const blockedStudentCount = computed(() => activeStudentRequestIds.value.size);
+
+const availableStudents = computed(() => {
+  const keyword = form.value.searchSiswa.trim().toLowerCase();
+  const selectedIds = new Set(selectedStudentIds.value);
+
+  return siswaList.value.filter((item) => {
+    const kelas = getStudentClassLabel(item);
+    const matchKelas = !form.value.filterKelas || kelas === form.value.filterKelas;
+    const matchKeyword =
+      !keyword ||
+      item.nama_siswa.toLowerCase().includes(keyword) ||
+      item.nis.toLowerCase().includes(keyword) ||
+      kelas.toLowerCase().includes(keyword);
+
+    return (
+      matchKelas &&
+      matchKeyword &&
+      !selectedIds.has(item.id_siswa) &&
+      !activeStudentRequestIds.value.has(item.id_siswa)
+    );
+  });
+});
+
+const filteredSuratRows = computed(() => {
+  const keyword = suratSearch.value.trim().toLowerCase();
+
+  return suratRows.value.filter((item) => {
+    const matchStatus =
+      activeStatusFilter.value === "semua" || item.status === activeStatusFilter.value;
+
+    const siswaText = extractStudentsFromSurat(item)
+      .map((siswa) => [siswa.nama, siswa.nis, siswa.kelas].filter(Boolean).join(" "))
+      .join(" ")
+      .toLowerCase();
+
+    const matchKeyword =
+      !keyword ||
+      String(item.nomor_surat || "").toLowerCase().includes(keyword) ||
+      String(item.ditujukan_kepada || "").toLowerCase().includes(keyword) ||
+      String(item.perihal || "").toLowerCase().includes(keyword) ||
+      siswaText.includes(keyword);
+
+    return matchStatus && matchKeyword;
+  });
+});
+
+const letterStats = computed(() => {
+  const stats = {
+    total: suratRows.value.length,
+    draft: 0,
+    dikirim: 0,
+    diterima: 0,
+    totalSiswa: 0,
+  };
+
+  for (const surat of suratRows.value) {
+    if (surat.status === "draft") stats.draft += 1;
+    if (surat.status === "dikirim") stats.dikirim += 1;
+    if (surat.status === "diterima") stats.diterima += 1;
+    stats.totalSiswa += extractStudentsFromSurat(surat).length;
+  }
+
+  return stats;
+});
+
+function getStudentClassLabel(item: Siswa) {
+  const kelas = String(item.kelas?.nama_kelas || "").trim();
+  if (kelas) return kelas;
+
+  const fallbackKode = String(item.kelas?.kode_tingkat || "").trim();
+  const jurusan = String(item.kelas?.jurusan?.nama_jurusan || "").trim();
+  if (fallbackKode && jurusan) {
+    return `${fallbackKode} ${jurusan}`;
+  }
+
+  return fallbackKode || jurusan || "-";
+}
+
+function isSuratPermohonan(surat: SuratKeluar) {
+  const templateJenis = String(surat.template_jenis || "").toLowerCase();
+  return templateJenis === "surat_permohonan" || surat.klasifikasi_surat === "permohonan";
+}
+
+function extractStudentsFromSurat(surat: SuratKeluar) {
+  return Array.isArray(surat.template_payload?.siswa) ? surat.template_payload.siswa : [];
+}
+
+function formatDate(dateStr?: string | null) {
+  if (!dateStr) return "-";
+
+  return new Date(dateStr).toLocaleDateString("id-ID", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+function formatStatusLabel(status: SuratKeluarStatus) {
+  if (status === "draft") return "Draft";
+  if (status === "dikirim") return "Dikirim";
+  return "Diterima";
+}
+
+function statusBadgeClass(status: SuratKeluarStatus) {
+  if (status === "draft") return "bg-amber-100 text-amber-700 border border-amber-200";
+  if (status === "dikirim") return "bg-blue-100 text-blue-700 border border-blue-200";
+  return "bg-emerald-100 text-emerald-700 border border-emerald-200";
+}
+
+function buildDefaultPerihal() {
+  const companyName = selectedCompany.value?.nama_perusahaan || "IDUKA tujuan";
+  const jumlahSiswa = selectedStudents.value.length;
+  const suffix = jumlahSiswa > 0 ? ` untuk ${jumlahSiswa} siswa` : "";
+
+  return `Permohonan Praktik Kerja Lapangan (PKL)${suffix} di ${companyName}`;
+}
+
+function buildDefaultLampiran() {
+  const lampiran = [
+    `Tahun Ajaran: ${tahunAjaranAktif.value || "-"}`,
+    `Jumlah Siswa: ${selectedStudents.value.length}`,
+  ];
+
+  if (form.value.periodeMulai && form.value.periodeSelesai) {
+    lampiran.push(
+      `Periode PKL: ${formatDate(form.value.periodeMulai)} s.d. ${formatDate(form.value.periodeSelesai)}`,
+    );
+  }
+
+  if (selectedStudents.value.length > 0) {
+    lampiran.push(
+      `Daftar Siswa: ${selectedStudents.value.map((item) => `${item.nama} (${item.kelas})`).join(", ")}`,
+    );
+  }
+
+  return lampiran.join("\n");
+}
+
+function normalizeFilePath(path?: string | null) {
+  return normalizeStoredFileRef(path);
+}
+
+function downloadFile(path?: string | null) {
+  const normalizedPath = normalizeFilePath(path);
+  if (!normalizedPath) return;
+
+  const link = document.createElement("a");
+  link.href = buildStoredFileUrl(normalizedPath);
+  link.target = "_blank";
+  link.rel = "noopener";
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
+function addStudent(id: string) {
+  if (!selectedStudentIds.value.includes(id)) {
+    selectedStudentIds.value = [...selectedStudentIds.value, id];
+  }
+}
+
+function removeStudent(id: string) {
+  selectedStudentIds.value = selectedStudentIds.value.filter((item) => item !== id);
+}
+
+function resetForm() {
+  form.value = {
+    perusahaanId: "",
+    penandatanganGuruId: form.value.penandatanganGuruId,
+    filterKelas: "",
+    searchSiswa: "",
+    periodeMulai: "",
+    periodeSelesai: "",
+    perihal: "",
+    isiLampiran: "",
+  };
+  selectedStudentIds.value = [];
+}
+
+async function loadLetters(showErrorToast = false) {
+  loadingLetters.value = true;
+
+  try {
+    const response = await suratKeluarApi.getAll({
+      page: 1,
+      limit: 1000,
+      klasifikasi_surat: "permohonan",
+    });
+
+    if (!response.success || !response.data) {
+      throw new Error(response.message || "Gagal memuat surat permohonan");
+    }
+
+    suratRows.value = (response.data.data || []).filter((item) => isSuratPermohonan(item));
+  } catch (error: any) {
+    if (showErrorToast) {
+      toast.add({
+        title: "Gagal memuat data surat",
+        description: error?.message || "Terjadi kesalahan saat memuat surat permohonan",
+        color: "error",
+      });
+    }
+  } finally {
+    loadingLetters.value = false;
+  }
+}
+
+async function loadInitialData() {
+  loadingData.value = true;
+
+  try {
+    const [perusahaanRes, siswaRes, guruRes, tahunAjaranRes, suratRes] = await Promise.all([
+      perusahaanApi.getAll({
+        page: 1,
+        limit: 1000,
+        mou_aktif: true,
+        arsip: false,
+      }),
+      siswaApi.getAll({
+        page: 1,
+        limit: 1000,
+        pkl_status: "unplaced",
+      }),
+      guruApi.getAllGuru({
+        page: 1,
+        limit: 1000,
+        penandatangan: true,
+      }),
+      tahunAjaranApi.getActive(),
+      suratKeluarApi.getAll({
+        page: 1,
+        limit: 1000,
+        klasifikasi_surat: "permohonan",
+      }),
+    ]);
+
+    perusahaanList.value = [...(perusahaanRes.data || [])].sort((left, right) =>
+      String(left.nama_perusahaan || "").localeCompare(String(right.nama_perusahaan || "")),
+    );
+
+    siswaList.value = [...(siswaRes.data || [])].sort((left, right) =>
+      String(left.nama_siswa || "").localeCompare(String(right.nama_siswa || "")),
+    );
+
+    if (!guruRes.success) {
+      throw new Error(guruRes.message || "Gagal memuat guru penandatangan");
+    }
+
+    penandatanganList.value = [...(guruRes.data?.data || [])]
+      .filter((item) => item.status_aktif !== false)
+      .sort((left, right) =>
+        String(left.nama_guru || "").localeCompare(String(right.nama_guru || "")),
+      );
+
+    if (!form.value.penandatanganGuruId && penandatanganList.value.length > 0) {
+      form.value.penandatanganGuruId = penandatanganList.value[0].id_guru;
+    }
+
+    tahunAjaranAktif.value = String(tahunAjaranRes.data?.nama_tahun_ajaran || "-");
+
+    if (!suratRes.success || !suratRes.data) {
+      throw new Error(suratRes.message || "Gagal memuat surat permohonan");
+    }
+
+    suratRows.value = (suratRes.data.data || []).filter((item) => isSuratPermohonan(item));
+  } catch (error: any) {
+    toast.add({
+      title: "Gagal memuat halaman",
+      description: error?.message || "Terjadi kesalahan saat sinkronisasi data frontend dan backend",
+      color: "error",
+    });
+  } finally {
+    loadingData.value = false;
+  }
+}
+
+async function submitSuratPermohonan() {
+  if (!selectedCompany.value) {
+    toast.add({
+      title: "Pilih perusahaan tujuan",
+      color: "warning",
+    });
+    return;
+  }
+
+  if (!form.value.penandatanganGuruId) {
+    toast.add({
+      title: "Pilih guru penandatangan",
+      color: "warning",
+    });
+    return;
+  }
+
+  if (!form.value.periodeMulai || !form.value.periodeSelesai) {
+    toast.add({
+      title: "Lengkapi periode PKL",
+      color: "warning",
+    });
+    return;
+  }
+
+  if (selectedStudents.value.length === 0) {
+    toast.add({
+      title: "Pilih minimal 1 siswa",
+      color: "warning",
+    });
+    return;
+  }
+
+  submitting.value = true;
+
+  try {
+    const nomorRes = await suratKeluarApi.generateNomor("surat_keluar");
+    if (!nomorRes.success || !nomorRes.data?.nomor_surat) {
+      throw new Error(nomorRes.message || "Gagal menghasilkan nomor surat");
+    }
+
+    const createRes = await suratKeluarApi.create({
+      nomor_surat: nomorRes.data.nomor_surat,
+      tanggal_surat: new Date().toISOString(),
+      ditujukan_kepada: selectedCompany.value.nama_perusahaan,
+      alamat_tujuan: selectedCompany.value.alamat || "",
+      perihal: form.value.perihal.trim() || buildDefaultPerihal(),
+      klasifikasi_surat: "permohonan",
+      sifat_surat: "biasa",
+      isi_lampiran: form.value.isiLampiran.trim() || buildDefaultLampiran(),
+      template_jenis: "surat_permohonan",
+      template_payload: {
+        siswa: selectedStudents.value.map((item) => ({
+          id_siswa: item.id_siswa,
+          nama: item.nama,
+          nis: item.nis,
+          kelas: item.kelas,
+        })),
+      },
+      penandatangan_guru_id: form.value.penandatanganGuruId,
+    });
+
+    if (!createRes.success) {
+      throw new Error(createRes.message || "Gagal membuat surat permohonan");
+    }
+
+    toast.add({
+      title: "Surat permohonan berhasil dibuat",
+      description: `Dokumen untuk ${selectedCompany.value.nama_perusahaan} berhasil digenerate`,
+      color: "success",
+    });
+
+    resetForm();
+    await loadLetters();
+  } catch (error: any) {
+    toast.add({
+      title: "Gagal membuat surat permohonan",
+      description: error?.message || "Terjadi kesalahan saat membuat surat permohonan",
+      color: "error",
+    });
+  } finally {
+    submitting.value = false;
+  }
+}
+
+async function updateLetterStatus(surat: SuratKeluar, nextStatus: SuratKeluarStatus) {
+  const actionLabel = formatStatusLabel(nextStatus).toLowerCase();
+  const confirmed = window.confirm(
+    `Ubah status surat ${surat.nomor_surat} menjadi ${actionLabel}?`,
+  );
+
+  if (!confirmed) {
+    return;
+  }
+
+  const response = await suratKeluarApi.updateStatus(surat.id, nextStatus);
+  if (!response.success) {
+    toast.add({
+      title: "Gagal memperbarui status",
+      description: response.message || "Status surat tidak berhasil diperbarui",
+      color: "error",
+    });
+    return;
+  }
+
+  toast.add({
+    title: "Status surat diperbarui",
+    description: `${surat.nomor_surat} sekarang berstatus ${actionLabel}`,
+    color: "success",
+  });
+
+  await loadLetters();
+}
+
+async function deleteLetter(surat: SuratKeluar) {
+  const confirmed = window.confirm(`Hapus surat ${surat.nomor_surat}?`);
+  if (!confirmed) {
+    return;
+  }
+
+  const response = await suratKeluarApi.remove(surat.id);
+  if (!response.success) {
+    toast.add({
+      title: "Gagal menghapus surat",
+      description: response.message || "Surat tidak berhasil dihapus",
+      color: "error",
+    });
+    return;
+  }
+
+  toast.add({
+    title: "Surat dihapus",
+    description: `${surat.nomor_surat} telah dihapus dari daftar`,
+    color: "success",
+  });
+
+  await loadLetters();
+}
+
+onMounted(() => {
+  loadInitialData();
+});
+
+useHead({
+  title: "Surat Permohonan PKL IDUKA | Admin",
+});
 </script>
 
 <template>
-  <div class="p-6 space-y-8 bg-slate-50 min-h-screen font-sans">
-    <!-- Main Header -->
-    <div class="bg-white rounded-3xl shadow-sm p-8 border border-slate-100 flex flex-col md:flex-row items-center justify-between gap-6">
-      <div class="flex items-center gap-6">
-        <div class="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center overflow-hidden border-2 border-blue-100 shadow-inner">
-          <img src="/assets/img/logo-skanda.png" alt="Logo" class="w-14 h-14 object-contain" />
-        </div>
-        <div class="text-center md:text-left">
-          <h1 class="text-4xl font-black text-blue-600 tracking-tighter uppercase">SIAP - PKL</h1>
-          <p class="text-slate-500 font-bold text-sm tracking-wide">Sistem Administrasi & Persuratan PKL</p>
-          <div class="mt-2">
-            <span class="bg-blue-600 text-white text-[10px] px-4 py-1 rounded-full font-black uppercase tracking-widest shadow-sm">SMK GITA LARAS</span>
+  <div class="min-h-screen bg-slate-50 p-6 font-sans">
+    <div class="space-y-6">
+      <div class="rounded-3xl border border-slate-100 bg-white p-8 shadow-sm">
+        <div class="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+          <div class="flex items-center gap-5">
+            <div class="flex h-20 w-20 items-center justify-center overflow-hidden rounded-full border-2 border-blue-100 bg-blue-50 shadow-inner">
+              <img src="/assets/img/logo-skanda.png" alt="Logo" class="h-14 w-14 object-contain" />
+            </div>
+            <div class="space-y-2">
+              <div class="flex flex-wrap items-center gap-2">
+                <span class="rounded-full bg-blue-600 px-4 py-1 text-[10px] font-black uppercase tracking-[0.25em] text-white">SIAP PKL</span>
+                <span class="rounded-full bg-slate-100 px-4 py-1 text-[10px] font-black uppercase tracking-[0.25em] text-slate-600">IDUKA</span>
+              </div>
+              <h1 class="text-3xl font-black uppercase tracking-tight text-slate-900">
+                Surat Permohonan PKL ke Dunia Industri
+              </h1>
+              <p class="max-w-3xl text-sm font-medium leading-relaxed text-slate-500">
+                Halaman ini sekarang langsung sinkron dengan backend `surat-keluar`, master perusahaan
+                bermoU aktif, data siswa belum ditempatkan, dan guru penandatangan.
+              </p>
+            </div>
+          </div>
+
+          <div class="grid min-w-[280px] grid-cols-2 gap-3">
+            <div class="rounded-2xl border border-blue-100 bg-blue-50 p-4">
+              <div class="text-[10px] font-black uppercase tracking-[0.25em] text-blue-500">Mitra Siap PKL</div>
+              <div class="mt-2 text-3xl font-black text-blue-700">{{ perusahaanList.length }}</div>
+            </div>
+            <div class="rounded-2xl border border-emerald-100 bg-emerald-50 p-4">
+              <div class="text-[10px] font-black uppercase tracking-[0.25em] text-emerald-500">Siswa Siap Ajukan</div>
+              <div class="mt-2 text-3xl font-black text-emerald-700">{{ siswaList.length }}</div>
+            </div>
+            <div class="rounded-2xl border border-amber-100 bg-amber-50 p-4">
+              <div class="text-[10px] font-black uppercase tracking-[0.25em] text-amber-500">Surat Draft</div>
+              <div class="mt-2 text-3xl font-black text-amber-700">{{ letterStats.draft }}</div>
+            </div>
+            <div class="rounded-2xl border border-slate-200 bg-slate-100 p-4">
+              <div class="text-[10px] font-black uppercase tracking-[0.25em] text-slate-500">Surat Aktif</div>
+              <div class="mt-2 text-3xl font-black text-slate-700">{{ letterStats.total }}</div>
+            </div>
           </div>
         </div>
       </div>
 
-      <!-- System Status Card -->
-      <div class="bg-slate-50 rounded-2xl border border-slate-200 p-4 min-w-[280px]">
-        <div class="flex items-center justify-between mb-3">
-          <div class="flex items-center gap-2 text-slate-500 font-bold text-[10px] uppercase tracking-wider">
-            <Icon name="lucide:cpu" class="w-4 h-4" />
-            System Health
+      <div class="grid gap-6 xl:grid-cols-[1.2fr_1fr]">
+        <div class="overflow-hidden rounded-3xl border border-slate-100 bg-white shadow-sm">
+          <div class="border-b border-slate-100 bg-slate-50 px-6 py-4">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h2 class="text-sm font-black uppercase tracking-[0.25em] text-slate-700">
+                  Generate Surat Permohonan
+                </h2>
+                <p class="mt-1 text-xs font-medium text-slate-500">
+                  Backend akan membuat nomor surat, menyimpan data, dan menghasilkan file DOCX/PDF.
+                </p>
+              </div>
+              <div class="rounded-full bg-slate-900 px-4 py-1.5 text-[10px] font-black uppercase tracking-[0.25em] text-white">
+                Tahun Ajaran: {{ tahunAjaranAktif }}
+              </div>
+            </div>
           </div>
-          <span class="bg-green-100 text-green-700 text-[10px] px-2 py-0.5 rounded font-black">0.00%</span>
+
+          <div class="space-y-6 p-6">
+            <div v-if="loadingData" class="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-6 text-sm text-slate-500">
+              Memuat master perusahaan, siswa, penandatangan, dan data surat...
+            </div>
+
+            <template v-else>
+              <div class="grid gap-5 md:grid-cols-2">
+                <div class="space-y-2">
+                  <label class="text-[10px] font-black uppercase tracking-[0.25em] text-slate-500">
+                    Perusahaan / IDUKA Tujuan
+                  </label>
+                  <select
+                    v-model="form.perusahaanId"
+                    class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                  >
+                    <option value="">Pilih perusahaan bermoU aktif</option>
+                    <option
+                      v-for="item in perusahaanList"
+                      :key="item.id_perusahaan"
+                      :value="item.id_perusahaan"
+                    >
+                      {{ item.nama_perusahaan }}
+                    </option>
+                  </select>
+                </div>
+
+                <div class="space-y-2">
+                  <label class="text-[10px] font-black uppercase tracking-[0.25em] text-slate-500">
+                    Guru Penandatangan
+                  </label>
+                  <select
+                    v-model="form.penandatanganGuruId"
+                    class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                  >
+                    <option value="">Pilih penandatangan</option>
+                    <option v-for="guru in penandatanganList" :key="guru.id_guru" :value="guru.id_guru">
+                      {{ guru.nama_guru }}
+                    </option>
+                  </select>
+                </div>
+
+                <div class="space-y-2 md:col-span-2">
+                  <label class="text-[10px] font-black uppercase tracking-[0.25em] text-slate-500">
+                    Alamat Tujuan
+                  </label>
+                  <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-600">
+                    {{ selectedCompany?.alamat || "Alamat perusahaan akan tampil otomatis di sini." }}
+                  </div>
+                </div>
+
+                <div class="space-y-2">
+                  <label class="text-[10px] font-black uppercase tracking-[0.25em] text-slate-500">
+                    Periode PKL Mulai
+                  </label>
+                  <input
+                    v-model="form.periodeMulai"
+                    type="date"
+                    class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                  />
+                </div>
+
+                <div class="space-y-2">
+                  <label class="text-[10px] font-black uppercase tracking-[0.25em] text-slate-500">
+                    Periode PKL Selesai
+                  </label>
+                  <input
+                    v-model="form.periodeSelesai"
+                    type="date"
+                    class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                  />
+                </div>
+
+                <div class="space-y-2 md:col-span-2">
+                  <label class="text-[10px] font-black uppercase tracking-[0.25em] text-slate-500">
+                    Perihal Surat
+                  </label>
+                  <textarea
+                    v-model="form.perihal"
+                    rows="3"
+                    class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                    placeholder="Kosongkan jika ingin memakai format otomatis."
+                  />
+                  <p class="text-xs text-slate-400">
+                    Preview otomatis: {{ buildDefaultPerihal() }}
+                  </p>
+                </div>
+
+                <div class="space-y-2 md:col-span-2">
+                  <label class="text-[10px] font-black uppercase tracking-[0.25em] text-slate-500">
+                    Lampiran / Keterangan Surat
+                  </label>
+                  <textarea
+                    v-model="form.isiLampiran"
+                    rows="5"
+                    class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                    placeholder="Kosongkan jika ingin memakai ringkasan otomatis."
+                  />
+                  <p class="whitespace-pre-line rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-3 text-xs font-medium leading-relaxed text-slate-500">
+                    {{ buildDefaultLampiran() }}
+                  </p>
+                </div>
+              </div>
+
+              <div class="rounded-3xl border border-slate-200 bg-slate-50 p-5">
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <h3 class="text-sm font-black uppercase tracking-[0.25em] text-slate-700">
+                      Pemilihan Siswa
+                    </h3>
+                    <p class="mt-1 text-xs font-medium text-slate-500">
+                      Siswa yang sudah punya permohonan aktif tidak akan ditampilkan lagi.
+                    </p>
+                  </div>
+                  <div class="rounded-full bg-rose-100 px-4 py-1.5 text-[10px] font-black uppercase tracking-[0.25em] text-rose-600">
+                    Terkunci oleh permohonan aktif: {{ blockedStudentCount }}
+                  </div>
+                </div>
+
+                <div class="mt-5 grid gap-3 md:grid-cols-[220px_1fr]">
+                  <select
+                    v-model="form.filterKelas"
+                    class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                  >
+                    <option value="">Semua kelas</option>
+                    <option v-for="kelas in classOptions" :key="kelas" :value="kelas">
+                      {{ kelas }}
+                    </option>
+                  </select>
+
+                  <input
+                    v-model="form.searchSiswa"
+                    type="text"
+                    placeholder="Cari nama siswa, NIS, atau kelas..."
+                    class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                  />
+                </div>
+
+                <div class="mt-5 grid gap-5 xl:grid-cols-2">
+                  <div class="rounded-3xl border border-slate-200 bg-white">
+                    <div class="border-b border-slate-100 px-5 py-4">
+                      <div class="text-[10px] font-black uppercase tracking-[0.25em] text-slate-500">
+                        Siswa Tersedia ({{ availableStudents.length }})
+                      </div>
+                    </div>
+                    <div class="custom-scrollbar max-h-[340px] space-y-3 overflow-y-auto p-4">
+                      <div
+                        v-if="availableStudents.length === 0"
+                        class="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-6 text-center text-sm text-slate-500"
+                      >
+                        Tidak ada siswa yang cocok dengan filter saat ini.
+                      </div>
+
+                      <div
+                        v-for="item in availableStudents"
+                        :key="item.id_siswa"
+                        class="flex items-start justify-between gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3"
+                      >
+                        <div class="min-w-0 space-y-1">
+                          <div class="truncate text-sm font-black text-slate-800">
+                            {{ item.nama_siswa }}
+                          </div>
+                          <div class="text-xs font-medium text-slate-500">
+                            NIS {{ item.nis }} • {{ getStudentClassLabel(item) }}
+                          </div>
+                        </div>
+                        <button
+                          class="shrink-0 rounded-xl bg-blue-600 px-3 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-white transition hover:bg-blue-700"
+                          @click="addStudent(item.id_siswa)"
+                        >
+                          Pilih
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="rounded-3xl border border-rose-200 bg-white">
+                    <div class="border-b border-rose-100 px-5 py-4">
+                      <div class="text-[10px] font-black uppercase tracking-[0.25em] text-rose-500">
+                        Siswa Terpilih ({{ selectedStudents.length }})
+                      </div>
+                    </div>
+                    <div class="custom-scrollbar max-h-[340px] space-y-3 overflow-y-auto p-4">
+                      <div
+                        v-if="selectedStudents.length === 0"
+                        class="rounded-2xl border border-dashed border-rose-200 bg-rose-50 px-4 py-6 text-center text-sm text-rose-500"
+                      >
+                        Belum ada siswa yang dipilih.
+                      </div>
+
+                      <div
+                        v-for="item in selectedStudents"
+                        :key="item.id_siswa"
+                        class="flex items-start justify-between gap-3 rounded-2xl border border-rose-100 bg-rose-50 px-4 py-3"
+                      >
+                        <div class="min-w-0 space-y-1">
+                          <div class="truncate text-sm font-black text-slate-800">
+                            {{ item.nama }}
+                          </div>
+                          <div class="text-xs font-medium text-slate-500">
+                            NIS {{ item.nis }} • {{ item.kelas }}
+                          </div>
+                        </div>
+                        <button
+                          class="shrink-0 rounded-xl border border-rose-200 px-3 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-rose-600 transition hover:bg-rose-100"
+                          @click="removeStudent(item.id_siswa)"
+                        >
+                          Hapus
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-blue-100 bg-blue-50 px-5 py-4">
+                <div class="space-y-1">
+                  <div class="text-[10px] font-black uppercase tracking-[0.25em] text-blue-500">
+                    Siap Diproses
+                  </div>
+                  <div class="text-sm font-medium text-blue-700">
+                    Tujuan: {{ selectedCompany?.nama_perusahaan || "-" }} • Penandatangan:
+                    {{ selectedSigner?.nama_guru || "-" }}
+                  </div>
+                </div>
+
+                <button
+                  class="rounded-2xl bg-blue-700 px-6 py-3 text-xs font-black uppercase tracking-[0.25em] text-white transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:bg-slate-300"
+                  :disabled="submitting"
+                  @click="submitSuratPermohonan"
+                >
+                  {{ submitting ? "Menyimpan..." : "Generate Surat Permohonan" }}
+                </button>
+              </div>
+            </template>
+          </div>
         </div>
-        <div class="flex items-center justify-between text-[11px] font-bold">
-          <span class="text-slate-400">Runtime Terpakai:</span>
-          <span class="text-slate-700">0.00 / 360 Menit</span>
-        </div>
-        <div class="mt-2 h-1.5 w-full bg-slate-200 rounded-full overflow-hidden">
-          <div class="h-full bg-green-500 w-[5%]"></div>
+
+        <div class="space-y-6">
+          <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-1">
+            <div class="rounded-3xl border border-slate-100 bg-white p-5 shadow-sm">
+              <div class="text-[10px] font-black uppercase tracking-[0.25em] text-slate-500">Total Surat</div>
+              <div class="mt-3 text-4xl font-black text-slate-900">{{ letterStats.total }}</div>
+            </div>
+            <div class="rounded-3xl border border-slate-100 bg-white p-5 shadow-sm">
+              <div class="text-[10px] font-black uppercase tracking-[0.25em] text-slate-500">Total Siswa Terlampir</div>
+              <div class="mt-3 text-4xl font-black text-slate-900">{{ letterStats.totalSiswa }}</div>
+            </div>
+          </div>
+
+          <div class="rounded-3xl border border-slate-100 bg-white p-5 shadow-sm">
+            <div class="text-[10px] font-black uppercase tracking-[0.25em] text-slate-500">Ringkasan Status</div>
+            <div class="mt-4 grid grid-cols-3 gap-3 text-center">
+              <div class="rounded-2xl border border-amber-200 bg-amber-50 p-4">
+                <div class="text-[10px] font-black uppercase tracking-[0.2em] text-amber-500">Draft</div>
+                <div class="mt-2 text-3xl font-black text-amber-700">{{ letterStats.draft }}</div>
+              </div>
+              <div class="rounded-2xl border border-blue-200 bg-blue-50 p-4">
+                <div class="text-[10px] font-black uppercase tracking-[0.2em] text-blue-500">Dikirim</div>
+                <div class="mt-2 text-3xl font-black text-blue-700">{{ letterStats.dikirim }}</div>
+              </div>
+              <div class="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+                <div class="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-500">Diterima</div>
+                <div class="mt-2 text-3xl font-black text-emerald-700">{{ letterStats.diterima }}</div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
-    </div>
 
-    <!-- 1. Form Section -->
-    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-      <button 
-        @click="isFormOpen = !isFormOpen"
-        class="w-full px-6 py-4 flex items-center justify-between bg-blue-50/50 text-blue-700 font-black uppercase tracking-widest text-sm hover:bg-blue-50 transition-all border-b border-slate-100"
-      >
-        <div class="flex items-center gap-3">
-          <Icon name="lucide:file-plus-2" class="w-5 h-5" />
-          BUAT SURAT PERMOHONAN
-        </div>
-        <Icon name="lucide:chevron-down" class="w-5 h-5 transition-transform" :class="{ 'rotate-180': isFormOpen }" />
-      </button>
-
-      <div v-show="isFormOpen" class="p-8 space-y-8 animate-in fade-in slide-in-from-top-2">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <div class="space-y-2">
-            <label class="text-[10px] font-black text-slate-500 uppercase tracking-widest">NAMA INDUSTRI (IDUKA)</label>
-            <input type="text" v-model="form.namaIndustri" class="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all shadow-sm" />
-          </div>
-          <div class="space-y-2">
-            <label class="text-[10px] font-black text-slate-500 uppercase tracking-widest">ALAMAT INDUSTRI</label>
-            <input type="text" v-model="form.alamatIndustri" class="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all shadow-sm" />
-          </div>
-        </div>
-
-        <div class="space-y-4">
-          <div class="flex items-center gap-2 text-blue-700 font-black text-[10px] uppercase tracking-widest">
-            <Icon name="lucide:users" class="w-4 h-4" />
-            PEMILIHAN SISWA
-          </div>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div class="space-y-4">
-              <select v-model="form.filterKelas" class="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none appearance-none cursor-pointer shadow-sm">
-                <option value="">-- Pilih Filter Kelas --</option>
-              </select>
-              <div class="border border-slate-200 rounded-2xl h-[250px] bg-slate-50/50 flex items-center justify-center text-slate-300">
-                <!-- List available students -->
-              </div>
+      <div class="overflow-hidden rounded-3xl border border-slate-100 bg-white shadow-sm">
+        <div class="border-b border-slate-100 bg-slate-50 px-6 py-5">
+          <div class="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+            <div>
+              <h2 class="text-sm font-black uppercase tracking-[0.25em] text-slate-700">
+                Data Surat Permohonan IDUKA
+              </h2>
+              <p class="mt-1 text-xs font-medium text-slate-500">
+                Menampilkan data nyata dari backend dengan status `draft`, `dikirim`, dan `diterima`.
+              </p>
             </div>
-            <div class="space-y-2 relative">
-              <div class="flex items-center justify-between mb-2">
-                <label class="text-[10px] font-black text-slate-700 uppercase tracking-widest">Siswa Terpilih</label>
-                <span class="bg-red-500 text-white text-[10px] px-2 py-0.5 rounded font-black">0</span>
+
+            <div class="flex flex-col gap-3 xl:flex-row xl:items-center">
+              <div class="flex flex-wrap items-center gap-2">
+                <button
+                  v-for="item in statusOptions"
+                  :key="item.value"
+                  class="rounded-full px-4 py-2 text-[10px] font-black uppercase tracking-[0.2em] transition"
+                  :class="
+                    activeStatusFilter === item.value
+                      ? 'bg-slate-900 text-white'
+                      : 'border border-slate-200 bg-white text-slate-500 hover:bg-slate-100'
+                  "
+                  @click="activeStatusFilter = item.value"
+                >
+                  {{ item.label }}
+                </button>
               </div>
-              <div class="border-2 border-red-100 rounded-2xl h-[250px] bg-white flex items-center justify-center text-slate-300">
-                <!-- List selected students -->
+
+              <div class="flex items-center gap-3">
+                <input
+                  v-model="suratSearch"
+                  type="text"
+                  placeholder="Cari nomor, tujuan, atau siswa..."
+                  class="w-full min-w-[260px] rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                />
+                <button
+                  class="rounded-2xl border border-slate-200 px-4 py-3 text-xs font-black uppercase tracking-[0.2em] text-slate-600 transition hover:bg-slate-100"
+                  :disabled="loadingLetters"
+                  @click="loadLetters(true)"
+                >
+                  Refresh
+                </button>
               </div>
             </div>
           </div>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <div class="space-y-2">
-            <label class="text-[10px] font-black text-slate-500 uppercase tracking-widest">TAHUN PELAJARAN</label>
-            <select v-model="form.tahunPelajaran" class="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none shadow-sm">
-              <option>2025/2026</option>
-            </select>
-          </div>
-          <div class="space-y-2">
-            <label class="text-[10px] font-black text-slate-500 uppercase tracking-widest">PERIODE PKL</label>
-            <div class="flex items-center gap-3">
-              <input type="date" class="flex-1 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none shadow-sm" />
-              <span class="text-slate-400">s/d</span>
-              <input type="date" class="flex-1 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none shadow-sm" />
-            </div>
-          </div>
-        </div>
-
-        <button class="w-full bg-blue-700 hover:bg-blue-800 text-white font-black py-4 rounded-xl flex items-center justify-center gap-3 transition-all shadow-lg shadow-blue-100 uppercase tracking-widest text-sm active:scale-[0.99]">
-          <Icon name="lucide:file-text" class="w-5 h-5" />
-          GENERATE PERMOHONAN
-        </button>
-      </div>
-    </div>
-
-    <!-- 2. Data Section -->
-    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-      <button 
-        @click="isDataOpen = !isDataOpen"
-        class="w-full px-6 py-4 flex items-center justify-between bg-blue-50/50 text-blue-700 font-black uppercase tracking-widest text-sm hover:bg-blue-50 transition-all border-b border-slate-100"
-      >
-        <div class="flex items-center gap-3">
-          <Icon name="lucide:table" class="w-5 h-5" />
-          LIHAT DATA DETAIL & OLAH DATA
-        </div>
-        <Icon name="lucide:chevron-down" class="w-5 h-5 transition-transform" :class="{ 'rotate-180': isDataOpen }" />
-      </button>
-
-      <div v-show="isDataOpen" class="p-6 space-y-6 animate-in fade-in slide-in-from-top-2">
-        <!-- Inner Collapsibles -->
-        <div class="space-y-2">
-          <div class="border border-slate-100 rounded-xl overflow-hidden">
-            <button class="w-full px-4 py-3 flex items-center justify-between bg-slate-50/50 text-[10px] font-black text-slate-600 uppercase tracking-widest hover:bg-slate-50 transition-all">
-              <div class="flex items-center gap-2">
-                <Icon name="lucide:filter" class="w-4 h-4" />
-                FILTER DATA
-              </div>
-              <Icon name="lucide:chevron-down" class="w-4 h-4" />
-            </button>
-          </div>
-          <div class="border border-slate-100 rounded-xl overflow-hidden">
-            <button class="w-full px-4 py-3 flex items-center justify-between bg-slate-50/50 text-[10px] font-black text-slate-600 uppercase tracking-widest hover:bg-slate-50 transition-all">
-              <div class="flex items-center gap-2">
-                <Icon name="lucide:printer" class="w-4 h-4" />
-                AKSI & CETAK MASSAL
-              </div>
-              <Icon name="lucide:chevron-down" class="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-
-        <!-- Tabs -->
-        <div class="flex items-center border-b border-slate-100 gap-8 px-2">
-          <button 
-            v-for="tab in tabs" 
-            :key="tab.label"
-            @click="activeTab = tab.label"
-            class="pb-3 text-xs font-bold transition-all relative"
-            :class="activeTab === tab.label ? 'text-blue-600' : 'text-slate-400 hover:text-slate-600'"
-          >
-            {{ tab.label }}: <span class="ml-1" :class="activeTab === tab.label ? 'text-blue-700' : 'text-red-500'">{{ tab.count }}</span>
-            <div v-if="activeTab === tab.label" class="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 rounded-full"></div>
-          </button>
-        </div>
-
-        <!-- Table -->
-        <div class="overflow-x-auto rounded-xl border border-slate-100">
-          <table class="w-full text-left border-collapse">
+        <div class="overflow-x-auto">
+          <table class="w-full min-w-[1200px] border-collapse text-left">
             <thead>
-              <tr class="bg-slate-800 text-white text-[10px] font-black uppercase tracking-widest">
-                <th class="px-4 py-4 w-12 text-center border-r border-slate-700"><input type="checkbox" /></th>
-                <th class="px-6 py-4 border-r border-slate-700">NOMOR SURAT (PRM/PNG/TRK)</th>
-                <th class="px-6 py-4 border-r border-slate-700">PERIODE PKL</th>
-                <th class="px-6 py-4 border-r border-slate-700">INDUSTRI (IDUKA)</th>
-                <th class="px-6 py-4 border-r border-slate-700">SISWA & KELAS</th>
-                <th class="px-6 py-4 border-r border-slate-700">DOKUMEN</th>
-                <th class="px-6 py-4 border-r border-slate-700">STATUS</th>
-                <th class="px-6 py-4 text-center">AKSI</th>
+              <tr class="border-b border-slate-100 text-[10px] font-black uppercase tracking-[0.25em] text-slate-500">
+                <th class="px-6 py-5">Nomor Surat</th>
+                <th class="px-6 py-5">Perusahaan Tujuan</th>
+                <th class="px-6 py-5">Daftar Siswa</th>
+                <th class="px-6 py-5">Periode / Lampiran</th>
+                <th class="px-6 py-5">Dokumen</th>
+                <th class="px-6 py-5">Status</th>
+                <th class="px-6 py-5 text-center">Aksi</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-slate-100">
-              <tr v-for="item in tableData" :key="item.id" class="text-xs hover:bg-slate-50/50 transition-colors">
-                <td class="px-4 py-6 text-center border-r border-slate-50"><input type="checkbox" /></td>
-                <td class="px-6 py-6 border-r border-slate-50">
+              <tr v-if="loadingLetters">
+                <td colspan="7" class="px-6 py-10 text-center text-sm text-slate-500">
+                  Memuat surat permohonan...
+                </td>
+              </tr>
+              <tr v-else-if="filteredSuratRows.length === 0">
+                <td colspan="7" class="px-6 py-10 text-center text-sm text-slate-500">
+                  Belum ada surat permohonan yang sesuai filter.
+                </td>
+              </tr>
+              <tr
+                v-for="surat in filteredSuratRows"
+                v-else
+                :key="surat.id"
+                class="align-top transition hover:bg-slate-50/70"
+              >
+                <td class="px-6 py-6">
                   <div class="space-y-2">
-                    <div class="text-[10px] text-slate-400">1. PRM ({{ item.tanggal.prm }}):</div>
-                    <div class="font-bold text-slate-700">{{ item.nomorSurat.prm }}</div>
-                    <div v-if="item.nomorSurat.png !== '-'" class="mt-2">
-                      <div class="text-[10px] text-slate-400">2. PNG ({{ item.tanggal.png }}):</div>
-                      <div class="font-bold text-blue-600 underline">{{ item.nomorSurat.png }}</div>
+                    <div class="text-sm font-black text-slate-900">{{ surat.nomor_surat }}</div>
+                    <div class="text-xs font-medium text-slate-500">
+                      Tanggal surat: {{ formatDate(surat.tanggal_surat) }}
+                    </div>
+                    <div class="text-xs font-medium text-slate-400">
+                      Penandatangan: {{ surat.penandatangan || "-" }}
                     </div>
                   </div>
                 </td>
-                <td class="px-6 py-6 border-r border-slate-50">
-                  <div class="space-y-1">
-                    <div class="font-black text-slate-900">{{ item.periode.split(' - ')[0] }}</div>
-                    <div class="font-black text-slate-900">{{ item.periode.split(' - ')[1] }}</div>
-                    <div class="inline-block border border-slate-200 rounded px-2 py-0.5 text-[9px] font-bold text-slate-500 mt-2">{{ item.durasi }}</div>
-                  </div>
-                </td>
-                <td class="px-6 py-6 border-r border-slate-50">
-                  <div class="font-black text-slate-800 leading-snug">{{ item.industri }}</div>
-                  <div class="text-[10px] text-slate-400 mt-1 italic">{{ item.alamat }}</div>
-                </td>
-                <td class="px-6 py-6 border-r border-slate-50">
-                  <div class="flex flex-col items-center gap-1">
-                    <span class="bg-black text-white text-[9px] px-2 py-0.5 rounded font-bold">{{ item.siswaCount }} Siswa</span>
-                    <span class="text-blue-600 font-bold text-[10px]">{{ item.kelas }}</span>
-                  </div>
-                </td>
-                <td class="px-6 py-6 border-r border-slate-50">
-                  <div class="space-y-1">
-                    <div class="flex items-center gap-2">
-                      <span class="text-[9px] text-slate-400 w-8">Prm:</span>
-                      <Icon name="lucide:file-text" class="w-4 h-4 text-blue-600" />
-                      <Icon name="lucide:file-text" class="w-4 h-4 text-red-500" />
+                <td class="px-6 py-6">
+                  <div class="max-w-[280px] space-y-2">
+                    <div class="text-sm font-black leading-snug text-blue-700">
+                      {{ surat.ditujukan_kepada }}
+                    </div>
+                    <div class="text-xs font-medium italic leading-relaxed text-slate-500">
+                      {{ surat.alamat_tujuan || "Alamat belum tercatat" }}
+                    </div>
+                    <div class="text-xs font-medium leading-relaxed text-slate-500">
+                      {{ surat.perihal }}
                     </div>
                   </div>
                 </td>
-                <td class="px-6 py-6 border-r border-slate-50">
-                  <span 
-                    class="px-3 py-1 rounded text-[9px] font-black tracking-widest uppercase"
-                    :class="item.status === 'Ditarik' ? 'bg-slate-100 text-slate-600' : 'bg-amber-100 text-amber-700'"
+                <td class="px-6 py-6">
+                  <div class="space-y-2">
+                    <div
+                      v-for="student in extractStudentsFromSurat(surat)"
+                      :key="`${surat.id}-${student.id_siswa || student.nis}`"
+                      class="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2"
+                    >
+                      <div class="text-sm font-black text-slate-800">{{ student.nama }}</div>
+                      <div class="text-xs font-medium text-slate-500">
+                        NIS {{ student.nis }} • {{ student.kelas }}
+                      </div>
+                    </div>
+                  </div>
+                </td>
+                <td class="px-6 py-6">
+                  <div class="max-w-[280px] whitespace-pre-line text-xs font-medium leading-relaxed text-slate-500">
+                    {{ surat.isi_lampiran || "-" }}
+                  </div>
+                </td>
+                <td class="px-6 py-6">
+                  <div class="flex flex-col gap-2">
+                    <button
+                      class="rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-blue-600 transition hover:bg-blue-100"
+                      :disabled="!normalizeFilePath(surat.file_surat_docx)"
+                      @click="downloadFile(surat.file_surat_docx)"
+                    >
+                      Unduh DOCX
+                    </button>
+                    <button
+                      class="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-rose-600 transition hover:bg-rose-100"
+                      :disabled="!normalizeFilePath(surat.file_surat_pdf || surat.file_surat)"
+                      @click="downloadFile(surat.file_surat_pdf || surat.file_surat)"
+                    >
+                      Unduh PDF
+                    </button>
+                  </div>
+                </td>
+                <td class="px-6 py-6">
+                  <span
+                    class="inline-flex rounded-full px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.25em]"
+                    :class="statusBadgeClass(surat.status)"
                   >
-                    {{ item.status }}
+                    {{ formatStatusLabel(surat.status) }}
                   </span>
                 </td>
                 <td class="px-6 py-6">
-                  <div class="flex items-center justify-center gap-1">
-                    <button v-if="item.status === 'Diajukan'" class="p-1.5 border border-green-200 rounded text-green-600 hover:bg-green-50 transition-all"><Icon name="lucide:check" class="w-4 h-4" /></button>
-                    <button class="p-1.5 border border-amber-200 rounded text-amber-500 hover:bg-amber-50 transition-all"><Icon name="lucide:pencil" class="w-4 h-4" /></button>
-                    <button class="p-1.5 border border-blue-200 rounded text-blue-600 hover:bg-blue-50 transition-all"><Icon name="lucide:upload-cloud" class="w-4 h-4" /></button>
+                  <div class="flex flex-col gap-2">
+                    <button
+                      v-if="surat.status === 'draft'"
+                      class="rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-blue-600 transition hover:bg-blue-100"
+                      @click="updateLetterStatus(surat, 'dikirim')"
+                    >
+                      Tandai Dikirim
+                    </button>
+                    <button
+                      v-if="surat.status === 'dikirim'"
+                      class="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-emerald-600 transition hover:bg-emerald-100"
+                      @click="updateLetterStatus(surat, 'diterima')"
+                    >
+                      Tandai Diterima
+                    </button>
+                    <button
+                      class="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-rose-600 transition hover:bg-rose-100"
+                      @click="deleteLetter(surat)"
+                    >
+                      Hapus
+                    </button>
                   </div>
                 </td>
               </tr>
             </tbody>
           </table>
         </div>
-
-        <div class="flex items-center justify-between text-xs text-slate-500">
-          <span>Menampilkan 4 data (Total: 4)</span>
-          <div class="flex gap-1">
-            <button class="w-8 h-8 flex items-center justify-center border border-slate-200 rounded hover:bg-slate-50"><Icon name="lucide:chevron-left" class="w-4 h-4" /></button>
-            <button class="w-8 h-8 flex items-center justify-center bg-blue-600 text-white rounded font-bold">1</button>
-            <button class="w-8 h-8 flex items-center justify-center border border-slate-200 rounded hover:bg-slate-50"><Icon name="lucide:chevron-right" class="w-4 h-4" /></button>
-          </div>
-        </div>
       </div>
-    </div>
-
-    <!-- 3. Dashboard Section -->
-    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-      <button 
-        @click="isDashboardOpen = !isDashboardOpen"
-        class="w-full px-6 py-4 flex items-center justify-between bg-blue-50/50 text-blue-700 font-black uppercase tracking-widest text-sm hover:bg-blue-50 transition-all border-b border-slate-100"
-      >
-        <div class="flex items-center gap-3">
-          <Icon name="lucide:line-chart" class="w-5 h-5" />
-          DASHBOARD STATISTIK & MONITORING
-        </div>
-        <Icon name="lucide:chevron-down" class="w-5 h-5 transition-transform" :class="{ 'rotate-180': isDashboardOpen }" />
-      </button>
-
-      <div v-show="isDashboardOpen" class="p-8 space-y-12 animate-in fade-in slide-in-from-top-2">
-        <!-- Top Stats -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-          <div class="border-2 border-blue-600 rounded-xl p-6 text-center">
-            <div class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">INDUSTRI AKTIF</div>
-            <div class="text-4xl font-black text-blue-600">{{ stats.industriAktif }}</div>
-          </div>
-          <div class="border-2 border-green-600 rounded-xl p-6 text-center">
-            <div class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">TOTAL SISWA</div>
-            <div class="text-4xl font-black text-green-600">{{ stats.totalSiswa }}</div>
-          </div>
-          <div class="border-2 border-sky-400 rounded-xl p-6 text-center">
-            <div class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">BERKAS SURAT</div>
-            <div class="text-4xl font-black text-sky-500">{{ stats.berkasSurat }}</div>
-          </div>
-        </div>
-
-        <!-- Charts Row -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
-          <!-- Pie Charts -->
-          <div class="grid grid-cols-2 gap-4">
-            <div class="text-center">
-              <div class="text-[10px] font-black text-slate-700 uppercase mb-4">Distribusi Industri</div>
-              <div class="w-32 h-32 mx-auto rounded-full border-[15px] border-blue-400 border-t-amber-400 flex items-center justify-center">
-                <!-- SVG Circle representation -->
-              </div>
-              <div class="mt-4 flex flex-col gap-1 items-center">
-                <div class="flex items-center gap-2 text-[9px] font-bold text-slate-500"><div class="w-2 h-2 bg-amber-400 rounded-full"></div> Ditarik: 1 Iduka</div>
-                <div class="flex items-center gap-2 text-[9px] font-bold text-slate-500"><div class="w-2 h-2 bg-blue-400 rounded-full"></div> Diajukan: 3 Iduka</div>
-              </div>
-            </div>
-            <div class="text-center">
-              <div class="text-[10px] font-black text-slate-700 uppercase mb-4">Distribusi Siswa</div>
-              <div class="w-32 h-32 mx-auto rounded-full border-[15px] border-sky-400 border-t-amber-400 flex items-center justify-center"></div>
-              <div class="mt-4 flex flex-col gap-1 items-center">
-                <div class="flex items-center gap-2 text-[9px] font-bold text-slate-500"><div class="w-2 h-2 bg-amber-400 rounded-full"></div> Ditarik: 2 Siswa</div>
-                <div class="flex items-center gap-2 text-[9px] font-bold text-slate-500"><div class="w-2 h-2 bg-sky-400 rounded-full"></div> Diajukan: 6 Siswa</div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Activities Table/Grid representation -->
-          <div class="space-y-4">
-            <div class="text-[10px] font-black text-slate-700 uppercase">GRAFIK AKTIVITAS (MULAI VS SELESAI)</div>
-            <div class="h-[250px] flex items-end justify-between gap-4 border-b border-l border-slate-200 p-4">
-              <!-- Placeholder bars -->
-              <div class="flex-1 flex flex-col items-center gap-1">
-                <div class="w-full bg-blue-600 h-[100%] rounded-t"></div>
-                <span class="text-[8px] text-slate-400 rotate-45 mt-2">Maret 2026</span>
-              </div>
-              <div class="flex-1 flex flex-col items-center gap-1">
-                <div class="w-full bg-blue-600 h-[100%] rounded-t"></div>
-                <span class="text-[8px] text-slate-400 rotate-45 mt-2">Mei 2026</span>
-              </div>
-              <div class="flex-1 flex flex-col items-center gap-1">
-                <div class="w-full bg-red-500 h-[60%] rounded-t"></div>
-                <span class="text-[8px] text-slate-400 rotate-45 mt-2">Juni 2026</span>
-              </div>
-              <div class="flex-1 flex flex-col items-center gap-1">
-                <div class="w-full bg-red-500 h-[60%] rounded-t"></div>
-                <span class="text-[8px] text-slate-400 rotate-45 mt-2">Juli 2026</span>
-              </div>
-              <div class="flex-1 flex flex-col items-center gap-1">
-                <div class="w-full bg-red-500 h-[100%] rounded-t"></div>
-                <span class="text-[8px] text-slate-400 rotate-45 mt-2">Februari 2027</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Monthly Data Table -->
-        <div class="space-y-4">
-          <div class="text-[10px] font-black text-slate-700 uppercase tracking-widest">DETAIL DATA ANGKA BULANAN</div>
-          <div class="overflow-x-auto rounded-xl border border-slate-100">
-            <table class="w-full text-left border-collapse text-[10px]">
-              <thead>
-                <tr class="bg-slate-50 font-black uppercase">
-                  <th class="px-6 py-4 border-r border-slate-200">Parameter</th>
-                  <th class="px-6 py-4 border-r border-slate-200 text-center">Maret 2026</th>
-                  <th class="px-6 py-4 border-r border-slate-200 text-center">Mei 2026</th>
-                  <th class="px-6 py-4 border-r border-slate-200 text-center">Juni 2026</th>
-                  <th class="px-6 py-4 border-r border-slate-200 text-center">Juli 2026</th>
-                  <th class="px-6 py-4 text-center">Februari 2027</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-slate-100 font-bold">
-                <tr>
-                  <td class="px-6 py-4 border-r border-slate-200 font-black">Siswa Berangkat</td>
-                  <td class="px-6 py-4 border-r border-slate-200 text-center">4</td>
-                  <td class="px-6 py-4 border-r border-slate-200 text-center">4</td>
-                  <td class="px-6 py-4 border-r border-slate-200 text-center">0</td>
-                  <td class="px-6 py-4 border-r border-slate-200 text-center">0</td>
-                  <td class="px-6 py-4 text-center">0</td>
-                </tr>
-                <tr>
-                  <td class="px-6 py-4 border-r border-slate-200 font-black text-red-500">Siswa Kembali</td>
-                  <td class="px-6 py-4 border-r border-slate-200 text-center">0</td>
-                  <td class="px-6 py-4 border-r border-slate-200 text-center">0</td>
-                  <td class="px-6 py-4 border-r border-slate-200 text-center">2</td>
-                  <td class="px-6 py-4 border-r border-slate-200 text-center">2</td>
-                  <td class="px-6 py-4 text-center">4</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <!-- Duration Distribution -->
-        <div class="border border-slate-100 rounded-2xl overflow-hidden">
-          <div class="px-6 py-4 bg-slate-50/50 flex items-center gap-2 text-[10px] font-black text-slate-700 uppercase border-b border-slate-100">
-            <Icon name="lucide:clock" class="w-4 h-4" />
-            Distribusi Durasi PKL Industri
-          </div>
-          <div class="grid grid-cols-3 divide-x divide-slate-100 p-8">
-            <div class="text-center space-y-4">
-              <div class="text-[10px] font-black text-slate-500 uppercase tracking-widest">4 Bln</div>
-              <div class="text-3xl font-black text-blue-600">1</div>
-              <div class="text-[9px] text-slate-400 font-bold uppercase">Industri</div>
-            </div>
-            <div class="text-center space-y-4">
-              <div class="text-[10px] font-black text-slate-500 uppercase tracking-widest">5 Bln</div>
-              <div class="text-3xl font-black text-blue-600">1</div>
-              <div class="text-[9px] text-slate-400 font-bold uppercase">Industri</div>
-            </div>
-            <div class="text-center space-y-4">
-              <div class="text-[10px] font-black text-slate-500 uppercase tracking-widest">10 Bln</div>
-              <div class="text-3xl font-black text-blue-600">2</div>
-              <div class="text-[9px] text-slate-400 font-bold uppercase">Industri</div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Footer -->
-    <div class="text-center py-4">
-      <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">TIM KEMITRAAN &copy; 2026 | SMKN 7 SEMARANG</p>
     </div>
   </div>
 </template>
 
 <style scoped>
 .custom-scrollbar::-webkit-scrollbar {
-  width: 4px;
+  width: 6px;
 }
+
 .custom-scrollbar::-webkit-scrollbar-track {
   background: transparent;
 }
+
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #e2e8f0;
-  border-radius: 10px;
-}
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: #cbd5e1;
+  border-radius: 999px;
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(-10px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.animate-in {
-  animation: fadeIn 0.3s ease-out forwards;
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
 }
 </style>

@@ -24,6 +24,7 @@ export interface SuratMasuk {
   sifat_surat: string;
   ditujukan_kepada: string;
   file_surat?: string;
+  file_surat_download_url?: string;
   keterangan?: string;
   status: string;
   created_at: string;

@@ -70,6 +70,8 @@ export interface Mou {
   pic_telepon?: string | null;
   link_maps?: string | null;
   link_dokumen?: string | null;
+  link_dokumen_download_url?: string | null;
+  link_dokumen_storage_driver?: "local" | "r2" | null;
   created_at?: string;
   updated_at?: string;
   status?: "AKTIF" | "EXPIRED";
@@ -88,6 +90,8 @@ export interface MouStats {
 export interface MouUploadResult {
   path: string;
   url: string;
+  download_url?: string;
+  storage_driver?: "local" | "r2";
   original_name: string;
   size: number;
 }

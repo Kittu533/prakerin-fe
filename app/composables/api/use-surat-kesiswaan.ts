@@ -1,4 +1,5 @@
 import { apiFetch } from "~/composables/api-fetch";
+import { normalizeStoredFileRef } from "~/utils/stored-file";
 
 export interface SuratKesiswaan {
   id: string;
@@ -25,8 +26,12 @@ export interface SuratKesiswaan {
   file_surat?: string;
   file_surat_docx?: string;
   file_surat_pdf?: string;
-  file_docx?: string;
-  file_pdf?: string;
+  file_surat_download_url?: string;
+  file_surat_docx_download_url?: string;
+  file_surat_pdf_download_url?: string;
+  file_surat_storage_driver?: "local" | "r2";
+  file_surat_docx_storage_driver?: "local" | "r2";
+  file_surat_pdf_storage_driver?: "local" | "r2";
   status: string;
   created_at: string;
   updated_at: string;
@@ -53,8 +58,12 @@ interface SuratKesiswaanApiRecord {
   file_surat?: string;
   file_surat_docx?: string;
   file_surat_pdf?: string;
-  file_docx?: string;
-  file_pdf?: string;
+  file_surat_download_url?: string;
+  file_surat_docx_download_url?: string;
+  file_surat_pdf_download_url?: string;
+  file_surat_storage_driver?: "local" | "r2";
+  file_surat_docx_storage_driver?: "local" | "r2";
+  file_surat_pdf_storage_driver?: "local" | "r2";
   tanggal_kegiatan?: string;
   tempat_kegiatan?: string;
   penyelenggara?: string;
@@ -95,11 +104,6 @@ export interface SuratKesiswaanListResponse {
   message?: string;
 }
 
-function normalizeFilePath(value?: string): string | undefined {
-  const normalized = String(value || "").trim();
-  return normalized.length > 0 ? normalized : undefined;
-}
-
 function resolveVariantPath(sourcePath: string, extension: "docx" | "pdf"): string {
   if (/\.(pdf|docx)$/i.test(sourcePath)) {
     return sourcePath.replace(/\.(pdf|docx)$/i, `.${extension}`);
@@ -109,9 +113,9 @@ function resolveVariantPath(sourcePath: string, extension: "docx" | "pdf"): stri
 
 function mapSurat(record: SuratKesiswaanApiRecord): SuratKesiswaan {
   const waktuMatch = record.keterangan?.match(/Waktu:\s*([^;]+)/i);
-  const baseFilePath = normalizeFilePath(record.file_surat);
-  const explicitDocx = normalizeFilePath(record.file_surat_docx || record.file_docx);
-  const explicitPdf = normalizeFilePath(record.file_surat_pdf || record.file_pdf || record.file_surat);
+  const baseFilePath = normalizeStoredFileRef(record.file_surat);
+  const explicitDocx = normalizeStoredFileRef(record.file_surat_docx);
+  const explicitPdf = normalizeStoredFileRef(record.file_surat_pdf || record.file_surat);
   const derivedDocx = explicitDocx || (baseFilePath ? resolveVariantPath(baseFilePath, "docx") : undefined);
   const derivedPdf = explicitPdf || (baseFilePath ? resolveVariantPath(baseFilePath, "pdf") : undefined);
 
@@ -136,8 +140,12 @@ function mapSurat(record: SuratKesiswaanApiRecord): SuratKesiswaan {
     file_surat: derivedPdf || baseFilePath,
     file_surat_docx: derivedDocx,
     file_surat_pdf: derivedPdf,
-    file_docx: derivedDocx,
-    file_pdf: derivedPdf,
+    file_surat_download_url: record.file_surat_download_url,
+    file_surat_docx_download_url: record.file_surat_docx_download_url,
+    file_surat_pdf_download_url: record.file_surat_pdf_download_url,
+    file_surat_storage_driver: record.file_surat_storage_driver,
+    file_surat_docx_storage_driver: record.file_surat_docx_storage_driver,
+    file_surat_pdf_storage_driver: record.file_surat_pdf_storage_driver,
     status: "selesai",
     created_at: record.created_at,
     updated_at: record.updated_at,

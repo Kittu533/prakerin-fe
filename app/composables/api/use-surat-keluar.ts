@@ -17,6 +17,8 @@ export type SuratKeluarTemplateJenis =
   | "surat_perintah"
   | "surat_undangan";
 
+export type SuratKeluarStatus = "draft" | "dikirim" | "diterima";
+
 export interface SuratKeluarTemplatePayload {
   siswa?: Array<{
     id_siswa?: string;
@@ -27,7 +29,7 @@ export interface SuratKeluarTemplatePayload {
 }
 
 export interface SuratKeluar {
-  id: number;
+  id: string;
   nomor_surat: string;
   tanggal_surat: string;
   ditujukan_kepada: string;
@@ -39,8 +41,12 @@ export interface SuratKeluar {
   file_surat?: string;
   file_surat_docx?: string;
   file_surat_pdf?: string;
-  file_docx?: string;
-  file_pdf?: string;
+  file_surat_download_url?: string;
+  file_surat_docx_download_url?: string;
+  file_surat_pdf_download_url?: string;
+  file_surat_storage_driver?: "local" | "r2";
+  file_surat_docx_storage_driver?: "local" | "r2";
+  file_surat_pdf_storage_driver?: "local" | "r2";
   template_jenis?: SuratKeluarTemplateJenis;
   template_payload?: SuratKeluarTemplatePayload;
   penandatangan_guru_id?: string;
@@ -52,7 +58,8 @@ export interface SuratKeluar {
   };
   tanggal_kirim?: string;
   bukti_pengiriman?: string;
-  status: string;
+  bukti_pengiriman_download_url?: string;
+  status: SuratKeluarStatus;
   created_at: string;
   updated_at: string;
 }
@@ -95,7 +102,7 @@ export interface SuratKeluarUpdate {
   penandatangan?: string;
   tanggal_kirim?: string;
   bukti_pengiriman?: string;
-  status?: string;
+  status?: SuratKeluarStatus;
 }
 
 export interface SuratKeluarListResponse {
@@ -219,7 +226,7 @@ export function useSuratKeluar() {
     };
   }
 
-  async function getById(id: number): Promise<{ success: boolean; data?: SuratKeluar; message: string }> {
+  async function getById(id: string): Promise<{ success: boolean; data?: SuratKeluar; message: string }> {
     return safeFetch<SuratKeluar>("TataUsahaService", `/surat-keluar/${id}`, { method: "GET" });
   }
 
@@ -230,14 +237,24 @@ export function useSuratKeluar() {
     });
   }
 
-  async function update(id: number, data: SuratKeluarUpdate): Promise<{ success: boolean; data?: SuratKeluar; message: string }> {
+  async function update(id: string, data: SuratKeluarUpdate): Promise<{ success: boolean; data?: SuratKeluar; message: string }> {
     return safeFetch<SuratKeluar>("TataUsahaService", `/surat-keluar/${id}`, {
       method: "PUT",
       data,
     });
   }
 
-  async function remove(id: number): Promise<{ success: boolean; message: string }> {
+  async function updateStatus(
+    id: string,
+    status: SuratKeluarStatus,
+  ): Promise<{ success: boolean; data?: SuratKeluar; message: string }> {
+    return safeFetch<SuratKeluar>("TataUsahaService", `/surat-keluar/${id}/status`, {
+      method: "PATCH",
+      data: { status },
+    });
+  }
+
+  async function remove(id: string): Promise<{ success: boolean; message: string }> {
     return safeFetch<null>("TataUsahaService", `/surat-keluar/${id}`, { method: "DELETE" });
   }
 
@@ -255,6 +272,7 @@ export function useSuratKeluar() {
     getById,
     create,
     update,
+    updateStatus,
     remove,
     generateNomor,
   };

@@ -122,10 +122,14 @@ const {
               <td class="px-6 py-6">
                 <div class="space-y-1 max-w-[250px]">
                   <div class="text-xs text-slate-500 leading-relaxed">{{ item.alamat }}</div>
-                  <a :href="item.link_maps || '#'" target="_blank" class="inline-flex items-center gap-1 text-[10px] font-bold text-blue-600 hover:underline">
+                  <a v-if="item.link_maps" :href="item.link_maps" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 text-[10px] font-bold text-blue-600 hover:underline">
                     <Icon name="lucide:map-pin" class="w-3 h-3" />
                     Lihat Lokasi
                   </a>
+                  <span v-else class="inline-flex items-center gap-1 text-[10px] font-bold text-slate-400">
+                    <Icon name="lucide:map-pin-off" class="w-3 h-3" />
+                    Lokasi belum tersedia
+                  </span>
                 </div>
               </td>
               <td class="px-6 py-6">
@@ -139,13 +143,22 @@ const {
                     <span v-for="tag in item.tags" :key="tag" class="bg-slate-100 text-slate-600 text-[9px] px-2 py-0.5 rounded font-bold uppercase">{{ tag }}</span>
                   </div>
                   <a
-                    :href="item.link_dokumen || '#'"
+                    v-if="item.link_dokumen"
+                    :href="item.link_dokumen"
                     target="_blank"
+                    rel="noopener noreferrer"
                     class="inline-flex items-center gap-1.5 border border-red-200 rounded px-2.5 py-1 text-[10px] font-bold text-red-500 hover:bg-red-50 transition-all uppercase"
                   >
                     <Icon name="lucide:file-text" class="w-3.5 h-3.5" />
                     Lihat Dokumen
                   </a>
+                  <span
+                    v-else
+                    class="inline-flex items-center gap-1.5 border border-slate-200 rounded px-2.5 py-1 text-[10px] font-bold text-slate-400 uppercase"
+                  >
+                    <Icon name="lucide:file-x" class="w-3.5 h-3.5" />
+                    Dokumen Tidak Ada
+                  </span>
                 </div>
               </td>
               <td class="px-6 py-6">
