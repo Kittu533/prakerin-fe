@@ -30,11 +30,16 @@ export default defineNuxtConfig({
     "@nuxt/ui",
     // "magic-regexp", // Disabled: Not compatible with Nuxt 4
     "@formkit/auto-animate",
-    "@nuxt/image",
     "@nuxtjs/google-fonts",
     "@vueuse/nuxt",
     "@nuxtjs/leaflet",
   ],
+  vite: {
+    build: {
+      sourcemap: false,
+      chunkSizeWarningLimit: 2048,
+    },
+  },
   ui: {
     theme: {
       colors: [

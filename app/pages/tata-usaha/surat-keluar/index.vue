@@ -318,92 +318,125 @@
                 </div>
             </div>
 
-            <UTable v-else :data="suratKeluar" :columns="columns" class="w-full">
-                <template #row_number-cell="{ row }">
-                    <div class="inline-flex h-7 min-w-7 items-center justify-center rounded-md bg-indigo-50 px-2 text-xs font-bold text-indigo-700">
-                        {{ ((pagination.page - 1) * pagination.limit) + row.index + 1 }}
-                    </div>
-                </template>
+            <div v-else class="overflow-x-auto">
+                <UTable :data="suratKeluar" :columns="columns" class="min-w-[1180px] w-full">
+                    <template #row_number-cell="{ row }">
+                        <div class="inline-flex h-7 min-w-7 items-center justify-center rounded-md bg-indigo-50 px-2 text-xs font-bold text-indigo-700">
+                            {{ ((pagination.page - 1) * pagination.limit) + row.index + 1 }}
+                        </div>
+                    </template>
 
-                <template #klasifikasi_surat-cell="{ row }">
-                    <span class="font-semibold uppercase text-slate-600 text-xs">
-                        {{ formatKlasifikasi(row.original.klasifikasi_surat) }}
-                    </span>
-                </template>
-
-                <template #nomor_surat-cell="{ row }">
-                    <div class="flex flex-col gap-1">
-                        <span class="font-bold text-blue-700">{{ row.original.nomor_surat }}</span>
-                        <span class="text-xs text-slate-500 inline-flex items-center gap-1">
-                            <Icon name="lucide:calendar" class="w-3.5 h-3.5" />
-                            {{ formatDate(row.original.tanggal_surat) }}
+                    <template #klasifikasi_surat-cell="{ row }">
+                        <span class="font-semibold uppercase text-slate-600 text-xs">
+                            {{ formatKlasifikasi(row.original.klasifikasi_surat) }}
                         </span>
-                    </div>
-                </template>
+                    </template>
 
-                <template #ditujukan_kepada-cell="{ row }">
-                    <div class="max-w-[220px] font-semibold text-slate-800" :title="row.original.ditujukan_kepada">
-                        {{ row.original.ditujukan_kepada }}
-                    </div>
-                </template>
+                    <template #nomor_surat-cell="{ row }">
+                        <div class="flex flex-col gap-1">
+                            <span class="font-bold text-blue-700">{{ row.original.nomor_surat }}</span>
+                            <span class="text-xs text-slate-500 inline-flex items-center gap-1">
+                                <Icon name="lucide:calendar" class="w-3.5 h-3.5" />
+                                {{ formatDate(row.original.tanggal_surat) }}
+                            </span>
+                        </div>
+                    </template>
 
-                <template #perihal-cell="{ row }">
-                    <div class="max-w-[260px] text-slate-600" :title="row.original.perihal || '-'">
-                        {{ row.original.perihal || '-' }}
-                    </div>
-                </template>
+                    <template #ditujukan_kepada-cell="{ row }">
+                        <div
+                            class="max-w-[220px] whitespace-normal break-words text-sm font-semibold leading-6 text-slate-800 line-clamp-2"
+                            :title="row.original.ditujukan_kepada"
+                        >
+                            {{ row.original.ditujukan_kepada }}
+                        </div>
+                    </template>
 
-                <template #isi_lampiran-cell="{ row }">
-                    <div class="max-w-[260px] text-cyan-600 italic" :title="row.original.isi_lampiran || '-'">
-                        {{ row.original.isi_lampiran ? `Dasar: ${row.original.isi_lampiran}` : '-' }}
-                    </div>
-                </template>
+                    <template #perihal-cell="{ row }">
+                        <div
+                            class="max-w-[320px] whitespace-normal break-words text-sm leading-6 text-slate-600 line-clamp-2"
+                            :title="row.original.perihal || '-'"
+                        >
+                            {{ row.original.perihal || '-' }}
+                        </div>
+                    </template>
 
-                <template #berkas-cell="{ row }">
-                    <div class="flex items-center gap-2">
-                        <UTooltip text="Unduh DOCX">
-                            <UButton
-                                variant="soft"
-                                color="primary"
-                                size="xs"
-                                class="h-8 w-8 rounded-md border border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-600"
-                                :disabled="!hasGeneratedFile(row.original, 'docx')"
-                                @click="downloadGeneratedFile(row.original, 'docx')"
-                            >
-                                <Icon name="vscode-icons:file-type-word" class="w-4 h-4" />
-                            </UButton>
-                        </UTooltip>
-                        <UTooltip text="Unduh PDF">
-                            <UButton
-                                variant="soft"
-                                color="error"
-                                size="xs"
-                                class="h-8 w-8 rounded-md border border-red-200 bg-red-50 hover:bg-red-100 text-red-600"
-                                :disabled="!hasGeneratedFile(row.original, 'pdf')"
-                                @click="downloadGeneratedFile(row.original, 'pdf')"
-                            >
-                                <Icon name="vscode-icons:file-type-pdf2" class="w-4 h-4" />
-                            </UButton>
-                        </UTooltip>
-                    </div>
-                </template>
+                    <template #isi_lampiran-cell="{ row }">
+                        <div
+                            class="max-w-[280px] whitespace-normal break-words text-sm italic leading-6 text-cyan-600 line-clamp-2"
+                            :title="row.original.isi_lampiran || '-'"
+                        >
+                            {{ row.original.isi_lampiran ? `Dasar: ${row.original.isi_lampiran}` : '-' }}
+                        </div>
+                    </template>
 
-                <template #actions-cell="{ row }">
-                    <div class="flex items-center justify-center">
-                        <UTooltip text="Edit Surat">
-                            <UButton
-                                variant="soft"
-                                color="warning"
-                                size="xs"
-                                class="h-8 w-8 rounded-md border border-amber-200 bg-amber-50 hover:bg-amber-100 text-amber-600"
-                                @click="editSurat(row.original)"
-                            >
-                                <Icon name="lucide:pencil" class="w-4 h-4" />
-                            </UButton>
-                        </UTooltip>
-                    </div>
-                </template>
-            </UTable>
+                    <template #status-cell="{ row }">
+                        <UBadge
+                            :color="getStatusColor(row.original.status)"
+                            variant="soft"
+                            size="sm"
+                            class="font-bold"
+                        >
+                            {{ formatStatusLabel(row.original.status) }}
+                        </UBadge>
+                    </template>
+
+                    <template #berkas-cell="{ row }">
+                        <div class="flex items-center gap-2">
+                            <UTooltip text="Unduh DOCX">
+                                <UButton
+                                    variant="soft"
+                                    color="primary"
+                                    size="xs"
+                                    class="h-8 w-8 rounded-md border border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-600"
+                                    :disabled="!hasGeneratedFile(row.original, 'docx')"
+                                    @click="downloadGeneratedFile(row.original, 'docx')"
+                                >
+                                    <Icon name="vscode-icons:file-type-word" class="w-4 h-4" />
+                                </UButton>
+                            </UTooltip>
+                            <UTooltip text="Unduh PDF">
+                                <UButton
+                                    variant="soft"
+                                    color="error"
+                                    size="xs"
+                                    class="h-8 w-8 rounded-md border border-red-200 bg-red-50 hover:bg-red-100 text-red-600"
+                                    :disabled="!hasGeneratedFile(row.original, 'pdf')"
+                                    @click="downloadGeneratedFile(row.original, 'pdf')"
+                                >
+                                    <Icon name="vscode-icons:file-type-pdf2" class="w-4 h-4" />
+                                </UButton>
+                            </UTooltip>
+                        </div>
+                    </template>
+
+                    <template #actions-cell="{ row }">
+                        <div class="flex items-center justify-center gap-2">
+                            <UTooltip text="Lihat Detail">
+                                <UButton
+                                    variant="soft"
+                                    color="primary"
+                                    size="xs"
+                                    class="h-8 w-8 rounded-md border border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-600"
+                                    @click="viewDetail(row.original)"
+                                >
+                                    <Icon name="lucide:eye" class="w-4 h-4" />
+                                </UButton>
+                            </UTooltip>
+                            <UTooltip text="Edit Surat">
+                                <UButton
+                                    variant="soft"
+                                    color="warning"
+                                    size="xs"
+                                    class="h-8 w-8 rounded-md border border-amber-200 bg-amber-50 hover:bg-amber-100 text-amber-600"
+                                    @click="editSurat(row.original)"
+                                >
+                                    <Icon name="lucide:pencil" class="w-4 h-4" />
+                                </UButton>
+                            </UTooltip>
+                        </div>
+                    </template>
+                </UTable>
+            </div>
 
             <!-- Pagination -->
             <div class="flex flex-col sm:flex-row items-center justify-between p-5 border-t border-slate-100 bg-slate-50/30 gap-4">
@@ -463,14 +496,24 @@
         >
             <template #body>
                 <div v-if="selectedSurat" class="space-y-6">
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 bg-slate-50 p-5 rounded-xl border border-slate-100">
+                    <div class="grid grid-cols-1 gap-6 rounded-xl border border-slate-100 bg-slate-50 p-5 sm:grid-cols-2 lg:grid-cols-4">
                         <div class="space-y-1">
                             <p class="text-[10px] uppercase tracking-widest text-slate-400 font-bold">Nomor Surat</p>
                             <p class="font-bold text-blue-700 text-lg">{{ selectedSurat.nomor_surat }}</p>
                         </div>
-                        <div class="space-y-1 text-right">
+                        <div class="space-y-1 sm:text-right lg:text-left">
                             <p class="text-[10px] uppercase tracking-widest text-slate-400 font-bold">Tanggal Surat</p>
                             <p class="font-bold text-slate-700">{{ formatDate(selectedSurat.tanggal_surat) }}</p>
+                        </div>
+                        <div class="space-y-1">
+                            <p class="text-[10px] uppercase tracking-widest text-slate-400 font-bold">Status</p>
+                            <UBadge :color="getStatusColor(selectedSurat.status)" variant="soft" class="font-bold">
+                                {{ formatStatusLabel(selectedSurat.status) }}
+                            </UBadge>
+                        </div>
+                        <div class="space-y-1">
+                            <p class="text-[10px] uppercase tracking-widest text-slate-400 font-bold">Diperbarui</p>
+                            <p class="font-medium text-slate-700">{{ formatTimestamp(selectedSurat.updated_at) }}</p>
                         </div>
                     </div>
 
@@ -478,6 +521,10 @@
                         <div class="space-y-1">
                             <p class="text-[10px] uppercase tracking-widest text-slate-400 font-bold">Ditujukan Kepada</p>
                             <p class="font-semibold text-slate-800">{{ selectedSurat.ditujukan_kepada }}</p>
+                        </div>
+                        <div class="space-y-1">
+                            <p class="text-[10px] uppercase tracking-widest text-slate-400 font-bold">Alamat Tujuan</p>
+                            <p class="font-medium text-slate-700 leading-relaxed">{{ selectedSurat.alamat_tujuan || "-" }}</p>
                         </div>
                         <div class="space-y-1">
                             <p class="text-[10px] uppercase tracking-widest text-slate-400 font-bold">Klasifikasi</p>
@@ -490,6 +537,11 @@
                         <div class="space-y-1">
                             <p class="text-[10px] uppercase tracking-widest text-slate-400 font-bold">Penandatangan</p>
                             <p class="font-medium text-slate-700">{{ selectedSurat.penandatangan_guru?.nama_guru || selectedSurat.penandatangan }}</p>
+                            <p class="text-xs text-slate-500">NIP. {{ selectedSurat.penandatangan_guru?.nip || "-" }}</p>
+                        </div>
+                        <div class="space-y-1 text-sm">
+                            <p class="text-[10px] uppercase tracking-widest text-slate-400 font-bold">Dibuat</p>
+                            <p class="font-medium text-slate-700">{{ formatTimestamp(selectedSurat.created_at) }}</p>
                         </div>
                     </div>
 
@@ -498,9 +550,73 @@
                         <p class="text-slate-700 leading-relaxed">{{ selectedSurat.perihal || '-' }}</p>
                     </div>
 
+                    <div
+                        v-if="selectedLampiranMeta"
+                        class="space-y-4 rounded-xl border border-cyan-100 bg-cyan-50/60 p-5"
+                    >
+                        <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                            <div>
+                                <p class="text-[10px] font-bold uppercase tracking-widest text-cyan-700">Metadata Tugas Jurnal Guru</p>
+                                <p class="text-sm text-cyan-900">Data teknis surat tugas yang tersimpan di lampiran metadata.</p>
+                            </div>
+                            <UBadge color="info" variant="soft" class="font-bold">
+                                {{ formatTaskTypeLabel(selectedLampiranMeta.task_type) }}
+                            </UBadge>
+                        </div>
+
+                        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                            <div class="space-y-1">
+                                <p class="text-[10px] font-bold uppercase tracking-widest text-slate-400">Guru Pelaksana</p>
+                                <p class="font-semibold text-slate-800">{{ selectedLampiranMeta.guru_pelaksana_nama || "-" }}</p>
+                                <p class="text-xs text-slate-500">NIP. {{ selectedLampiranMeta.guru_pelaksana_nip || "-" }}</p>
+                            </div>
+                            <div class="space-y-1">
+                                <p class="text-[10px] font-bold uppercase tracking-widest text-slate-400">Perusahaan</p>
+                                <p class="font-semibold text-slate-800">{{ selectedLampiranMeta.perusahaan_nama || "-" }}</p>
+                                <p class="text-xs leading-relaxed text-slate-500">{{ selectedLampiranMeta.perusahaan_alamat || "-" }}</p>
+                            </div>
+                            <div class="space-y-1">
+                                <p class="text-[10px] font-bold uppercase tracking-widest text-slate-400">Periode Tugas</p>
+                                <p class="font-medium text-slate-700">
+                                    {{ formatDateRange(selectedLampiranMeta.tanggal_mulai, selectedLampiranMeta.tanggal_selesai) }}
+                                </p>
+                            </div>
+                            <div class="space-y-1">
+                                <p class="text-[10px] font-bold uppercase tracking-widest text-slate-400">Jumlah Penempatan</p>
+                                <p class="font-medium text-slate-700">{{ selectedLampiranMeta.penempatan_ids?.length || 0 }} data</p>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="space-y-1 pt-4 border-t border-slate-100">
                         <p class="text-[10px] uppercase tracking-widest text-slate-400 font-bold">Lampiran / Keterangan</p>
-                        <p class="text-slate-700 leading-relaxed italic">{{ selectedSurat.isi_lampiran || 'Tidak ada lampiran' }}</p>
+                        <p class="whitespace-pre-line text-slate-700 leading-relaxed italic">
+                            {{ selectedLampiranText || 'Tidak ada lampiran' }}
+                        </p>
+                    </div>
+
+                    <div class="space-y-3 pt-4 border-t border-slate-100">
+                        <p class="text-[10px] uppercase tracking-widest text-slate-400 font-bold">Berkas Surat</p>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <UButton
+                                variant="soft"
+                                color="primary"
+                                :disabled="!hasGeneratedFile(selectedSurat, 'docx')"
+                                @click="downloadGeneratedFile(selectedSurat, 'docx')"
+                            >
+                                <Icon name="vscode-icons:file-type-word" class="w-4 h-4 mr-2" />
+                                Unduh DOCX
+                            </UButton>
+                            <UButton
+                                variant="soft"
+                                color="error"
+                                :disabled="!hasGeneratedFile(selectedSurat, 'pdf')"
+                                @click="downloadGeneratedFile(selectedSurat, 'pdf')"
+                            >
+                                <Icon name="vscode-icons:file-type-pdf2" class="w-4 h-4 mr-2" />
+                                Unduh PDF
+                            </UButton>
+                        </div>
                     </div>
                 </div>
             </template>
@@ -653,15 +769,70 @@ const form = ref({
 });
 
 const columns = [
-    { accessorKey: "row_number", header: "No" },
-    { accessorKey: "klasifikasi_surat", header: "Klasifikasi" },
-    { accessorKey: "nomor_surat", header: "Nomor Surat & Tanggal" },
-    { accessorKey: "ditujukan_kepada", header: "Ditujukan" },
-    { accessorKey: "perihal", header: "Perihal" },
-    { accessorKey: "isi_lampiran", header: "Dasar" },
-    { accessorKey: "berkas", header: "Berkas" },
-    { accessorKey: "actions", header: "Aksi" },
+    {
+        accessorKey: "row_number",
+        header: "No",
+        meta: { class: { th: "w-16", td: "w-16 align-top" } },
+    },
+    {
+        accessorKey: "klasifikasi_surat",
+        header: "Klasifikasi",
+        meta: { class: { th: "w-40", td: "w-40 align-top" } },
+    },
+    {
+        accessorKey: "nomor_surat",
+        header: "Nomor Surat & Tanggal",
+        meta: { class: { th: "w-56", td: "w-56 align-top" } },
+    },
+    {
+        accessorKey: "ditujukan_kepada",
+        header: "Ditujukan",
+        meta: { class: { th: "w-56", td: "w-56 align-top" } },
+    },
+    {
+        accessorKey: "perihal",
+        header: "Perihal",
+        meta: { class: { th: "w-80", td: "w-80 align-top" } },
+    },
+    {
+        accessorKey: "isi_lampiran",
+        header: "Dasar",
+        meta: { class: { th: "w-72", td: "w-72 align-top" } },
+    },
+    {
+        accessorKey: "status",
+        header: "Status",
+        meta: { class: { th: "w-28", td: "w-28 align-top" } },
+    },
+    {
+        accessorKey: "berkas",
+        header: "Berkas",
+        meta: { class: { th: "w-28", td: "w-28 align-top" } },
+    },
+    {
+        accessorKey: "actions",
+        header: "Aksi",
+        meta: { class: { th: "w-24", td: "w-24 align-top" } },
+    },
 ];
+
+const JURNAL_GURU_META_PREFIX = "__JURNAL_GURU_META__";
+
+type SuratGuruTaskType = "penerjunan" | "monitoring" | "penarikan";
+
+interface SuratLampiranMeta {
+    task_type: SuratGuruTaskType;
+    guru_pelaksana_id?: string;
+    guru_pelaksana_nama?: string;
+    guru_pelaksana_nip?: string;
+    perusahaan_id?: string;
+    perusahaan_nama?: string;
+    perusahaan_alamat?: string;
+    tanggal_mulai?: string;
+    tanggal_selesai?: string;
+    penempatan_ids?: string[];
+    batch_label?: string;
+}
 
 type TemplateOption = { label: string; value: string };
 
@@ -716,9 +887,80 @@ function formatDate(dateStr: string): string {
     return new Date(dateStr).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
 }
 
+function formatTimestamp(dateStr?: string): string {
+    if (!dateStr) return "-";
+    const value = new Date(dateStr);
+    if (Number.isNaN(value.getTime())) return "-";
+    return value.toLocaleString("id-ID", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+    });
+}
+
 function formatKlasifikasi(value?: string): string {
     if (!value) return "-";
     return value.replace(/_/g, " ").toUpperCase();
+}
+
+function formatStatusLabel(status?: string): string {
+    switch (status) {
+        case "draft":
+            return "Draft";
+        case "dikirim":
+            return "Dikirim";
+        case "diterima":
+            return "Diterima";
+        default:
+            return String(status || "-")
+                .replace(/_/g, " ")
+                .replace(/\b\w/g, (char) => char.toUpperCase());
+    }
+}
+
+function formatTaskTypeLabel(taskType?: SuratGuruTaskType): string {
+    switch (taskType) {
+        case "penerjunan":
+            return "Penerjunan";
+        case "monitoring":
+            return "Monitoring";
+        case "penarikan":
+            return "Penarikan";
+        default:
+            return "-";
+    }
+}
+
+function parseLampiranMetadata(rawText?: string | null): SuratLampiranMeta | null {
+    const source = String(rawText || "").trim();
+    if (!source) return null;
+
+    const firstLine = source.split(/\r?\n/)[0]?.trim() || "";
+    if (!firstLine.startsWith(JURNAL_GURU_META_PREFIX)) return null;
+
+    try {
+        return JSON.parse(firstLine.slice(JURNAL_GURU_META_PREFIX.length).trim()) as SuratLampiranMeta;
+    } catch {
+        return null;
+    }
+}
+
+function stripLampiranMetadata(rawText?: string | null): string {
+    const source = String(rawText || "").trim();
+    if (!source) return "";
+    const lines = source.split(/\r?\n/);
+    const firstLine = lines[0]?.trim() || "";
+    if (!firstLine.startsWith(JURNAL_GURU_META_PREFIX)) {
+        return source;
+    }
+    return lines.slice(1).join("\n").trim();
+}
+
+function formatDateRange(start?: string, end?: string): string {
+    if (!start && !end) return "-";
+    return `${formatDate(start || "")} - ${formatDate(end || "")}`;
 }
 
 function inferTemplateJenisFromSurat(surat: SuratKeluar): SuratKeluarTemplateJenis {
@@ -835,12 +1077,20 @@ async function downloadGeneratedFile(surat: SuratKeluar, extension: "docx" | "pd
 
 function getStatusColor(status: string): string {
     switch (status) {
-        case "terkirim": return "success";
-        case "sedang_diproses": return "warning";
-        case "ditolak": return "error";
+        case "diterima": return "success";
+        case "dikirim": return "info";
+        case "draft": return "warning";
         default: return "neutral";
     }
 }
+
+const selectedLampiranMeta = computed(() =>
+    parseLampiranMetadata(selectedSurat.value?.isi_lampiran),
+);
+
+const selectedLampiranText = computed(() =>
+    stripLampiranMetadata(selectedSurat.value?.isi_lampiran),
+);
 
 function resetForm() {
     form.value = {

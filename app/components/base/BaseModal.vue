@@ -49,6 +49,7 @@ export interface FormField {
 export interface ModalProps {
     open: boolean;
     title: string;
+    description?: string;
     fields: FormField[];
     data?: Record<string, any>;
     loading?: boolean;
@@ -84,6 +85,12 @@ const sizeClasses = computed(() => {
     return sizes[props.size];
 });
 
+const modalDescription = computed(
+  () =>
+    props.description ||
+    `Form ${props.title.toLowerCase()} untuk menambah atau memperbarui data.`,
+)
+
 // Check if field should be visible
 const isFieldVisible = (field: FormField) => {
   return field.showWhen ? field.showWhen(formData.value) : true
@@ -113,6 +120,7 @@ const renderField = (field: FormField) => {
 <template>
   <UModal
     :open="open"
+    :description="modalDescription"
     @update:open="handleClose"
     :ui="{ content: sizeClasses }"
   >

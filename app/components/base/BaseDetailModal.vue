@@ -23,6 +23,7 @@ export interface DetailField {
 export interface DetailModalProps {
   open: boolean
   title: string
+  description?: string
   fields: DetailField[]
   data?: Record<string, any>
   size?: 'sm' | 'md' | 'lg' | 'xl'
@@ -47,6 +48,12 @@ const sizeClasses = computed(() => {
   }
   return sizes[props.size]
 })
+
+const modalDescription = computed(
+  () =>
+    props.description ||
+    `Informasi detail untuk ${props.title.toLowerCase()}.`,
+)
 
 // Format value based on field type
 const formatValue = (field: DetailField) => {
@@ -133,6 +140,7 @@ const handleClose = () => {
 <template>
   <UModal
     :open="open"
+    :description="modalDescription"
     @update:open="handleClose"
     :ui="{ content: sizeClasses }"
   >

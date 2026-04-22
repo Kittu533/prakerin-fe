@@ -1,23 +1,58 @@
 <template>
     <div class="space-y-4">
-        <!-- Mass Management Section -->
-        <MassManagementCard
-            ref="massCard"
-            entity-name="Siswa PKL"
-            :loading="uploading"
-            @upload="handleUpload"
-            @download-template="downloadTemplate"
-            @export-filtered="() => {}"
-            @export-all="() => {}"
-        />
+        <div class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                <div class="min-w-0 flex-1 space-y-1">
+                    <h2 class="text-lg font-bold text-slate-900">Monitoring PKL Aktif</h2>
+                    <p class="text-sm text-slate-500">
+                        Halaman ini hanya menampilkan siswa yang sudah memiliki penempatan PKL aktif.
+                        Input, impor, dan perbaikan biodata siswa tetap dilakukan dari Master Siswa.
+                    </p>
+                </div>
+                <div class="flex w-full flex-col gap-2 sm:flex-row lg:w-auto lg:min-w-[240px] lg:flex-col xl:min-w-0 xl:flex-row">
+                    <UButton
+                        color="neutral"
+                        variant="outline"
+                        icon="lucide:users"
+                        class="w-full justify-center"
+                        @click="navigateTo('/tata-usaha/master/siswa')"
+                    >
+                        Buka Master Siswa
+                    </UButton>
+                    <UButton
+                        color="neutral"
+                        variant="outline"
+                        icon="lucide:filter"
+                        class="w-full justify-center"
+                        @click="exportFilteredData"
+                    >
+                        Export Filter
+                    </UButton>
+                    <UButton
+                        color="primary"
+                        icon="lucide:download"
+                        class="w-full justify-center"
+                        @click="exportAllData"
+                    >
+                        Export Semua
+                    </UButton>
+                </div>
+            </div>
+        </div>
+
+        <div class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            Data pada halaman ini muncul setelah penempatan PKL aktif dibuat. Jika siswa belum muncul di sini,
+            cek dulu kelayakan di Master Siswa lalu lakukan plotting dari flow Admin &gt; SIAP PKL &gt; Kelola Tempat PKL.
+        </div>
 
         <!-- Filters Section -->
         <div class="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
-            <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
-                <div class="md:col-span-5 space-y-1.5">
+            <div class="flex flex-col gap-4 lg:flex-row lg:items-end">
+                <div class="flex w-full flex-col gap-1.5 lg:flex-[1.4]">
                     <label class="text-sm font-semibold text-slate-700">Cari Data</label>
                     <UInput
                         v-model="filters.search"
+                        class="w-full"
                         placeholder="Nama, NIS, atau Perusahaan..."
                         icon="i-heroicons-magnifying-glass"
                         size="lg"
@@ -27,10 +62,11 @@
                         }"
                     />
                 </div>
-                <div class="md:col-span-4 space-y-1.5">
+                <div class="flex w-full flex-col gap-1.5 lg:flex-1">
                     <label class="text-sm font-semibold text-slate-700">Filter Kelas</label>
                     <USelectMenu
                         v-model="filters.kelas"
+                        class="w-full"
                         :options="kelasOptions"
                         size="lg"
                         placeholder="Pilih Kelas"
@@ -40,13 +76,13 @@
                         }"
                     />
                 </div>
-                <div class="md:col-span-3">
+                <div class="flex w-full lg:w-auto lg:min-w-[220px]">
                     <UButton
                         variant="outline"
                         color="neutral"
                         block
                         size="lg"
-                        class="h-11 border-blue-600 text-blue-600 hover:bg-blue-50 rounded-lg font-semibold"
+                        class="h-11 w-full justify-center whitespace-nowrap border-blue-600 text-blue-600 hover:bg-blue-50 rounded-lg font-semibold"
                         @click="fetchData"
                     >
                         <Icon name="i-heroicons-arrow-path" class="w-4 h-4 mr-2" />
@@ -95,6 +131,42 @@
                     </div>
                 </template>
 
+                <template #status_pkl-cell="{ row }">
+                    <div class="space-y-1">
+                        <UBadge
+                            variant="subtle"
+                            :color="getPKLStatusColor(row.original.pkl_status)"
+                            size="xs"
+                        >
+                            {{ row.original.pkl_status_label || (row.original.penempatan?.[0] ? 'Sedang PKL' : 'Belum PKL') }}
+                        </UBadge>
+                        <p
+                            v-if="row.original.penempatan?.[0]?.perusahaan?.nama_perusahaan"
+                            class="max-w-[180px] truncate text-[10px] text-slate-500"
+                        >
+                            {{ row.original.penempatan[0].perusahaan.nama_perusahaan }}
+                        </p>
+                    </div>
+                </template>
+
+                <template #kelayakan-cell="{ row }">
+                    <div class="space-y-1">
+                        <UBadge
+                            variant="subtle"
+                            :color="getEligibilityColor(row.original.pkl_eligibility_status)"
+                            size="xs"
+                        >
+                            {{ row.original.pkl_eligibility_label || 'Belum Siap' }}
+                        </UBadge>
+                        <p
+                            v-if="row.original.pkl_eligibility_reasons?.length"
+                            class="max-w-[220px] text-[10px] leading-4 text-slate-500 line-clamp-2"
+                        >
+                            {{ row.original.pkl_eligibility_reasons.join(' ') }}
+                        </p>
+                    </div>
+                </template>
+
                 <!-- TTL & Gender Column -->
                 <template #ttl_gender-cell="{ row }">
                     <div class="space-y-0.5 text-xs">
@@ -108,15 +180,11 @@
                     </div>
                 </template>
 
-                <!-- Status PKL Column (Added for PKL page) -->
-                <template #status_pkl-cell="{ row }">
-                    <div v-if="row.original.penempatan?.[0]" class="space-y-1">
-                        <p class="text-[10px] font-bold text-slate-900 truncate max-w-[150px]">
-                            {{ row.original.penempatan[0].perusahaan.nama_perusahaan }}
-                        </p>
-                        <UBadge variant="subtle" color="success" size="xs">Aktif</UBadge>
-                    </div>
-                    <span v-else class="text-xs text-slate-400 italic">Belum PKL</span>
+                <!-- Alamat Column -->
+                <template #alamat-cell="{ row }">
+                    <p class="text-xs text-slate-600 max-w-[200px] line-clamp-2">
+                        {{ row.original.alamat || '-' }}
+                    </p>
                 </template>
 
                 <!-- Kontak Column -->
@@ -173,52 +241,65 @@
         </div>
 
         <!-- Detail Modal -->
-        <UModal v-model:open="showDetailModal" title="Detail Penempatan PKL" size="lg">
-            <div v-if="selectedSiswa" class="p-6 space-y-6">
-                <!-- Siswa Info -->
-                <div class="flex items-center gap-4 pb-6 border-b border-slate-100">
-                    <div class="w-16 h-16 rounded-xl bg-slate-100 flex items-center justify-center text-slate-400">
-                        <Icon name="i-heroicons-user" class="w-8 h-8" />
+        <UModal
+            v-model:open="showDetailModal"
+            title="Detail Penempatan PKL"
+            :description="detailModalDescription"
+            size="lg"
+        >
+            <template #body>
+                <div v-if="selectedSiswa" class="p-6 space-y-6">
+                    <!-- Siswa Info -->
+                    <div class="flex items-center gap-4 border-b border-slate-100 pb-6">
+                        <div class="flex h-16 w-16 items-center justify-center rounded-xl bg-slate-100 text-slate-400">
+                            <Icon name="i-heroicons-user" class="h-8 w-8" />
+                        </div>
+                        <div class="min-w-0">
+                            <h3 class="text-lg font-bold text-slate-900">{{ selectedSiswa.nama_siswa }}</h3>
+                            <p class="text-sm text-slate-500">
+                                NIS. {{ selectedSiswa.nis }} | {{ selectedSiswa.kelas?.nama_kelas }}
+                            </p>
+                        </div>
                     </div>
-                    <div>
-                        <h3 class="text-lg font-bold text-slate-900">{{ selectedSiswa.nama_siswa }}</h3>
-                        <p class="text-sm text-slate-500">NIS. {{ selectedSiswa.nis }} | {{ selectedSiswa.kelas?.nama_kelas }}</p>
+
+                    <!-- PKL Details -->
+                    <div v-if="selectedSiswa.penempatan?.[0]" class="grid grid-cols-1 gap-6 md:grid-cols-2">
+                        <div class="space-y-4">
+                            <div class="space-y-1">
+                                <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Perusahaan</p>
+                                <p class="text-sm font-semibold text-slate-900">{{ selectedSiswa.penempatan[0].perusahaan.nama_perusahaan }}</p>
+                                <p class="text-xs text-slate-500">{{ selectedSiswa.penempatan[0].perusahaan.alamat || '-' }}</p>
+                            </div>
+                            <div class="space-y-1">
+                                <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Guru Pembimbing</p>
+                                <p class="text-sm font-semibold text-slate-900">{{ selectedSiswa.penempatan[0].guru.nama_guru }}</p>
+                                <p class="text-xs text-slate-500">NIP. {{ selectedSiswa.penempatan[0].guru.nip }}</p>
+                            </div>
+                        </div>
+                        <div class="space-y-4">
+                            <div class="space-y-1">
+                                <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Periode PKL</p>
+                                <p class="text-sm font-semibold text-slate-900">
+                                    {{ formatDate(selectedSiswa.penempatan[0].tanggal_mulai) }} - {{ formatDate(selectedSiswa.penempatan[0].tanggal_selesai) }}
+                                </p>
+                                <p class="text-xs text-slate-500">Tahun Ajaran {{ selectedSiswa.penempatan[0].tahun_ajaran?.nama_tahun_ajaran }}</p>
+                            </div>
+                            <div class="space-y-1">
+                                <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Status</p>
+                                <UBadge variant="subtle" color="success" size="xs">Aktif Melaksanakan</UBadge>
+                            </div>
+                        </div>
+                    </div>
+                    <div v-else class="py-10 text-center">
+                        <Icon name="i-heroicons-information-circle" class="mx-auto mb-2 h-10 w-10 text-slate-300" />
+                        <p class="text-sm text-slate-500">Siswa ini belum memiliki data penempatan PKL aktif.</p>
                     </div>
                 </div>
 
-                <!-- PKL Details -->
-                <div v-if="selectedSiswa.penempatan?.[0]" class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div class="space-y-4">
-                        <div class="space-y-1">
-                            <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Perusahaan</p>
-                            <p class="text-sm font-semibold text-slate-900">{{ selectedSiswa.penempatan[0].perusahaan.nama_perusahaan }}</p>
-                            <p class="text-xs text-slate-500">{{ selectedSiswa.penempatan[0].perusahaan.alamat || '-' }}</p>
-                        </div>
-                        <div class="space-y-1">
-                            <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Guru Pembimbing</p>
-                            <p class="text-sm font-semibold text-slate-900">{{ selectedSiswa.penempatan[0].guru.nama_guru }}</p>
-                            <p class="text-xs text-slate-500">NIP. {{ selectedSiswa.penempatan[0].guru.nip }}</p>
-                        </div>
-                    </div>
-                    <div class="space-y-4">
-                        <div class="space-y-1">
-                            <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Periode PKL</p>
-                            <p class="text-sm font-semibold text-slate-900">
-                                {{ formatDate(selectedSiswa.penempatan[0].tanggal_mulai) }} - {{ formatDate(selectedSiswa.penempatan[0].tanggal_selesai) }}
-                            </p>
-                            <p class="text-xs text-slate-500">Tahun Ajaran {{ selectedSiswa.penempatan[0].tahun_ajaran?.nama_tahun_ajaran }}</p>
-                        </div>
-                        <div class="space-y-1">
-                            <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Status</p>
-                            <UBadge variant="subtle" color="success" size="xs">Aktif Melaksanakan</UBadge>
-                        </div>
-                    </div>
+                <div v-else class="px-6 py-8 text-sm text-slate-500">
+                    Data penempatan PKL tidak tersedia.
                 </div>
-                <div v-else class="py-10 text-center">
-                    <Icon name="i-heroicons-information-circle" class="w-10 h-10 text-slate-300 mx-auto mb-2" />
-                    <p class="text-slate-500 text-sm">Siswa ini belum memiliki data penempatan PKL aktif.</p>
-                </div>
-            </div>
+            </template>
             <template #footer>
                 <div class="flex justify-end">
                     <UButton variant="neutral" @click="showDetailModal = false">Tutup</UButton>
@@ -229,89 +310,310 @@
 </template>
 
 <script setup lang="ts">
-import { useSiswaApi } from "~/composables/api/use-academic";
-import MassManagementCard from "~/components/master/MassManagementCard.vue";
+import {
+    useKelasApi,
+    useSiswaApi,
+    type Siswa,
+} from "~/composables/api/use-academic";
 
 definePageMeta({ layout: "tata-usaha" });
 
-const { getPklStudents, importExcel, downloadTemplate } = useSiswaApi();
+const { getPklStudents } = useSiswaApi();
+const { getAll: getAllKelas } = useKelasApi();
 const toast = useToast();
 
-const massCard = ref<InstanceType<typeof MassManagementCard> | null>(null);
 const loading = ref(false);
-const uploading = ref(false);
 const showDetailModal = ref(false);
-const selectedSiswa = ref<any | null>(null);
+const selectedSiswa = ref<Siswa | null>(null);
 
-const siswaList = ref<any[]>([]);
+const ALL_FILTER_VALUE = "__all__";
+
+const siswaList = ref<Siswa[]>([]);
 const pagination = ref({ page: 1, limit: 20, total: 0 });
 
 const filters = ref({
     search: "",
-    kelas: null
+    kelas: ALL_FILTER_VALUE,
 });
 
-const kelasOptions = ref([]);
+const kelasOptions = ref<Array<{ label: string; value: string }>>([
+    { label: "Semua Kelas", value: ALL_FILTER_VALUE },
+]);
 
 const columns = [
     { accessorKey: "index", header: "NO" },
     { accessorKey: "identitas", header: "IDENTITAS SISWA" },
     { accessorKey: "kelas_program", header: "KELAS & PROGRAM" },
-    { accessorKey: "ttl_gender", header: "TTL & GENDER" },
     { accessorKey: "status_pkl", header: "STATUS PKL" },
+    { accessorKey: "kelayakan", header: "KELAYAKAN" },
+    { accessorKey: "ttl_gender", header: "TTL & GENDER" },
+    { accessorKey: "alamat", header: "ALAMAT" },
     { accessorKey: "kontak", header: "KONTAK (WA)" },
     { accessorKey: "actions", header: "AKSI" },
 ];
 
+const detailModalDescription = computed(() =>
+    selectedSiswa.value
+        ? `Ringkasan penempatan PKL aktif untuk ${selectedSiswa.value.nama_siswa || "siswa terpilih"}.`
+        : "Ringkasan penempatan PKL aktif siswa terpilih.",
+);
+
+function parsePklRows(result: any) {
+    const payload = result?.data;
+
+    if (Array.isArray(payload)) {
+        return {
+            rows: payload as Siswa[],
+            meta: result?.meta || result?.pagination || null,
+        };
+    }
+
+    if (Array.isArray(payload?.data)) {
+        return {
+            rows: payload.data as Siswa[],
+            meta:
+                payload.meta ||
+                payload.pagination ||
+                result?.meta ||
+                result?.pagination ||
+                null,
+        };
+    }
+
+    return {
+        rows: [] as Siswa[],
+        meta:
+            payload?.meta ||
+            payload?.pagination ||
+            result?.meta ||
+            result?.pagination ||
+            null,
+    };
+}
+
+function normalizePklParams(filteredOnly: boolean) {
+    if (!filteredOnly) {
+        return {
+            search: undefined,
+            id_kelas: undefined,
+        };
+    }
+
+    const selectedKelas = filters.value.kelas;
+    return {
+        search: filters.value.search || undefined,
+        id_kelas:
+            selectedKelas && selectedKelas !== ALL_FILTER_VALUE
+                ? selectedKelas
+                : undefined,
+    };
+}
+
+async function collectPklRowsForExport(filteredOnly: boolean) {
+    const limit = 200;
+    let page = 1;
+    let totalPages = 1;
+    const collected: Siswa[] = [];
+    const params = normalizePklParams(filteredOnly);
+
+    while (page <= totalPages) {
+        const result = await getPklStudents({
+            page,
+            limit,
+            ...params,
+        });
+
+        if (!result?.success) {
+            throw new Error(result?.message || "Gagal mengambil data siswa PKL");
+        }
+
+        const { rows, meta } = parsePklRows(result);
+        collected.push(...rows);
+
+        const parsedTotalPages = Number(meta?.totalPages || 1);
+        const parsedTotal = Number(meta?.total || collected.length);
+
+        if (Number.isFinite(parsedTotalPages) && parsedTotalPages > 0) {
+            totalPages = parsedTotalPages;
+        } else {
+            totalPages = Math.max(1, Math.ceil(parsedTotal / limit));
+        }
+
+        page += 1;
+    }
+
+    return collected;
+}
+
+function mapPklRowsToExport(rows: Siswa[]) {
+    return rows.map((item, index) => ({
+        NO: index + 1,
+        NIS: item.nis || "-",
+        NISN: item.nisn || "-",
+        NAMA: item.nama_siswa || "-",
+        JENIS_KELAMIN:
+            item.jenis_kelamin === "L"
+                ? "Laki-laki"
+                : item.jenis_kelamin === "P"
+                  ? "Perempuan"
+                  : "-",
+        TEMPAT_LAHIR: item.tempat_lahir || "-",
+        TANGGAL_LAHIR: item.tanggal_lahir || "-",
+        KELAS: item.kelas?.nama_kelas || "-",
+        JURUSAN: item.kelas?.jurusan?.nama_jurusan || "-",
+        STATUS_SISWA: item.status_siswa || "-",
+        STATUS_PKL: item.pkl_status_label || (item.penempatan?.[0] ? "Sedang PKL" : "Belum PKL"),
+        KELAYAKAN_PKL: item.pkl_eligibility_label || "Belum Siap",
+        ALASAN_KELAYAKAN: item.pkl_eligibility_reasons?.join("; ") || "-",
+        PERUSAHAAN_AKTIF: item.penempatan?.[0]?.perusahaan?.nama_perusahaan || "-",
+        TANGGAL_MULAI_PKL: item.penempatan?.[0]?.tanggal_mulai || "-",
+        TANGGAL_SELESAI_PKL: item.penempatan?.[0]?.tanggal_selesai || "-",
+        ALAMAT: item.alamat || "-",
+        NO_HP: item.no_hp || "-",
+        EMAIL: item.email || "-",
+    }));
+}
+
+async function downloadPklExport(rows: Siswa[], prefix: string) {
+    const XLSX = await import("xlsx").then((m) => m.default || m);
+    const worksheet = XLSX.utils.json_to_sheet(mapPklRowsToExport(rows));
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Data Siswa");
+
+    const now = new Date();
+    const pad = (num: number) => String(num).padStart(2, "0");
+    const stamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}`;
+
+    XLSX.writeFile(workbook, `${prefix}_${stamp}.xlsx`);
+}
+
+async function exportFilteredData() {
+    try {
+        const rows = await collectPklRowsForExport(true);
+
+        if (!rows.length) {
+            toast.add({
+                title: "Tidak ada data",
+                description: "Tidak ada data siswa PKL sesuai filter untuk diunduh.",
+                color: "warning",
+            });
+            return;
+        }
+
+        await downloadPklExport(rows, "Data_Siswa_PKL_Filtered");
+
+        toast.add({
+            title: "Unduh berhasil",
+            description: `${rows.length} data siswa PKL (hasil filter) berhasil diunduh.`,
+            color: "success",
+        });
+    } catch (error: any) {
+        console.error("[SiswaPKL] Error export filtered:", error);
+        toast.add({
+            title: "Gagal mengunduh",
+            description: error?.message || "Terjadi kesalahan saat mengunduh data terpilih.",
+            color: "error",
+        });
+    }
+}
+
+async function exportAllData() {
+    try {
+        const rows = await collectPklRowsForExport(false);
+
+        if (!rows.length) {
+            toast.add({
+                title: "Tidak ada data",
+                description: "Data siswa PKL tidak tersedia untuk backup.",
+                color: "warning",
+            });
+            return;
+        }
+
+        await downloadPklExport(rows, "Backup_Siswa_PKL");
+
+        toast.add({
+            title: "Backup berhasil",
+            description: `${rows.length} data siswa PKL berhasil diunduh sebagai backup.`,
+            color: "success",
+        });
+    } catch (error: any) {
+        console.error("[SiswaPKL] Error export all:", error);
+        toast.add({
+            title: "Gagal backup",
+            description: error?.message || "Terjadi kesalahan saat mengunduh backup data.",
+            color: "error",
+        });
+    }
+}
+
+function getPKLStatusColor(status?: Siswa["pkl_status"]) {
+    if (status === "placed") return "info";
+    return "neutral";
+}
+
+function getEligibilityColor(status?: Siswa["pkl_eligibility_status"]) {
+    switch (status) {
+        case "siap":
+            return "success";
+        case "sedang_pkl":
+            return "info";
+        default:
+            return "warning";
+    }
+}
+
+async function fetchKelasOptions() {
+    try {
+        const result = await getAllKelas({ page: 1, limit: 200 });
+        if (!result.success || !result.data) {
+            return;
+        }
+
+        const rows = Array.isArray(result.data)
+            ? result.data
+            : result.data.data || [];
+
+        const mappedKelasOptions = rows
+            .map((item) => ({
+                label: item.nama_kelas,
+                value: String(item.id_kelas ?? "").trim(),
+            }))
+            .filter((item) => item.value.length > 0);
+
+        kelasOptions.value = [
+            { label: "Semua Kelas", value: ALL_FILTER_VALUE },
+            ...mappedKelasOptions,
+        ];
+    } catch (error) {
+        console.error("[SiswaPKL] Error fetching kelas:", error);
+    }
+}
+
 async function fetchData() {
     loading.value = true;
     try {
+        const selectedKelas = filters.value.kelas;
+
         const result = await getPklStudents({
             page: pagination.value.page,
             limit: pagination.value.limit,
+            id_kelas:
+                selectedKelas && selectedKelas !== ALL_FILTER_VALUE
+                    ? selectedKelas
+                    : undefined,
             search: filters.value.search || undefined,
         });
 
-        if (result.success && result.data) {
-            siswaList.value = result.data.data || [];
-            pagination.value.total = result.data.meta?.total || 0;
+        if (result.success) {
+            const { rows, meta } = parsePklRows(result);
+            siswaList.value = rows;
+            pagination.value.total = Number(meta?.total || rows.length);
         }
     } catch (err) {
         console.error("[SiswaPKL] Error fetching:", err);
     } finally {
         loading.value = false;
-    }
-}
-
-async function handleUpload(file: File, mode: 'append' | 'replace') {
-    uploading.value = true;
-    try {
-        const result = await importExcel(file, mode);
-        
-        if (result.success) {
-            toast.add({
-                title: "Berhasil",
-                description: result.message || "Data siswa berhasil diunggah",
-                color: "success"
-            });
-            massCard.value?.reset();
-            fetchData();
-        } else {
-            toast.add({
-                title: "Gagal",
-                description: result.message || "Gagal mengunggah data siswa",
-                color: "error"
-            });
-        }
-    } catch (err: any) {
-        console.error("[SiswaPKL] Error uploading:", err);
-        toast.add({
-            title: "Error",
-            description: err.message || "Terjadi kesalahan sistem saat mengunggah",
-            color: "error"
-        });
-    } finally {
-        uploading.value = false;
     }
 }
 
@@ -324,7 +626,7 @@ function formatDate(dateStr: string) {
     });
 }
 
-function viewDetail(siswa: any) {
+function viewDetail(siswa: Siswa) {
     selectedSiswa.value = siswa;
     showDetailModal.value = true;
 }
@@ -334,7 +636,16 @@ function changePage(page: number) {
     fetchData();
 }
 
+watch(
+    () => filters.value.kelas,
+    () => {
+        pagination.value.page = 1;
+        fetchData();
+    },
+);
+
 onMounted(() => {
+    fetchKelasOptions();
     fetchData();
 });
 

@@ -3,8 +3,8 @@
  * Endpoints for TU dashboard stats, calendar events
  *
  * API Endpoints used:
- * - GET /api/tu-dashboard/stats - Dashboard statistics
- * - GET /api/tu-dashboard/calendar - Calendar events
+ * - GET /api/tu/dashboard/stats - Dashboard statistics
+ * - GET /api/tu/dashboard/calendar - Calendar events
  */
 import { apiFetch } from "~/composables/api-fetch";
 
@@ -99,7 +99,7 @@ export function useTUDashboard() {
     data?: TUDashboardStats;
     message: string;
   }> {
-    return safeFetch<TUDashboardStats>("TataUsahaService", "/dashboard/stats", {
+    return safeFetch<TUDashboardStats>("TataUsahaService", "/tu/dashboard/stats", {
       method: "GET",
     });
   }
@@ -118,8 +118,8 @@ export function useTUDashboard() {
 
     const queryString = params.toString();
     const endpoint = queryString
-      ? `/dashboard/calendar?${queryString}`
-      : "/dashboard/calendar";
+      ? `/tu/dashboard/calendar?${queryString}`
+      : "/tu/dashboard/calendar";
 
     return safeFetch<TUCakupanEvent[]>("TataUsahaService", endpoint, {
       method: "GET",

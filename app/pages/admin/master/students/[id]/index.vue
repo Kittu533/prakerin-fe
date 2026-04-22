@@ -78,6 +78,13 @@ function handleBack() {
     router.push("/admin/master/students");
 }
 
+function navigateToPlacementFlow() {
+    router.push({
+        path: "/admin/siap-pkl/kelola-tempat",
+        query: { siswa_id: id.value },
+    });
+}
+
 function formatDate(dateString?: string) {
     if (!dateString) return "-";
     const date = new Date(dateString);
@@ -428,9 +435,9 @@ useHead({ title: "Detail Siswa | Admin" });
                             variant="ghost"
                             class="mt-4"
                             icon="lucide:plus"
-                            @click="router.push('/admin/placement/create')"
+                            @click="navigateToPlacementFlow"
                         >
-                            Buat Penempatan
+                            Buka Flow Penempatan
                         </UButton>
                     </div>
                 </div>

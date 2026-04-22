@@ -1,7 +1,7 @@
 <template>
   <div class="space-y-6 max-w-[1400px] mx-auto pb-10 px-4">
-    <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-      <div>
+    <div class="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+      <div class="min-w-0 flex-1">
         <h1 class="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-3">
           <Icon name="lucide:signature" class="w-8 h-8 text-sky-600" />
           Master Data TTD Digital
@@ -11,31 +11,36 @@
         </p>
       </div>
 
-      <div class="flex items-center gap-2">
+      <div class="flex w-full flex-col gap-2 sm:flex-row sm:flex-wrap xl:w-auto xl:flex-nowrap xl:justify-end">
         <UInput
           v-model="filters.search"
           placeholder="Cari nama guru atau NIP"
           icon="lucide:search"
-          class="w-[260px]"
+          class="w-full sm:flex-1 xl:w-[260px] xl:flex-none"
           @keyup.enter="fetchData"
         />
         <UButton
           :color="showOnlyInvalid ? 'error' : 'neutral'"
           variant="soft"
-          class="font-bold"
+          class="w-full justify-center font-bold sm:w-auto"
           @click="toggleInvalidFilter"
         >
           <Icon name="lucide:filter" class="w-4 h-4 mr-2" />
           {{ showOnlyInvalid ? `Hanya Tidak Valid (${invalidOnPageCount})` : "Tampilkan Tidak Valid" }}
         </UButton>
-        <UButton color="primary" class="font-bold" :loading="loading" @click="fetchData">
+        <UButton
+          color="primary"
+          class="w-full justify-center font-bold sm:w-auto"
+          :loading="loading"
+          @click="fetchData"
+        >
           <Icon name="lucide:refresh-cw" class="w-4 h-4 mr-2" />
           Muat Ulang
         </UButton>
         <UButton
           color="warning"
           variant="soft"
-          class="font-bold"
+          class="w-full justify-center font-bold sm:w-auto"
           :loading="verifyingAll"
           @click="verifyAllSignatures"
         >
@@ -135,8 +140,8 @@
             v-if="editingGuruId === guru.id_guru"
             class="rounded-xl border border-sky-100 bg-sky-50/40 p-4 space-y-3"
           >
-            <div class="flex flex-col lg:flex-row gap-3">
-              <div class="flex-1">
+            <div class="flex flex-col gap-4 xl:flex-row xl:items-start">
+              <div class="flex min-w-0 flex-1 flex-col">
                 <label class="text-xs font-semibold text-slate-600 block mb-1">
                   Payload TTD (Data URL image / teks QR)
                 </label>
@@ -144,15 +149,19 @@
                   v-model="signatureDraftMap[guru.id_guru]"
                   :rows="6"
                   :placeholder="`Contoh: data:image/png;base64,... atau teks payload QR untuk ${guru.nama_guru}`"
+                  class="w-full"
+                  :ui="{
+                    base: 'w-full min-h-40'
+                  }"
                 />
               </div>
 
-              <div class="lg:w-[300px] space-y-2">
+              <div class="flex w-full flex-col gap-2 xl:w-[320px] xl:shrink-0">
                 <label class="text-xs font-semibold text-slate-600 block">Upload Gambar TTD</label>
                 <input
                   type="file"
                   accept="image/*"
-                  class="block w-full text-xs text-slate-500 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:bg-sky-100 file:text-sky-700"
+                  class="block w-full text-xs text-slate-500 file:mr-2 file:mb-2 file:w-full file:rounded-lg file:border-0 file:bg-sky-100 file:px-3 file:py-2 file:text-sm file:font-medium file:text-sky-700 sm:file:mb-0 sm:file:w-auto"
                   @change="onPickSignatureImage($event, guru.id_guru)"
                 />
                 <p class="text-[11px] text-slate-500">
@@ -163,19 +172,19 @@
 
             <div
               v-if="isImagePayload(signatureDraftMap[guru.id_guru])"
-              class="rounded-lg border border-slate-200 bg-white p-2 inline-block"
+              class="inline-flex w-full rounded-lg border border-slate-200 bg-white p-2 sm:w-auto"
             >
               <img
                 :src="signatureDraftMap[guru.id_guru]"
                 alt="Preview TTD"
-                class="max-h-28 object-contain"
+                class="max-h-28 w-full object-contain sm:w-auto"
               />
             </div>
 
-            <div class="flex flex-wrap items-center gap-2">
+            <div class="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
               <UButton
                 color="primary"
-                class="font-bold"
+                class="w-full justify-center font-bold sm:w-auto"
                 :loading="savingSignatureId === guru.id_guru"
                 @click="saveSignature(guru)"
               >
@@ -185,7 +194,7 @@
               <UButton
                 color="error"
                 variant="soft"
-                class="font-bold"
+                class="w-full justify-center font-bold sm:w-auto"
                 :loading="resettingSignatureId === guru.id_guru"
                 @click="resetSignature(guru)"
               >
@@ -194,7 +203,7 @@
               </UButton>
               <span
                 v-if="signatureStateMap[guru.id_guru]?.timestamp"
-                class="text-xs text-slate-500"
+                class="text-xs text-slate-500 sm:ml-auto"
               >
                 Update terakhir: {{ formatTimestamp(signatureStateMap[guru.id_guru]?.timestamp) }}
               </span>

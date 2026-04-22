@@ -16,9 +16,44 @@ export interface SweetAlertOptions {
 }
 
 export function useSweetAlert() {
+    function applyContainerLayering() {
+        if (!import.meta.client) return;
+
+        const container = Swal.getContainer();
+        const popup = Swal.getPopup();
+
+        if (container) {
+            container.style.zIndex = '2147483647';
+        }
+
+        if (popup) {
+            popup.style.zIndex = '2147483647';
+        }
+    }
+
+    function getAlertBaseOptions() {
+        return {
+            target: import.meta.client ? document.body : undefined,
+            returnFocus: false,
+            heightAuto: false,
+            backdrop: true,
+            didOpen: () => {
+                applyContainerLayering();
+            },
+            customClass: {
+                container: 'swal-disposisi-layer',
+                popup: 'rounded-lg',
+                title: 'text-lg font-semibold',
+                content: 'text-sm',
+                confirmButton: 'px-4 py-2 rounded-lg font-medium',
+                cancelButton: 'px-4 py-2 rounded-lg font-medium'
+            }
+        };
+    }
     
     function showAlert(options: SweetAlertOptions) {
         return Swal.fire({
+            ...getAlertBaseOptions(),
             title: options.title,
             text: options.text,
             icon: options.icon,
@@ -30,14 +65,7 @@ export function useSweetAlert() {
             timer: options.timer,
             timerProgressBar: options.timerProgressBar || false,
             allowOutsideClick: options.allowOutsideClick ?? true,
-            allowEscapeKey: options.allowEscapeKey ?? true,
-            customClass: {
-                popup: 'rounded-lg',
-                title: 'text-lg font-semibold',
-                content: 'text-sm',
-                confirmButton: 'px-4 py-2 rounded-lg font-medium',
-                cancelButton: 'px-4 py-2 rounded-lg font-medium'
-            }
+            allowEscapeKey: options.allowEscapeKey ?? true
         });
     }
 
@@ -103,12 +131,14 @@ export function useSweetAlert() {
 
     function showLoading(title: string = 'Memproses...', text?: string) {
         return Swal.fire({
+            ...getAlertBaseOptions(),
             title,
             text,
             allowOutsideClick: false,
             allowEscapeKey: false,
             showConfirmButton: false,
             didOpen: () => {
+                applyContainerLayering();
                 Swal.showLoading();
             }
         });
@@ -124,6 +154,7 @@ export function useSweetAlert() {
         position: 'top' | 'top-start' | 'top-end' | 'center' | 'center-start' | 'center-end' | 'bottom' | 'bottom-start' | 'bottom-end' = 'top-end'
     ) {
         return Swal.fire({
+            ...getAlertBaseOptions(),
             toast: true,
             position,
             icon,
@@ -132,6 +163,7 @@ export function useSweetAlert() {
             timer: 3000,
             timerProgressBar: true,
             didOpen: (toast) => {
+                applyContainerLayering();
                 toast.addEventListener('mouseenter', Swal.stopTimer);
                 toast.addEventListener('mouseleave', Swal.resumeTimer);
             }

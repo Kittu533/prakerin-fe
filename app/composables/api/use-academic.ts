@@ -61,20 +61,38 @@ async function safeFetch<T>(
 export interface Siswa {
   id_siswa: string;
   nis: string;
+  nisn?: string;
   nama_siswa: string;
   jenis_kelamin?: string;
+  tempat_lahir?: string;
   tanggal_lahir?: string;
   alamat?: string;
   no_hp?: string;
   email?: string;
   foto?: string;
   id_kelas: string;
+  status_siswa?: "aktif" | "lulus" | "pindah" | "dikeluarkan";
   kelas?: {
     id_kelas: string;
     nama_kelas: string;
     kode_tingkat: string;
     jurusan?: { nama_jurusan: string };
   };
+  penempatan?: Array<{
+    id_penempatan: string;
+    status_penempatan: "aktif" | "selesai" | "dibatalkan";
+    tanggal_mulai?: string;
+    tanggal_selesai?: string;
+    perusahaan?: {
+      nama_perusahaan?: string;
+    };
+  }>;
+  pkl_status?: "placed" | "unplaced";
+  pkl_status_label?: string;
+  pkl_eligibility_status?: "siap" | "belum_siap" | "sedang_pkl";
+  pkl_eligibility_label?: string;
+  pkl_eligibility_reasons?: string[];
+  can_join_pkl?: boolean;
   created_at?: string;
   updated_at?: string;
   generated_password?: string;
@@ -163,6 +181,7 @@ export function useSiswaApi() {
     id_kelas?: string;
     search?: string;
     pkl_status?: "placed" | "unplaced";
+    eligibility_status?: "siap" | "belum_siap" | "sedang_pkl";
   }) {
     const query = new URLSearchParams();
     if (params?.page) query.append("page", String(params.page));
@@ -170,6 +189,9 @@ export function useSiswaApi() {
     if (params?.id_kelas) query.append("id_kelas", String(params.id_kelas));
     if (params?.search) query.append("search", params.search);
     if (params?.pkl_status) query.append("pkl_status", params.pkl_status);
+    if (params?.eligibility_status) {
+      query.append("eligibility_status", params.eligibility_status);
+    }
 
     const { data } = await apiFetch<PaginatedResponse<Siswa>>(
       "CoreService",

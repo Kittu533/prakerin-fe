@@ -131,7 +131,12 @@
     </UCard>
 
     <!-- Import Result Modal -->
-    <UModal v-model:open="showResultModal" :title="resultTitle" size="lg">
+    <UModal
+        v-model:open="showResultModal"
+        :title="resultTitle"
+        description="Ringkasan hasil proses import data massal, termasuk jumlah data berhasil dan gagal."
+        size="lg"
+    >
         <div class="p-4 space-y-4">
             <div class="grid grid-cols-2 gap-4">
                 <div class="bg-green-50 rounded-lg p-4 text-center">

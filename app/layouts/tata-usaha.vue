@@ -237,6 +237,7 @@ const pageTitle = computed(() => {
         "/tata-usaha/surat-kesiswaan": "Surat Kesiswaan",
         "/tata-usaha/ttd-digital": "TTD Digital",
         "/tata-usaha/master/siswa": "Data Siswa",
+        "/tata-usaha/master/siswa-pkl": "Monitoring PKL",
         "/tata-usaha/master/guru": "Data Guru",
         "/tata-usaha/settings": "Pengaturan",
     };
@@ -244,7 +245,7 @@ const pageTitle = computed(() => {
     if (titles[route.path]) return titles[route.path];
 
     for (const [path, title] of Object.entries(titles)) {
-        if (route.path.startsWith(path) && path !== "/tata-usaha") return title;
+        if (path !== "/tata-usaha" && matchesRoute(path)) return title;
     }
 
     return "Dashboard";
@@ -295,7 +296,7 @@ const masterItems: MenuItem[] = [
             {
                 to: "/tata-usaha/master/siswa-pkl",
                 icon: "lucide:graduation-cap",
-                label: "Siswa - PKL",
+                label: "Monitoring PKL",
             },
         ],
     },
@@ -319,13 +320,17 @@ const bottomNavItems = [
     { to: "/tata-usaha/ttd-digital", icon: "lucide:signature", label: "TTD" },
 ];
 
+const matchesRoute = (path: string) => {
+    return route.path === path || route.path.startsWith(`${path}/`);
+};
+
 const isActive = (path: string) => {
     if (path === "/tata-usaha") return route.path === "/tata-usaha";
-    return route.path.startsWith(path);
+    return matchesRoute(path);
 };
 
 const isSubmenuActive = (children: any[]) => {
-    return children.some((child) => route.path.startsWith(child.to));
+    return children.some((child) => child.to && matchesRoute(child.to));
 };
 
 const toggleSubmenu = (label: string) => {
@@ -353,7 +358,7 @@ watch(
 
 const isActiveRoute = (path: string) => {
     if (path === "/tata-usaha") return route.path === "/tata-usaha";
-    return route.path.startsWith(path);
+    return matchesRoute(path);
 };
 
 const logout = () => navigateTo("/login");

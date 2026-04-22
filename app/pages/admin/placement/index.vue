@@ -435,7 +435,7 @@ const getGuruName = (guruId: string) => {
 
 // Actions
 const navigateToCreate = () => {
-    router.push("/admin/placement/create");
+    router.push("/admin/siap-pkl/kelola-tempat");
 };
 
 const navigateToDetail = (item: Penempatan) => {
@@ -834,7 +834,7 @@ useHead({ title: "Penempatan PKL | Admin" });
                     Penempatan PKL
                 </h1>
                 <p class="text-sm text-slate-500">
-                    Kelola penempatan siswa di industri
+                    Pantau hasil plot dan kelola penempatan siswa PKL aktif
                 </p>
             </div>
             <div class="flex items-center gap-2">
@@ -842,7 +842,7 @@ useHead({ title: "Penempatan PKL | Admin" });
                     Smart Draft
                 </UButton>
                 <UButton icon="lucide:plus" @click="navigateToCreate">
-                    Tambah Penempatan
+                    Plot Siswa Siap PKL
                 </UButton>
             </div>
         </div>
@@ -916,7 +916,7 @@ useHead({ title: "Penempatan PKL | Admin" });
             <Icon name="lucide:building-2" class="w-12 h-12 mx-auto mb-3 text-slate-300" />
             <p>Belum ada data penempatan</p>
             <p class="text-sm mt-2">
-                Klik "Tambah Penempatan" untuk menambah data baru
+                Mulai dari "Plot Siswa Siap PKL" untuk membuat penempatan baru
             </p>
         </div>
 

@@ -13,6 +13,7 @@ import { usePeriodePKLApi } from "~/composables/api/use-periode-pkl";
 definePageMeta({ layout: "admin" });
 
 const toast = useToast();
+const route = useRoute();
 const router = useRouter();
 const penempatanApi = usePenempatanApi();
 const siswaApi = useSiswaApi();
@@ -59,6 +60,13 @@ const perusahaanOptions = ref<OptionItem[]>([]);
 const guruOptions = ref<OptionItem[]>([]);
 const periodePKLOptions = ref<OptionItem[]>([]);
 const activePeriode = ref<any>(null);
+const kelolaTempatTarget = computed(() => ({
+    path: "/admin/siap-pkl/kelola-tempat",
+    query:
+        typeof route.query.siswa_id === "string"
+            ? { siswa_id: route.query.siswa_id }
+            : undefined,
+}));
 
 // Existing penempatan (for validation)
 const existingPenempatan = ref<Set<string>>(new Set());
@@ -220,7 +228,8 @@ const fetchSiswaByKelas = async () => {
     fetchingSiswa.value = true;
     try {
         const response = await siswaApi.getAll({
-            kelas_id: selectedKelas.value,
+            id_kelas: selectedKelas.value,
+            eligibility_status: "siap",
             limit: 100,
         });
 
@@ -438,7 +447,7 @@ onMounted(() => {
     fetchInitialData();
 });
 
-useHead({ title: "Tambah Penempatan | Admin" });
+useHead({ title: "Input Manual Penempatan | Admin" });
 </script>
 
 <template>
@@ -451,11 +460,27 @@ useHead({ title: "Tambah Penempatan | Admin" });
             </UButton>
             <div>
                 <h1 class="text-xl lg:text-2xl font-bold text-slate-900">
-                    Tambah Penempatan PKL
+                    Input Manual Penempatan PKL
                 </h1>
                 <p class="text-sm text-slate-500 mt-0.5">
-                    Pilih siswa dan atur penempatan di industri
+                    Flow utama penempatan ada di Kelola Tempat PKL. Halaman ini hanya untuk input manual bila diperlukan.
                 </p>
+            </div>
+        </div>
+
+        <div class="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            Untuk flow operasional harian, gunakan shortlist pada
+            <span class="font-semibold">Admin &gt; SIAP PKL &gt; Kelola Tempat PKL</span>
+            agar siswa yang ditampilkan benar-benar sudah siap PKL pada periode aktif.
+            <div class="mt-3">
+                <UButton
+                    color="warning"
+                    variant="soft"
+                    icon="lucide:workflow"
+                    @click="router.push(kelolaTempatTarget)"
+                >
+                    Buka Kelola Tempat PKL
+                </UButton>
             </div>
         </div>
 

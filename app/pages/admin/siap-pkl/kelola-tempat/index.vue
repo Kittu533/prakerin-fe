@@ -19,6 +19,7 @@ interface PlotItem {
 }
 
 const toast = useToast();
+const route = useRoute();
 
 const guruApi = useGuruApi();
 const perusahaanApi = usePerusahaanApi();
@@ -38,11 +39,15 @@ const activeTahunAjaranId = ref("");
 const activeTanggalMulai = ref("");
 const activeTanggalSelesai = ref("");
 const defaultDurasiBulan = ref(1);
+const hasAppliedRouteFocus = ref(false);
 
 const siswaItems = ref<PlotItem[]>([]);
 
 const mitraOptions = ref<Array<{ value: string; label: string }>>([]);
 const guruOptions = ref<Array<{ value: string; label: string }>>([]);
+const focusedSiswaId = computed(() =>
+  typeof route.query.siswa_id === "string" ? route.query.siswa_id : "",
+);
 
 const kelasOptions = computed(() => {
   const unique = new Set(siswaItems.value.map((item) => item.kelas));
@@ -121,6 +126,29 @@ function getDurasiRangePreview(durasiBulan: number) {
   if (!endDate) return "-";
 
   return `${formatDateId(activeTanggalMulai.value)} - ${formatDateId(endDate.toISOString())}`;
+}
+
+function applyRouteFocusToRows() {
+  if (!focusedSiswaId.value || hasAppliedRouteFocus.value) return;
+
+  hasAppliedRouteFocus.value = true;
+
+  const target = siswaItems.value.find(
+    (item) => item.id_siswa === focusedSiswaId.value,
+  );
+
+  if (!target) {
+    toast.add({
+      title: "Siswa belum siap diplot",
+      description:
+        "Siswa ini belum masuk shortlist siswa siap PKL pada periode aktif.",
+      color: "warning",
+    });
+    return;
+  }
+
+  search.value = target.nama_siswa;
+  target.selected = true;
 }
 
 async function loadInitialData() {
@@ -205,6 +233,8 @@ async function loadSiswaAvailable() {
     durasi_bulan: defaultDurasiBulan.value,
     selected: false,
   }));
+
+  applyRouteFocusToRows();
 }
 
 async function handlePlotSelected() {
@@ -318,10 +348,16 @@ useHead({
       <div class="bg-amber-50 border-l-4 border-amber-400 p-4 rounded-r-xl text-sm text-amber-800">
         Hanya mitra dengan MoU aktif yang tampil. Siswa yang sudah terplot pada periode aktif tidak ditampilkan.
       </div>
-      <div class="bg-blue-50 border-l-4 border-blue-400 p-4 rounded-r-xl text-sm text-blue-800">
-        Durasi magang diisi per siswa (1-12 bulan). Tanggal selesai dihitung otomatis dari tanggal mulai periode aktif.
+        <div class="bg-blue-50 border-l-4 border-blue-400 p-4 rounded-r-xl text-sm text-blue-800">
+          Durasi magang diisi per siswa (1-12 bulan). Tanggal selesai dihitung otomatis dari tanggal mulai periode aktif.
+        </div>
+        <div
+          v-if="focusedSiswaId"
+          class="bg-emerald-50 border-l-4 border-emerald-400 p-4 rounded-r-xl text-sm text-emerald-800"
+        >
+          Halaman dibuka dari detail siswa. Jika siswa memenuhi syarat PKL pada periode aktif, datanya akan otomatis difokuskan di shortlist ini.
+        </div>
       </div>
-    </div>
 
     <div class="bg-white rounded-2xl shadow-sm p-6 border border-slate-100 space-y-6">
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
