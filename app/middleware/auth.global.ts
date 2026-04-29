@@ -50,16 +50,35 @@ export default defineNuxtRouteMiddleware((to) => {
   const role = dataStore.userRole;
   const path = to.path;
 
+  const getDashboardRoute = () => {
+    switch (role) {
+      case "admin":
+        return "/admin";
+      case "guru":
+        return "/guru";
+      case "siswa":
+        return "/siswa";
+      case "tata_usaha":
+        return "/tata-usaha";
+      default:
+        return "/login";
+    }
+  };
+
   if (path.startsWith("/admin") && role !== "admin") {
     console.warn("[Auth Middleware] Admin access denied for role:", role);
-    return navigateTo("/siswa");
+    return navigateTo(getDashboardRoute());
   }
   if (path.startsWith("/guru") && role !== "guru") {
     console.warn("[Auth Middleware] Guru access denied for role:", role);
-    return navigateTo("/siswa");
+    return navigateTo(getDashboardRoute());
   }
   if (path.startsWith("/siswa") && role !== "siswa") {
     console.warn("[Auth Middleware] Siswa access denied for role:", role);
-    return navigateTo("/login");
+    return navigateTo(getDashboardRoute());
+  }
+  if (path.startsWith("/tata-usaha") && role !== "tata_usaha") {
+    console.warn("[Auth Middleware] Tata Usaha access denied for role:", role);
+    return navigateTo(getDashboardRoute());
   }
 });

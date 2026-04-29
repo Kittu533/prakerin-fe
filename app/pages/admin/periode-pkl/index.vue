@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, computed, h } from "vue";
+import { ref, onMounted, computed, h, watch } from "vue";
 import {
     usePeriodePKLApi,
     type PeriodePKL,
@@ -9,6 +9,7 @@ import { createColumnHelper, type ColumnDef } from "@tanstack/vue-table";
 
 definePageMeta({ layout: "admin" });
 
+const route = useRoute();
 const router = useRouter();
 const toast = useToast();
 const api = usePeriodePKLApi();
@@ -596,6 +597,7 @@ const fetchData = async () => {
 
 const navigateToCreate = () => {
     showCreateModal.value = true;
+    router.replace({ query: { ...route.query, modal: "create" } });
 };
 
 // Modal handlers
@@ -606,6 +608,12 @@ const closeModal = () => {
     showCloneModal.value = false;
     showReportModal.value = false;
     selectedItem.value = null;
+
+    if (route.query.modal) {
+        const nextQuery = { ...route.query } as Record<string, any>;
+        delete nextQuery.modal;
+        router.replace({ query: nextQuery });
+    }
 };
 
 const handleSaved = () => {
@@ -616,6 +624,16 @@ const handleSaved = () => {
 onMounted(() => {
     fetchData();
 });
+
+watch(
+    () => route.query.modal,
+    (value) => {
+        if (value === "create") {
+            showCreateModal.value = true;
+        }
+    },
+    { immediate: true },
+);
 
 useHead({ title: "Periode PKL | Admin" });
 </script>

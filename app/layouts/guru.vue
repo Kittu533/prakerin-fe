@@ -1,161 +1,69 @@
 <template>
-    <div class="min-h-screen bg-slate-50">
-        <div class="flex">
-            <!-- Sidebar - Desktop (sticky) -->
-            <div class="hidden lg:block sticky top-0 h-screen shrink-0">
-                <GuruSidebar />
+  <div class="min-h-screen bg-slate-50">
+    <div class="flex">
+      <div class="hidden h-screen shrink-0 lg:sticky lg:top-0 lg:block">
+        <GuruSidebar />
+      </div>
+
+      <div class="flex min-h-screen min-w-0 flex-1 flex-col">
+        <header class="sticky top-0 z-30 flex h-14 items-center border-b border-slate-200 bg-white px-4 shrink-0 lg:h-16 lg:px-6">
+          <div class="flex w-full items-center justify-between gap-4">
+            <div class="min-w-0">
+              <div class="flex items-center gap-2 lg:hidden">
+                <img src="~/assets/img/logo-skanda.png" alt="Logo" class="h-8 w-8 object-contain" />
+                <span class="text-sm font-semibold text-slate-900">SIM Prakerin</span>
+              </div>
+              <div class="hidden lg:block">
+                <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Area Guru</p>
+                <h1 class="truncate text-lg font-semibold text-slate-900">{{ pageTitle }}</h1>
+              </div>
             </div>
 
-            <!-- Main Area -->
-            <div class="flex-1 min-w-0 flex flex-col min-h-screen">
-                <!-- Header -->
-                <header
-                    class="sticky top-0 z-30 bg-white border-b border-slate-200 h-14 lg:h-16 flex items-center px-4 lg:px-6 shrink-0"
-                >
-                    <div class="flex items-center justify-between w-full">
-                        <!-- Left -->
-                        <div class="flex items-center gap-3">
-                            <!-- Mobile Logo -->
-                            <div class="flex items-center gap-2 lg:hidden">
-                                <img
-                                    src="~/assets/img/logo-skanda.png"
-                                    alt="Logo"
-                                    class="w-8 h-8 object-contain"
-                                />
-                                <span
-                                    class="font-semibold text-slate-900 text-sm"
-                                    >SIM Prakerin</span
-                                >
-                            </div>
+            <UDropdownMenu :items="userMenuItems">
+              <UButton variant="ghost" color="neutral" class="rounded-lg p-1 hover:bg-slate-50">
+                <div class="flex items-center gap-2">
+                  <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-sky-500 text-sm font-semibold text-white">
+                    {{ guruInitials }}
+                  </div>
+                  <div class="hidden text-left sm:block">
+                    <p class="text-xs font-semibold leading-tight text-slate-900">{{ guruName }}</p>
+                    <p class="text-[10px] font-medium leading-tight text-slate-500">Guru Pembimbing</p>
+                  </div>
+                  <Icon name="lucide:chevron-down" class="hidden h-4 w-4 text-slate-400 sm:block" />
+                </div>
+              </UButton>
+            </UDropdownMenu>
+          </div>
+        </header>
 
-                            <!-- Page Title (Desktop) -->
-                            <div class="hidden lg:block">
-                                <h1
-                                    class="text-lg font-semibold text-slate-900"
-                                >
-                                    {{ pageTitle }}
-                                </h1>
-                            </div>
-                        </div>
+        <main class="flex-1 p-4 pb-20 lg:p-6 lg:pb-6">
+          <slot />
+        </main>
 
-                        <!-- Right -->
-                        <div class="flex items-center gap-2">
-                            <!-- Search (Desktop) -->
-                            <div class="hidden lg:block">
-                                <UInput
-                                    placeholder="Cari..."
-                                    class="w-64"
-                                    size="sm"
-                                >
-                                    <template #leading>
-                                        <Icon
-                                            name="lucide:search"
-                                            class="w-4 h-4 text-slate-400"
-                                        />
-                                    </template>
-                                </UInput>
-                            </div>
+        <footer class="hidden border-t border-slate-200 bg-white px-4 py-4 text-sm text-slate-500 shrink-0 lg:block lg:px-6">
+          <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <p>© 2026 SIM Prakerin - SMK N 2 Wonogiri</p>
+            <p class="text-xs">Workspace guru yang disederhanakan untuk flow monitoring terbaru</p>
+          </div>
+        </footer>
 
-                            <!-- Notifications -->
-                            <button
-                                class="relative flex items-center justify-center w-10 h-10 rounded-lg hover:bg-slate-100 transition-colors"
-                            >
-                                <Icon
-                                    name="lucide:bell"
-                                    class="w-5 h-5 text-slate-600"
-                                />
-                                <span
-                                    class="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full"
-                                />
-                            </button>
-
-                            <!-- User Menu -->
-                            <UDropdownMenu :items="userMenuItems">
-                                <UButton
-                                    variant="ghost"
-                                    color="neutral"
-                                    class="p-1 rounded-lg hover:bg-slate-50"
-                                >
-                                    <div class="flex items-center gap-2">
-                                        <div
-                                            class="w-8 h-8 rounded-lg bg-sky-500 flex items-center justify-center text-white font-semibold text-sm ring-2 ring-transparent group-hover:ring-sky-100"
-                                        >
-                                            {{ guruInitials }}
-                                        </div>
-                                        <div class="text-left hidden sm:block">
-                                            <p
-                                                class="text-xs font-semibold text-slate-900 leading-tight"
-                                            >
-                                                {{ guruName }}
-                                            </p>
-                                            <p
-                                                class="text-[10px] text-slate-500 font-medium leading-tight"
-                                            >
-                                                Guru Pembimbing
-                                            </p>
-                                        </div>
-                                        <Icon
-                                            name="lucide:chevron-down"
-                                            class="w-4 h-4 text-slate-400 hidden sm:block"
-                                        />
-                                    </div>
-                                </UButton>
-                            </UDropdownMenu>
-                        </div>
-                    </div>
-                </header>
-
-                <!-- Content -->
-                <main class="flex-1 p-4 lg:p-6 pb-20 lg:pb-6">
-                    <slot />
-                </main>
-
-                <!-- Footer (Desktop only) -->
-                <footer
-                    class="hidden lg:block border-t border-slate-200 bg-white px-4 lg:px-6 py-4 shrink-0"
-                >
-                    <div
-                        class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-sm text-slate-500"
-                    >
-                        <p>© 2024 SIM Prakerin - SMK N 2 Wonogiri</p>
-                        <p class="text-xs">v1.0.0</p>
-                    </div>
-                </footer>
-
-                <!-- Bottom Navigation (Mobile/Tablet Only) -->
-                <nav
-                    class="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 z-30 safe-area-bottom"
-                >
-                    <div class="flex items-center justify-around h-16">
-                        <NuxtLink
-                            v-for="item in bottomNavItems"
-                            :key="item.to"
-                            :to="item.to"
-                            class="flex flex-col items-center justify-center gap-1 w-full h-full transition-colors"
-                            :class="
-                                isActiveRoute(item.to)
-                                    ? 'text-sky-600'
-                                    : 'text-slate-500'
-                            "
-                        >
-                            <div class="relative">
-                                <Icon :name="item.icon" class="w-5 h-5" />
-                                <span
-                                    v-if="item.badge"
-                                    class="absolute -top-1 -right-2 w-4 h-4 text-[10px] bg-red-500 text-white rounded-full flex items-center justify-center"
-                                >
-                                    {{ item.badge > 9 ? "9+" : item.badge }}
-                                </span>
-                            </div>
-                            <span class="text-[10px] font-medium">{{
-                                item.label
-                            }}</span>
-                        </NuxtLink>
-                    </div>
-                </nav>
-            </div>
-        </div>
+        <nav class="fixed bottom-0 left-0 right-0 z-30 border-t border-slate-200 bg-white lg:hidden safe-area-bottom">
+          <div class="flex h-16 items-center justify-around">
+            <NuxtLink
+              v-for="item in bottomNavItems"
+              :key="item.to"
+              :to="item.to"
+              class="flex h-full w-full flex-col items-center justify-center gap-1 transition-colors"
+              :class="isActiveRoute(item.to) ? 'text-sky-600' : 'text-slate-500'"
+            >
+              <Icon :name="item.icon" class="h-5 w-5" />
+              <span class="text-[10px] font-medium">{{ item.label }}</span>
+            </NuxtLink>
+          </div>
+        </nav>
+      </div>
     </div>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -163,128 +71,108 @@ import { useAuth } from "~/composables/auth/use-auth";
 import { useGuruApi } from "~/composables/api/use-academic";
 
 const route = useRoute();
-const toast = useToast();
 const { user, logout: authLogout } = useAuth();
 const { getMe } = useGuruApi();
 
-// Guru state
 const guru = ref<any>(null);
-const loading = ref(true);
 
-// Fetch guru data
 async function fetchGuruData() {
-    try {
-        const res = await getMe();
-        if (res?.data) {
-            guru.value = res.data;
-        }
-    } catch (e) {
-        console.warn("Failed to fetch guru data:", e);
-    } finally {
-        loading.value = false;
+  try {
+    const res = await getMe();
+    if (res?.data) {
+      guru.value = res.data;
     }
+  } catch (error) {
+    console.warn("Failed to fetch guru data:", error);
+  }
 }
 
-// Computed values for display
-const guruName = computed(
-    () => guru.value?.nama_guru || user.value?.nama || "Guru",
-);
+const guruName = computed(() => guru.value?.nama_guru || user.value?.nama || "Guru");
 const guruInitials = computed(() => {
-    const name = guruName.value;
-    const parts = name.split(" ");
-    if (parts.length >= 2) {
-        return (parts[0][0] + parts[1][0]).toUpperCase();
-    }
-    return name.slice(0, 2).toUpperCase();
+  const name = guruName.value.trim();
+  if (!name) {
+    return "GU";
+  }
+
+  const parts = name.split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) {
+    return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+  }
+
+  return name.slice(0, 2).toUpperCase();
 });
 
 const pageTitle = computed(() => {
-    const titles: Record<string, string> = {
-        "/guru": "Dashboard",
-        "/guru/siswa-bimbingan": "Siswa Bimbingan",
-        "/guru/penempatan": "Penempatan PKL",
-        "/guru/kunjungan": "Monitoring Kunjungan",
-        "/guru/absensi": "Validasi Absensi",
-        "/guru/verifikasi-logbook": "Verifikasi Logbook",
-        "/guru/penilaian-nilai": "Penilaian PKL",
-        "/guru/laporan-akhir": "Laporan Akhir",
-    };
+  const titles: Record<string, string> = {
+    "/guru": "Dashboard Guru",
+    "/guru/siswa-bimbingan": "Siswa Bimbingan",
+    "/guru/penempatan": "Penempatan PKL",
+    "/guru/kunjungan": "Monitoring Kunjungan",
+    "/guru/absensi": "Validasi Absensi",
+    "/guru/verifikasi-logbook": "Verifikasi Logbook",
+  };
 
-    if (titles[route.path]) return titles[route.path];
+  if (titles[route.path]) {
+    return titles[route.path];
+  }
 
-    for (const [path, title] of Object.entries(titles)) {
-        if (route.path.startsWith(path) && path !== "/guru") return title;
+  for (const [path, title] of Object.entries(titles)) {
+    if (path !== "/guru" && route.path.startsWith(path)) {
+      return title;
     }
+  }
 
-    return "Dashboard";
+  return "Dashboard Guru";
 });
 
 const bottomNavItems = [
-    { to: "/guru", icon: "lucide:home", label: "Home" },
-    {
-        to: "/guru/siswa-bimbingan",
-        icon: "lucide:users",
-        label: "Siswa",
-        badge: 24,
-    },
-    {
-        to: "/guru/verifikasi-logbook",
-        icon: "lucide:book-open",
-        label: "Logbook",
-        badge: 12,
-    },
-    {
-        to: "/guru/absensi",
-        icon: "lucide:calendar-check",
-        label: "Absensi",
-        badge: 5,
-    },
-    { to: "/guru/penilaian-nilai", icon: "lucide:award", label: "Nilai" },
+  { to: "/guru", icon: "lucide:home", label: "Home" },
+  { to: "/guru/siswa-bimbingan", icon: "lucide:users", label: "Siswa" },
+  { to: "/guru/penempatan", icon: "lucide:building-2", label: "Tempat" },
+  { to: "/guru/verifikasi-logbook", icon: "lucide:book-open", label: "Logbook" },
+  { to: "/guru/absensi", icon: "lucide:calendar-check", label: "Absensi" },
 ];
 
 const isActiveRoute = (path: string) => {
-    if (path === "/guru") return route.path === "/guru";
-    return route.path.startsWith(path);
+  if (path === "/guru") {
+    return route.path === path;
+  }
+
+  return route.path.startsWith(path);
 };
 
 const userMenuItems = [
-    [
-        {
-            label: "Profil Saya",
-            icon: "i-lucide-user",
-            click: () => {},
-        },
-        {
-            label: "Pengaturan",
-            icon: "i-lucide-settings",
-            click: () => {},
-        },
-    ],
-    [
-        {
-            label: "Keluar",
-            icon: "i-lucide-log-out",
-            click: async () => {
-                try {
-                    await authLogout();
-                    toast.add({ title: 'Berhasil logout', color: 'success' });
-                } catch (e) {
-                    console.error('Logout error:', e);
-                } finally {
-                    navigateTo('/login');
-                }
-            },
-        },
-    ],
+  [
+    {
+      label: "Profil Saya",
+      icon: "i-lucide-user",
+      click: () => {},
+    },
+  ],
+  [
+    {
+      label: "Keluar",
+      icon: "i-lucide-log-out",
+      click: async () => {
+        try {
+          await authLogout();
+        } catch (error) {
+          console.error("Logout error:", error);
+        } finally {
+          await navigateTo("/login");
+        }
+      },
+    },
+  ],
 ];
 
 onMounted(() => {
-    fetchGuruData();
+  fetchGuruData();
 });
 </script>
 
 <style scoped>
 .safe-area-bottom {
-    padding-bottom: env(safe-area-inset-bottom);
+  padding-bottom: env(safe-area-inset-bottom);
 }
 </style>

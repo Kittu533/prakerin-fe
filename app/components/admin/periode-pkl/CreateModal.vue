@@ -208,7 +208,12 @@ const validateForm = (): boolean => {
         errors.value.nama_periode = "Nama periode wajib diisi";
     }
 
-    if (!formData.value.id_tahun_ajaran) {
+    const tahunAjaranId =
+        typeof formData.value.id_tahun_ajaran === "string"
+            ? formData.value.id_tahun_ajaran
+            : (formData.value.id_tahun_ajaran as any)?.value;
+
+    if (!tahunAjaranId) {
         errors.value.id_tahun_ajaran = "Tahun ajaran wajib dipilih";
     }
 
@@ -270,9 +275,14 @@ const submit = async () => {
 
     submitting.value = true;
     try {
+        const tahunAjaranId =
+            typeof formData.value.id_tahun_ajaran === "string"
+                ? formData.value.id_tahun_ajaran
+                : (formData.value.id_tahun_ajaran as any)?.value;
+
         const payload = {
             nama_periode: formData.value.nama_periode,
-            id_tahun_ajaran: formData.value.id_tahun_ajaran,
+            id_tahun_ajaran: tahunAjaranId,
             tanggal_mulai: new Date(formData.value.tanggal_mulai).toISOString(),
             tanggal_selesai: new Date(
                 formData.value.tanggal_selesai,
@@ -317,8 +327,13 @@ const resetForm = () => {
 
 // Auto-suggest dates based on tahun ajaran
 const autoFillDates = () => {
+    const selectedId =
+        typeof formData.value.id_tahun_ajaran === "string"
+            ? formData.value.id_tahun_ajaran
+            : (formData.value.id_tahun_ajaran as any)?.value;
+
     const selectedTA = tahunAjaranOptions.value.find(
-        (ta) => ta.value === formData.value.id_tahun_ajaran,
+        (ta) => ta.value === selectedId,
     );
     if (selectedTA) {
         // Extract years from nama_tahun_ajaran (e.g., "2024/2025")
@@ -425,6 +440,7 @@ fetchTahunAjaran();
                                 :disabled="submitting"
                                 class="flex-1"
                                 size="lg"
+                                value-attribute="value"
                             />
                             <UButton
                                 type="button"

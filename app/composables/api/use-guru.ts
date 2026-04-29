@@ -286,7 +286,7 @@ export function useGuruApi() {
     if (params?.limit) query.append("limit", String(params.limit));
     if (params?.status_penempatan) query.append("status_penempatan", params.status_penempatan);
 
-    const { data } = await apiFetch<PaginatedResponse<SiswaBimbingan>(
+    const { data } = await apiFetch<PaginatedResponse<SiswaBimbingan>>(
       "PlacementService",
       `/penempatan/guru/me?${query.toString()}`,
       { method: "GET" },
@@ -381,7 +381,7 @@ export function useGuruApi() {
    * Get detail siswa bimbingan by penempatan ID
    */
   async function getDetailSiswaBimbingan(idPenempatan: string) {
-    const { data } = await apiFetch<SingleResponse<SiswaBimbingan>(
+    const { data } = await apiFetch<SingleResponse<SiswaBimbingan>>(
       "PlacementService",
       `/penempatan/${idPenempatan}`,
       { method: "GET" },

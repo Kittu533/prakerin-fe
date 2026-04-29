@@ -59,7 +59,7 @@
                   placeholder="Enter your identity"
                   class="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500/50 focus:border-sky-500 transition-all text-sm"
                   required
-                  :disabled="isLoading"
+                  :disabled="isLoading || !isHydrated"
                   autocomplete="username"
                 />
               </div>
@@ -81,14 +81,14 @@
                   placeholder="Enter your password"
                   class="w-full pl-11 pr-12 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500/50 focus:border-sky-500 transition-all text-sm"
                   required
-                  :disabled="isLoading"
+                  :disabled="isLoading || !isHydrated"
                   autocomplete="current-password"
                 />
                 <button
                   type="button"
                   @click="togglePasswordVisibility"
                   class="absolute inset-y-0 right-0 flex items-center pr-3.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
-                  :disabled="isLoading"
+                  :disabled="isLoading || !isHydrated"
                 >
                   <Icon :name="showPassword ? 'lucide:eye-off' : 'lucide:eye'" class="w-5 h-5" />
                 </button>
@@ -107,7 +107,7 @@
             <!-- Submit -->
             <button
               type="submit"
-              :disabled="isLoading"
+              :disabled="isLoading || !isHydrated"
               class="w-full bg-sky-500 hover:bg-sky-600 text-white font-medium py-3 rounded-xl transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
             >
               <span v-if="isLoading">Signing in...</span>
@@ -155,7 +155,12 @@ const form = reactive({
 const isLoading = ref(false);
 const errorMessage = ref('');
 const showPassword = ref(false);
+const isHydrated = ref(false);
 let isUnmounted = false;
+
+onMounted(() => {
+  isHydrated.value = true;
+});
 
 onUnmounted(() => {
   isUnmounted = true;
@@ -177,15 +182,15 @@ async function handleSubmit() {
 
     if (result.success) {
       await showSuccess(
-        'Login Berhasil!', 
+        'Login Berhasil!',
         'Selamat datang kembali! Anda akan diarahkan ke dashboard.',
         { timer: 2000 }
       );
-      
+
       const dashboardRoute = getDashboardRoute();
       await navigateTo(dashboardRoute);
     } else {
-      const isDeactivated = result.message?.toLowerCase().includes('nonaktif') || 
+      const isDeactivated = result.message?.toLowerCase().includes('nonaktif') ||
                           result.message?.toLowerCase().includes('deactivated') ||
                           result.message?.toLowerCase().includes('aktif');
 
