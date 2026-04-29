@@ -13,9 +13,14 @@ export default defineNuxtConfig({
   runtimeConfig: {
     // Private keys (server-side only)
     apiSecret: "",
+    apiProxyTarget:
+      process.env.NUXT_API_PROXY_TARGET ||
+      (process.env.NODE_ENV === "development" ? "http://localhost:3000/api" : ""),
     // Public keys (exposed to client)
     public: {
-      apiUrl: process.env.NUXT_PUBLIC_API_URL || "http://localhost:3000/api",
+      apiUrl:
+        process.env.NUXT_PUBLIC_API_URL ||
+        (process.env.NODE_ENV === "production" ? "/api" : "http://localhost:3000/api"),
       dev: process.env.NODE_ENV === "development",
     },
   },
