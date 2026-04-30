@@ -218,7 +218,7 @@
                     >
                 </NuxtLink>
                 <NuxtLink
-                    to="/siswa/internship/status"
+                    to="/siswa/internship"
                     class="flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-indigo-50 transition-colors"
                 >
                     <div
@@ -228,19 +228,6 @@
                     </div>
                     <span class="text-xs font-medium text-slate-700 text-center"
                         >Status PKL</span
-                    >
-                </NuxtLink>
-                <NuxtLink
-                    to="/siswa/nilai"
-                    class="flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-purple-50 transition-colors"
-                >
-                    <div
-                        class="w-12 h-12 rounded-xl bg-purple-100 text-purple-600 flex items-center justify-center"
-                    >
-                        <Icon name="lucide:award" class="w-6 h-6" />
-                    </div>
-                    <span class="text-xs font-medium text-slate-700 text-center"
-                        >Nilai PKL</span
                     >
                 </NuxtLink>
             </div>
