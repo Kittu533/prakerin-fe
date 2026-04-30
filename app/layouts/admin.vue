@@ -105,9 +105,9 @@
                 <nav
                     class="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 z-30 safe-area-bottom">
                     <div class="flex items-center justify-around h-16">
-                        <NuxtLink v-for="item in bottomNavItems" :key="item.to" :to="item.to"
+                        <NuxtLink v-for="item in bottomNavItems.filter(i => i.to)" :key="item.to" :to="item.to"
                             class="flex flex-col items-center justify-center gap-1 w-full h-full transition-colors"
-                            :class="isActiveRoute(item.to)
+                            :class="isActiveRoute(item.to!)
                                     ? 'text-sky-600'
                                     : 'text-slate-500'
                                 ">
@@ -141,7 +141,6 @@ const pageTitle = computed(() => {
     const titles: Record<string, string> = {
         "/admin": "Dashboard",
         "/admin/periode-pkl": "Periode PKL",
-        "/admin/verification": "Verifikasi Pengajuan",
         "/admin/placement": "Penempatan Siswa",
         "/admin/monitoring": "Monitoring PKL",
         "/admin/master/companies": "Master Perusahaan",
@@ -151,7 +150,6 @@ const pageTitle = computed(() => {
         "/admin/reporting/assessment": "Rekap Nilai & Kelulusan",
         "/admin/reporting/company": "Ketersediaan Kuota",
         "/admin/reporting/application": "Pengajuan Mandiri",
-        "/admin/reporting/unplaced-students": "Siswa Belum Penempatan",
         "/admin/placement/smart-draft": "Smart Placement Draft",
         "/admin/placement/overview": "Overview Siswa PKL",
         "/admin/archive": "Arsip Penempatan",
@@ -181,13 +179,6 @@ const menuItems: MenuItem[] = [
         to: "/admin/periode-pkl",
         icon: "lucide:calendar-clock",
         label: "Periode PKL",
-    },
-    {
-        to: "/admin/verification",
-        icon: "lucide:file-check",
-        label: "Verifikasi",
-        badge: 5,
-        badgeColor: "warning",
     },
     { to: "/admin/placement", icon: "lucide:map-pin", label: "Penempatan" },
     { to: "/admin/monitoring", icon: "lucide:activity", label: "Monitoring" },
@@ -230,17 +221,6 @@ const menuItems: MenuItem[] = [
         ],
     },
     {
-        icon: "lucide:file-text",
-        label: "PERSURATAN UKK 2025/2026",
-        children: [
-            {
-                to: "/admin/siap-ukk/pengajuan-asesor",
-                icon: "lucide:user-check",
-                label: "PENGAJUAN ASESOR UKK 2026",
-            },
-        ],
-    },
-    {
         icon: "lucide:bar-chart-3",
         label: "Laporan",
         children: [
@@ -269,23 +249,12 @@ const menuItems: MenuItem[] = [
                 icon: "lucide:file-text",
                 label: "Pengajuan Mandiri",
             },
-            {
-                to: "/admin/reporting/unplaced-students",
-                icon: "lucide:user-x",
-                label: "Siswa Belum Tempat",
-            },
         ],
     },
 ];
 
-const bottomNavItems = [
+const bottomNavItems: MenuItem[] = [
     { to: "/admin", icon: "lucide:home", label: "Home" },
-    {
-        to: "/admin/verification",
-        icon: "lucide:file-check",
-        label: "Verifikasi",
-        badge: 5,
-    },
     { to: "/admin/placement", icon: "lucide:map-pin", label: "Penempatan" },
     { to: "/admin/users", icon: "lucide:users", label: "Akun" },
     { to: "/admin/monitoring", icon: "lucide:activity", label: "Monitoring" },
