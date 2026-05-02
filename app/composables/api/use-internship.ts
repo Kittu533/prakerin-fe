@@ -83,16 +83,15 @@ export interface Logbook {
   id_logbook: string;
   id_penempatan: string;
   tanggal: string;
-  jam_mulai: string;
-  jam_selesai: string;
-  kegiatan: string;
-  deskripsi: string;
-  foto?: string;
-  status: "pending" | "approved" | "revision";
-  catatan_mentor?: string;
-  catatan_guru?: string;
+  judul_kegiatan: string;
+  isi_kegiatan: string;
+  foto_kegiatan?: string;
+  status_persetujuan: "menunggu" | "disetujui" | "ditolak";
+  catatan_pembimbing?: string;
+  tanggal_disetujui?: string;
   penempatan?: Penempatan;
   created_at?: string;
+  updated_at?: string;
 }
 
 export interface Penilaian {

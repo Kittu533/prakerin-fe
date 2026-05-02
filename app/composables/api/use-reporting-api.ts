@@ -11,6 +11,10 @@ export interface PlacementReportParams {
   limit?: number;
 }
 
+export interface PklStatisticsParams {
+  tahun_ajaran_id?: string;
+}
+
 export interface AttendanceReportParams {
   tanggal_mulai?: string;
   tanggal_selesai?: string;
@@ -170,6 +174,49 @@ export interface TeacherStatistics {
   average_visits_per_teacher: number;
 }
 
+export interface PklAcademicYearOption {
+  id: string;
+  label: string;
+  is_active: boolean;
+}
+
+export interface PklStatisticPoint {
+  label: string;
+  count: number;
+}
+
+export interface PklDepartmentDistributionPoint extends PklStatisticPoint {
+  percentage: number;
+}
+
+export interface PklStatisticsOverview {
+  active_year: PklAcademicYearOption | null;
+  academic_years: PklAcademicYearOption[];
+  quick_stats: {
+    total_students: number;
+    placed_students: number;
+    total_companies: number;
+    active_mous: number;
+    active_companies: number;
+    pending_applications: number;
+    unplaced_students: number;
+  };
+  placement_status: {
+    placed: number;
+    pending_applications: number;
+    unplaced: number;
+  };
+  monthly_trend: PklStatisticPoint[];
+  industry_categories: PklStatisticPoint[];
+  department_distribution: PklDepartmentDistributionPoint[];
+}
+
+export interface SingleDataResponse<T = any> {
+  success: boolean;
+  message?: string;
+  data: T;
+}
+
 export interface ReportResponse<T = any, S = any> {
   success: boolean;
   message?: string;
@@ -189,6 +236,31 @@ export function useReportingApi() {
       (import.meta.client ? localStorage.getItem("token") : "")
     );
   };
+
+  /**
+   * Get SIAP PKL statistics overview
+   */
+  async function getPklStatistics(
+    params: PklStatisticsParams = {},
+  ): Promise<SingleDataResponse<PklStatisticsOverview>> {
+    try {
+      const response = await $fetch<SingleDataResponse<PklStatisticsOverview>>(
+        `${baseURL}/reporting/pkl-statistics`,
+        {
+          method: "GET",
+          params,
+          headers: {
+            Authorization: `Bearer ${getToken()}`,
+          },
+        },
+      );
+
+      return response;
+    } catch (error: any) {
+      console.error("[API] Error fetching PKL statistics:", error);
+      throw error;
+    }
+  }
 
   /**
    * Get placement report
@@ -442,6 +514,7 @@ export function useReportingApi() {
   }
 
   return {
+    getPklStatistics,
     getPlacementReport,
     getAttendanceReport,
     getLogbookReport,

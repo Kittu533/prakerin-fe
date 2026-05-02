@@ -149,7 +149,6 @@ const pageTitle = computed(() => {
         "/admin/reporting/attendance": "Rekap Absensi",
         "/admin/reporting/assessment": "Rekap Nilai & Kelulusan",
         "/admin/reporting/company": "Ketersediaan Kuota",
-        "/admin/reporting/application": "Pengajuan Mandiri",
         "/admin/placement/smart-draft": "Smart Placement Draft",
         "/admin/placement/overview": "Overview Siswa PKL",
         "/admin/archive": "Arsip Penempatan",
@@ -188,20 +187,10 @@ const menuItems: MenuItem[] = [
         icon: "lucide:briefcase",
         label: "SIAP PKL",
         children: [
-            {
-                icon: "lucide:book-open",
-                label: "JURNAL PKL",
-                children: [
-                    { to: "/admin/siap-pkl/jurnal/isi", icon: "lucide:file-edit", label: "ISI JURNAL PKL" },
-                    { to: "/admin/siap-pkl/jurnal/monitoring", icon: "lucide:monitor", label: "MONITORING JURNAL" },
-                ]
-            },
             { to: "/admin/siap-pkl/jurnal/iduka", icon: "lucide:file-text", label: "SURAT KE IDUKA" },
             { to: "/admin/siap-pkl/jurnal/guru", icon: "lucide:file-text", label: "SURAT TUGAS GURU" },
             { to: "/admin/siap-pkl/jurnal/murid", icon: "lucide:file-text", label: "SURAT TUGAS PKL MURID" },
-            { to: "/admin/siap-pkl/kelola-tempat", icon: "lucide:building-2", label: "KELOLA DATA TEMPAT PKL" },
-            { to: "/admin/siap-pkl/statistik", icon: "lucide:bar-chart-3", label: "STATISTIK PKL" },
-            { to: "/admin/siap-pkl/maps", icon: "lucide:map", label: "MAPS" },
+            { to: "/admin/siap-pkl/kelola-tempat", icon: "lucide:user-plus", label: "PLOTTING SISWA PKL" },
         ],
     },
     {
@@ -218,6 +207,11 @@ const menuItems: MenuItem[] = [
                 icon: "lucide:file-signature",
                 label: "Data MOU",
             },
+            {
+                to: "/admin/siap-pkl/maps",
+                icon: "lucide:map",
+                label: "Peta Mitra",
+            },
         ],
     },
     {
@@ -225,14 +219,14 @@ const menuItems: MenuItem[] = [
         label: "Laporan",
         children: [
             {
+                to: "/admin/siap-pkl/statistik",
+                icon: "lucide:bar-chart-3",
+                label: "Statistik PKL",
+            },
+            {
                 to: "/admin/reporting/company",
                 icon: "lucide:building-2",
                 label: "Ketersediaan Kuota",
-            },
-            {
-                to: "/admin/reporting/placement",
-                icon: "lucide:file-text",
-                label: "Master Penempatan",
             },
             {
                 to: "/admin/reporting/attendance",
@@ -243,11 +237,6 @@ const menuItems: MenuItem[] = [
                 to: "/admin/reporting/assessment",
                 icon: "lucide:award",
                 label: "Rekap Nilai",
-            },
-            {
-                to: "/admin/reporting/application",
-                icon: "lucide:file-text",
-                label: "Pengajuan Mandiri",
             },
         ],
     },
