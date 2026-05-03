@@ -26,6 +26,9 @@
                         <UInput
                             v-model="form.tanggal"
                             type="date"
+                            :min="getLocalDateKey()"
+                            :max="getLocalDateKey()"
+                            disabled
                             class="w-full"
                         />
                     </UFormField>
@@ -172,7 +175,7 @@ const logbookApi = useSiswaLogbookApi();
 const penempatanApi = useSiswaPenempatanApi();
 
 const form = reactive({
-    tanggal: new Date().toISOString().split("T")[0],
+    tanggal: getLocalDateKey(),
     jamMulai: "08:00",
     jamSelesai: "16:00",
     judul: "",

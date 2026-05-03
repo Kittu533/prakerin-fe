@@ -34,32 +34,10 @@ interface GroupedPlacement {
   siswaDetails: JurnalGuruParticipant[];
   latestStatus: string;
   stageStatuses: Record<TaskType, JurnalGuruStageSummary>;
+  letters: Record<TaskType, ParsedGuruTaskLetter[]>;
 }
 
 type ParsedGuruTaskLetter = JurnalGuruLetter;
-
-interface MonitoringRow {
-  batchKey: string;
-  batchLabel: string;
-  perusahaanId: string;
-  perusahaanNama: string;
-  alamat: string;
-  periodeMulai: string;
-  periodeSelesai: string;
-  siswaCount: number;
-  participants: JurnalGuruParticipant[];
-  stages: Record<TaskType, ParsedGuruTaskLetter[]>;
-  summary: {
-    totalLetters: number;
-    generatedStages: number;
-    completedStages: number;
-    progressPercent: number;
-    currentStageLabel: string;
-    nextActionLabel: string;
-    nextActionTone: SummaryTone;
-    priority: number;
-  };
-}
 
 interface ParticipantDetailState {
   title: string;
@@ -91,6 +69,7 @@ const activeTaskType = ref<TaskType>("penerjunan");
 const activeTarget = ref<GroupedPlacement | null>(null);
 const detailModalState = ref<ParticipantDetailState | null>(null);
 const editingDraftLetter = ref<ParsedGuruTaskLetter | null>(null);
+const expandedRows = ref<Set<string>>(new Set());
 
 const form = ref({
   guruPelaksanaId: "",
@@ -98,6 +77,18 @@ const form = ref({
   tanggalMulai: "",
   tanggalSelesai: "",
 });
+
+function toggleRow(batchKey: string) {
+  if (expandedRows.value.has(batchKey)) {
+    expandedRows.value.delete(batchKey);
+  } else {
+    expandedRows.value.add(batchKey);
+  }
+}
+
+function isRowExpanded(batchKey: string) {
+  return expandedRows.value.has(batchKey);
+}
 
 const taskTypeLabels: Record<TaskType, string> = {
   penerjunan: "Penerjunan",
@@ -219,14 +210,6 @@ const stageFilterOptions = computed(() => [
   })),
 ]);
 
-function createEmptyStages(): Record<TaskType, ParsedGuruTaskLetter[]> {
-  return {
-    penerjunan: [],
-    monitoring: [],
-    penarikan: [],
-  };
-}
-
 function sortLettersByDate(items: ParsedGuruTaskLetter[]) {
   return [...items].sort(
     (left, right) =>
@@ -252,143 +235,12 @@ function getStageStateLabel(state: MonitoringStageState) {
   return "Diterima";
 }
 
-function getStageStateClass(state: MonitoringStageState) {
-  if (state === "empty") {
-    return "border border-dashed border-slate-200 bg-slate-50 text-slate-400";
-  }
-  if (state === "draft") return "border border-slate-200 bg-slate-100 text-slate-700";
-  if (state === "dikirim") return "border border-blue-200 bg-blue-50 text-blue-700";
-  return "border border-emerald-200 bg-emerald-50 text-emerald-700";
-}
-
 function getStageDotClass(state: MonitoringStageState) {
   if (state === "empty") return "bg-slate-200";
   if (state === "draft") return "bg-slate-500";
   if (state === "dikirim") return "bg-blue-500";
   return "bg-emerald-500";
 }
-
-function getSummaryToneClass(tone: SummaryTone) {
-  if (tone === "amber") return "border border-amber-200 bg-amber-50 text-amber-700";
-  if (tone === "blue") return "border border-blue-200 bg-blue-50 text-blue-700";
-  if (tone === "emerald") return "border border-emerald-200 bg-emerald-50 text-emerald-700";
-  return "border border-slate-200 bg-slate-100 text-slate-700";
-}
-
-function buildRowSummary(stages: Record<TaskType, ParsedGuruTaskLetter[]>) {
-  const stageStates = stageColumns.map((stage) => ({
-    key: stage.key,
-    state: getStageState(stages[stage.key]),
-  }));
-  const latestExistingStage = [...stageColumns]
-    .reverse()
-    .find((stage) => stages[stage.key].length > 0);
-  const generatedStages = stageStates.filter((item) => item.state !== "empty").length;
-  const completedStages = stageStates.filter((item) => item.state === "diterima").length;
-
-  let nextActionLabel = "Belum ada surat yang dibuat";
-  let nextActionTone: SummaryTone = "slate";
-  let priority = 3;
-
-  if (stageStates.some((item) => item.state === "draft")) {
-    nextActionLabel = "Ada surat draft yang perlu dikirim";
-    nextActionTone = "amber";
-    priority = 0;
-  } else if (stageStates.some((item) => item.state === "dikirim")) {
-    nextActionLabel = "Ada surat yang menunggu konfirmasi";
-    nextActionTone = "blue";
-    priority = 1;
-  } else {
-    const firstMissingStage = stageStates.find((item) => item.state === "empty");
-    if (firstMissingStage) {
-      const stageLabel =
-        stageColumns.find((item) => item.key === firstMissingStage.key)?.shortLabel || "tahap";
-      nextActionLabel = `Siapkan surat ${stageLabel.toLowerCase()}`;
-      priority = 2;
-    } else {
-      nextActionLabel = "Siklus surat sudah lengkap";
-      nextActionTone = "emerald";
-      priority = 4;
-    }
-  }
-
-  return {
-    totalLetters: stageColumns.reduce((total, stage) => total + stages[stage.key].length, 0),
-    generatedStages,
-    completedStages,
-    progressPercent: Math.round((generatedStages / stageColumns.length) * 100),
-    currentStageLabel: latestExistingStage
-      ? `Tahap aktif: ${getTaskTypeLabel(latestExistingStage.key)}`
-      : "Belum ada surat",
-    nextActionLabel,
-    nextActionTone,
-    priority,
-  };
-}
-
-const groupedTaskLetters = computed<MonitoringRow[]>(() => {
-  const groups = new Map<string, MonitoringRow>();
-
-  for (const item of filteredTaskLetters.value) {
-    const key = item.batch_key;
-    if (!groups.has(key)) {
-      groups.set(key, {
-        batchKey: item.batch_key,
-        batchLabel: item.batch_label,
-        perusahaanId: item.meta.perusahaan_id,
-        perusahaanNama: item.meta.perusahaan_nama,
-        alamat: item.meta.perusahaan_alamat || "",
-        periodeMulai: item.batch_mulai,
-        periodeSelesai: item.batch_selesai,
-        siswaCount: item.participants.length,
-        participants: item.participants,
-        stages: createEmptyStages(),
-        summary: {
-          totalLetters: 0,
-          generatedStages: 0,
-          completedStages: 0,
-          progressPercent: 0,
-          currentStageLabel: "Belum ada surat",
-          nextActionLabel: "Belum ada surat yang dibuat",
-          nextActionTone: "slate",
-          priority: 99,
-        },
-      });
-    }
-
-    groups.get(key)?.stages[item.meta.task_type].push(item);
-  }
-
-  return Array.from(groups.values())
-    .map((row) => ({
-      ...row,
-      stages: {
-        penerjunan: sortLettersByDate(row.stages.penerjunan),
-        monitoring: sortLettersByDate(row.stages.monitoring),
-        penarikan: sortLettersByDate(row.stages.penarikan),
-      },
-    }))
-    .map((row) => ({
-      ...row,
-      summary: buildRowSummary(row.stages),
-    }))
-    .sort((left, right) => {
-      if (left.summary.priority !== right.summary.priority) {
-        return left.summary.priority - right.summary.priority;
-      }
-      const companyDiff = left.perusahaanNama.localeCompare(right.perusahaanNama);
-      if (companyDiff !== 0) return companyDiff;
-      return left.periodeMulai.localeCompare(right.periodeMulai);
-    });
-});
-
-const monitoringStats = computed(() => ({
-  totalBatch: groupedTaskLetters.value.length,
-  totalVisibleLetters: filteredTaskLetters.value.length,
-  needSending: filteredTaskLetters.value.filter((item) => item.surat.status === "draft").length,
-  waitingConfirmation: filteredTaskLetters.value.filter((item) => item.surat.status === "dikirim")
-    .length,
-}));
 
 const stats = computed(() => ({
   totalTarget: placementRows.value.length,
@@ -425,10 +277,6 @@ function getStatusBadgeClass(status: SuratKeluarStatus) {
   if (status === "draft") return "bg-slate-100 text-slate-700 border border-slate-200";
   if (status === "dikirim") return "bg-blue-100 text-blue-700 border border-blue-200";
   return "bg-emerald-100 text-emerald-700 border border-emerald-200";
-}
-
-function getStageItems(row: MonitoringRow, stage: TaskType) {
-  return row.stages[stage];
 }
 
 function getTargetStageSummary(row: GroupedPlacement, stage: TaskType) {
@@ -590,21 +438,41 @@ async function loadData(showRefreshToast = false) {
     guruPelaksanaList.value = response.data.options.guru_pelaksana || [];
     guruPenandatanganList.value = response.data.options.penandatangan || [];
     taskLetters.value = response.data.letters || [];
-    placementRows.value = (response.data.targets || []).map((item) => ({
-      targetKey: item.target_key,
-      batchLabel: item.batch_label,
-      perusahaanId: item.perusahaan_id,
-      perusahaanNama: item.perusahaan_nama,
-      alamat: item.alamat,
-      periodeMulai: item.periode_mulai,
-      periodeSelesai: item.periode_selesai,
-      siswaCount: item.siswa_count,
-      placementIds: item.penempatan_ids,
-      siswaSummary: item.siswa_summary,
-      siswaDetails: item.siswa_details,
-      latestStatus: item.latest_status,
-      stageStatuses: item.stage_statuses,
-    }));
+    placementRows.value = (response.data.targets || []).map((item) => {
+      const letters: Record<TaskType, ParsedGuruTaskLetter[]> = {
+        penerjunan: [],
+        monitoring: [],
+        penarikan: [],
+      };
+
+      taskLetters.value.forEach((letter) => {
+        if (letter.batch_key === item.target_key) {
+          letters[letter.meta.task_type].push(letter);
+        }
+      });
+
+      // Sort letters by date within each stage
+      (Object.keys(letters) as TaskType[]).forEach((stage) => {
+        letters[stage] = sortLettersByDate(letters[stage]);
+      });
+
+      return {
+        targetKey: item.target_key,
+        batchLabel: item.batch_label,
+        perusahaanId: item.perusahaan_id,
+        perusahaanNama: item.perusahaan_nama,
+        alamat: item.alamat,
+        periodeMulai: item.periode_mulai,
+        periodeSelesai: item.periode_selesai,
+        siswaCount: item.siswa_count,
+        placementIds: item.penempatan_ids,
+        siswaSummary: item.siswa_summary,
+        siswaDetails: item.siswa_details,
+        latestStatus: item.latest_status,
+        stageStatuses: item.stage_statuses,
+        letters,
+      };
+    });
 
     if (showRefreshToast) {
       toast.add({
@@ -783,31 +651,70 @@ useHead({
       </div>
 
       <div class="overflow-hidden rounded-3xl border border-slate-100 bg-white shadow-sm">
-        <div class="border-b border-slate-100 bg-slate-50 px-6 py-5">
-          <div class="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-            <div>
-              <h2 class="text-sm font-black uppercase tracking-[0.25em] text-slate-700">
-                Data Pengajuan Penugasan
-              </h2>
-              <p class="mt-1 text-xs font-medium text-slate-500">
-                Data ini dipisah per mitra dan periode. Satu stage hanya bisa punya satu surat untuk satu batch.
-              </p>
+        <div class="border-b border-slate-100 bg-slate-50 px-8 py-6">
+          <div class="flex flex-col gap-6">
+            <div class="flex flex-col gap-2 xl:flex-row xl:items-center xl:justify-between">
+              <div>
+                <h2 class="text-sm font-black uppercase tracking-[0.25em] text-slate-700">
+                  Data Penugasan Guru PKL
+                </h2>
+                <p class="mt-1 text-xs font-medium text-slate-500">
+                  Kelola surat tugas per batch penempatan. Klik baris untuk melihat histori surat.
+                </p>
+              </div>
+
+              <div class="flex flex-wrap items-center gap-3">
+                <div class="relative flex-1 min-w-[300px]">
+                  <input
+                    v-model="industriSearch"
+                    type="text"
+                    placeholder="Cari mitra, batch, atau siswa..."
+                    class="w-full rounded-2xl border border-slate-200 bg-white pl-11 pr-4 py-3 text-sm font-medium text-slate-700 outline-none transition focus:border-sky-400 focus:ring-4 focus:ring-sky-50"
+                  />
+                  <div class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                  </div>
+                </div>
+                <button
+                  class="rounded-2xl bg-white border border-slate-200 px-5 py-3 text-[10px] font-black uppercase tracking-[0.2em] text-slate-600 transition hover:bg-slate-50 active:scale-95"
+                  :disabled="loading"
+                  @click="loadData(true)"
+                >
+                  Refresh Data
+                </button>
+              </div>
             </div>
 
-            <div class="flex items-center gap-3">
-              <input
-                v-model="industriSearch"
-                type="text"
-                placeholder="Cari mitra, batch, atau siswa..."
-                class="w-full min-w-[260px] rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 outline-none transition focus:border-sky-400 focus:ring-2 focus:ring-sky-100"
-              />
-              <button
-                class="rounded-2xl border border-slate-200 px-4 py-3 text-xs font-black uppercase tracking-[0.2em] text-slate-600 transition hover:bg-slate-100"
-                :disabled="loading"
-                @click="loadData(true)"
-              >
-                Refresh
-              </button>
+            <div class="flex flex-wrap items-center gap-6 border-t border-slate-100 pt-6">
+              <div class="flex flex-wrap items-center gap-2">
+                <span class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mr-2">Filter Tahap:</span>
+                <button
+                  v-for="option in stageFilterOptions"
+                  :key="option.value"
+                  class="rounded-full px-4 py-1.5 text-[10px] font-black uppercase tracking-[0.2em] transition-all"
+                  :class="stageFilter === option.value ? 'bg-sky-600 text-white shadow-md shadow-sky-100' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'"
+                  @click="stageFilter = option.value"
+                >
+                  {{ option.label }}
+                </button>
+              </div>
+
+              <div class="h-6 w-px bg-slate-200 hidden xl:block" />
+
+              <div class="flex flex-wrap items-center gap-2">
+                <span class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mr-2">Status Surat:</span>
+                <button
+                  v-for="option in statusFilterOptions"
+                  :key="option.value"
+                  class="rounded-full px-4 py-1.5 text-[10px] font-black uppercase tracking-[0.2em] transition-all"
+                  :class="statusFilter === option.value ? 'bg-slate-800 text-white shadow-md shadow-slate-200' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'"
+                  @click="statusFilter = option.value"
+                >
+                  {{ option.label }}
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -815,414 +722,211 @@ useHead({
         <div class="overflow-x-auto">
           <table class="w-full min-w-[1260px] border-collapse text-left">
             <thead>
-              <tr class="border-b border-slate-100 text-[10px] font-black uppercase tracking-[0.25em] text-slate-500">
-                <th class="px-6 py-5">Batch PKL</th>
-                <th class="px-6 py-5">Industri / IDUKA</th>
-                <th class="px-6 py-5">Peserta</th>
-                <th class="px-6 py-5">Workflow Batch</th>
-                <th class="px-6 py-5 text-center">Buat Surat Tugas</th>
+              <tr class="border-b border-slate-100 bg-slate-50/50 text-[10px] font-black uppercase tracking-[0.25em] text-slate-400">
+                <th class="px-8 py-5">Informasi Batch & Industri</th>
+                <th class="px-8 py-5">Peserta</th>
+                <th class="px-8 py-5 text-center">Workflow Status</th>
+                <th class="px-8 py-5 text-center">Aksi Cepat</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-slate-100">
-              <tr v-if="loading">
-                <td colspan="5" class="px-6 py-10 text-center text-sm text-slate-500">
-                  Memuat data penempatan dan surat tugas guru...
-                </td>
-              </tr>
-              <tr v-else-if="filteredPlacements.length === 0">
-                <td colspan="5" class="px-6 py-10 text-center text-sm text-slate-500">
-                  Belum ada batch penempatan yang bisa dijadikan target surat tugas guru.
-                </td>
-              </tr>
-              <tr
-                v-for="row in filteredPlacements"
-                v-else
-                :key="row.targetKey"
-                class="align-top transition hover:bg-slate-50/60"
-              >
-                <td class="px-6 py-6">
-                  <div class="space-y-2">
-                    <div class="inline-flex rounded-full bg-slate-900 px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-white">
-                      {{ row.batchLabel }}
-                    </div>
-                    <div class="text-xs font-medium text-slate-500">
-                      {{ formatPeriod(row.periodeMulai, row.periodeSelesai) }}
-                    </div>
-                  </div>
-                </td>
-                <td class="px-6 py-6">
-                  <div class="max-w-[320px] space-y-2">
-                    <div class="text-sm font-black leading-snug text-sky-700">
-                      {{ row.perusahaanNama }}
-                    </div>
-                    <div class="text-xs font-medium leading-relaxed text-slate-500">
-                      {{ row.alamat }}
-                    </div>
-                  </div>
-                </td>
-                <td class="px-6 py-6">
-                  <div class="space-y-3">
-                    <div class="inline-flex rounded-full bg-slate-900 px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-white">
-                      {{ row.siswaCount }} Siswa
-                    </div>
-                    <div class="max-w-[280px] text-xs font-medium leading-relaxed text-slate-500">
-                      {{ row.siswaSummary.join(", ") }}
-                    </div>
-                    <button
-                      class="rounded-full border border-slate-200 bg-white px-3 py-2 text-[10px] font-black uppercase tracking-[0.18em] text-slate-600 transition hover:bg-slate-100"
-                      @click="openTargetParticipants(row)"
-                    >
-                      Lihat Detail Siswa
-                    </button>
-                  </div>
-                </td>
-                <td class="px-6 py-6">
-                  <div class="space-y-2">
-                    <span class="inline-flex rounded-full border border-slate-200 bg-slate-100 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.25em] text-slate-700">
-                      {{ row.latestStatus }}
-                    </span>
-                    <div class="grid gap-2">
+              <template v-for="row in filteredPlacements" :key="row.targetKey">
+                <tr
+                  class="group cursor-pointer align-top transition-colors hover:bg-slate-50"
+                  :class="isRowExpanded(row.targetKey) ? 'bg-slate-50/50' : ''"
+                  @click="toggleRow(row.targetKey)"
+                >
+                  <td class="px-8 py-6">
+                    <div class="flex items-start gap-4">
                       <div
-                        v-for="stage in stageColumns"
-                        :key="`${row.targetKey}-status-${stage.key}`"
-                        class="rounded-xl border border-slate-200 bg-white px-3 py-2"
+                        class="mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-400 transition-colors group-hover:border-sky-200 group-hover:bg-sky-50 group-hover:text-sky-500"
+                        :class="isRowExpanded(row.targetKey) ? 'border-sky-200 bg-sky-50 text-sky-500' : ''"
                       >
-                        <div class="flex items-center justify-between gap-3">
-                          <span class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-600">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 transition-transform" :class="isRowExpanded(row.targetKey) ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </div>
+                      <div class="space-y-1.5">
+                        <div class="flex items-center gap-2">
+                          <span class="rounded-lg bg-slate-900 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-white">
+                            {{ row.batchLabel }}
+                          </span>
+                          <span class="text-xs font-semibold text-slate-400">
+                            {{ formatPeriod(row.periodeMulai, row.periodeSelesai) }}
+                          </span>
+                        </div>
+                        <div class="text-base font-bold tracking-tight text-slate-800">
+                          {{ row.perusahaanNama }}
+                        </div>
+                        <div class="max-w-[300px] text-xs font-medium leading-relaxed text-slate-500">
+                          {{ row.alamat }}
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="px-8 py-6">
+                    <div class="space-y-3">
+                      <div class="flex items-center gap-2">
+                        <div class="flex -space-x-2">
+                          <div v-for="i in Math.min(row.siswaCount, 3)" :key="i" class="h-8 w-8 rounded-full border-2 border-white bg-slate-100 flex items-center justify-center text-[10px] font-bold text-slate-400">
+                            {{ i }}
+                          </div>
+                        </div>
+                        <span class="text-xs font-bold text-slate-700">{{ row.siswaCount }} Peserta</span>
+                      </div>
+                      <div class="max-w-[240px] truncate text-[11px] font-medium text-slate-500" :title="row.siswaSummary.join(', ')">
+                        {{ row.siswaSummary.join(", ") }}
+                      </div>
+                      <button
+                        class="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-slate-600 transition hover:bg-slate-50 active:scale-95"
+                        @click.stop="openTargetParticipants(row)"
+                      >
+                        Detail Peserta
+                      </button>
+                    </div>
+                  </td>
+                  <td class="px-8 py-6">
+                    <div class="flex flex-col items-center gap-4">
+                      <!-- Stepper -->
+                      <div class="relative flex w-full max-w-[360px] items-center justify-between">
+                        <!-- Line -->
+                        <div class="absolute left-0 top-1/2 h-[2px] w-full -translate-y-1/2 bg-slate-100" />
+                        
+                        <div
+                          v-for="(stage, idx) in stageColumns"
+                          :key="stage.key"
+                          class="relative z-10 flex flex-col items-center gap-2"
+                        >
+                          <div
+                            class="flex h-10 w-10 items-center justify-center rounded-full border-4 transition-all"
+                            :class="[
+                              getTargetStageSummary(row, stage.key).exists ? 'bg-white' : 'bg-slate-50',
+                              getTargetStageSummary(row, stage.key).state === 'diterima' ? 'border-emerald-500 text-emerald-500' : 
+                              getTargetStageSummary(row, stage.key).state === 'dikirim' ? 'border-blue-500 text-blue-500' : 
+                              getTargetStageSummary(row, stage.key).state === 'draft' ? 'border-amber-500 text-amber-500' : 
+                              'border-slate-100 text-slate-300'
+                            ]"
+                          >
+                            <span v-if="getTargetStageSummary(row, stage.key).state === 'diterima'" class="text-lg font-bold">✓</span>
+                            <span v-else class="text-xs font-black">{{ idx + 1 }}</span>
+                          </div>
+                          <span class="text-[10px] font-black uppercase tracking-wider text-slate-500">
                             {{ stage.shortLabel }}
                           </span>
-                          <span
-                            class="rounded-full px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.18em]"
-                            :class="getStageStateClass(getTargetStageSummary(row, stage.key).state)"
-                          >
-                            {{ getStageStateLabel(getTargetStageSummary(row, stage.key).state) }}
-                          </span>
                         </div>
-                        <div class="mt-2 text-[11px] font-medium text-slate-500">
-                          {{ getTargetStageHint(row, stage.key) }}
-                        </div>
+                      </div>
+                      <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                        Status: {{ row.latestStatus }}
                       </div>
                     </div>
-                  </div>
-                </td>
-                <td class="px-6 py-6">
-                  <div class="grid gap-2">
-                    <button
-                      v-for="stage in stageColumns"
-                      :key="`${row.targetKey}-action-${stage.key}`"
-                      class="rounded-xl px-3 py-2 text-[10px] font-black uppercase tracking-[0.2em] transition disabled:cursor-not-allowed disabled:opacity-100"
-                      :class="getTargetStageActionClass(row, stage.key)"
-                      :disabled="!canCreateStage(row, stage.key) && !canReviseStage(row, stage.key)"
-                      @click="openConfigModal(stage.key, row)"
-                    >
-                      {{ getTargetStageActionLabel(row, stage.key) }}
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <div class="overflow-hidden rounded-3xl border border-slate-100 bg-white shadow-sm">
-        <div class="border-b border-slate-100 bg-slate-50 px-6 py-5">
-          <div class="flex flex-col gap-5">
-            <div>
-              <h2 class="text-sm font-black uppercase tracking-[0.25em] text-slate-700">
-                Monitoring Progres Surat Tugas Guru
-              </h2>
-              <p class="mt-1 text-xs font-medium text-slate-500">
-                Histori surat ditampilkan per batch. Jadi dua gelombang berbeda di mitra yang sama tetap terbaca terpisah.
-              </p>
-            </div>
-
-            <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-              <div class="rounded-2xl border border-slate-200 bg-white p-4">
-                <div class="text-[10px] font-black uppercase tracking-[0.25em] text-slate-500">Batch Tampil</div>
-                <div class="mt-2 text-2xl font-black text-slate-900">{{ monitoringStats.totalBatch }}</div>
-              </div>
-              <div class="rounded-2xl border border-violet-100 bg-violet-50 p-4">
-                <div class="text-[10px] font-black uppercase tracking-[0.25em] text-violet-500">Surat Terlihat</div>
-                <div class="mt-2 text-2xl font-black text-violet-700">{{ monitoringStats.totalVisibleLetters }}</div>
-              </div>
-              <div class="rounded-2xl border border-amber-100 bg-amber-50 p-4">
-                <div class="text-[10px] font-black uppercase tracking-[0.25em] text-amber-500">Butuh Dikirim</div>
-                <div class="mt-2 text-2xl font-black text-amber-700">{{ monitoringStats.needSending }}</div>
-              </div>
-              <div class="rounded-2xl border border-blue-100 bg-blue-50 p-4">
-                <div class="text-[10px] font-black uppercase tracking-[0.25em] text-blue-500">Menunggu Konfirmasi</div>
-                <div class="mt-2 text-2xl font-black text-blue-700">{{ monitoringStats.waitingConfirmation }}</div>
-              </div>
-            </div>
-
-            <div class="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
-              <div class="space-y-4">
-                <div>
-                  <div class="text-[10px] font-black uppercase tracking-[0.25em] text-slate-500">Filter Status</div>
-                  <div class="mt-2 flex flex-wrap items-center gap-2">
-                    <button
-                      v-for="option in statusFilterOptions"
-                      :key="option.value"
-                      class="rounded-full px-4 py-2 text-[10px] font-black uppercase tracking-[0.2em] transition"
-                      :class="statusFilter === option.value ? 'bg-slate-900 text-white' : 'border border-slate-200 bg-white text-slate-500 hover:bg-slate-100'"
-                      @click="statusFilter = option.value"
-                    >
-                      {{ option.label }} ({{ option.count }})
-                    </button>
-                  </div>
-                </div>
-
-                <div>
-                  <div class="text-[10px] font-black uppercase tracking-[0.25em] text-slate-500">Filter Tahap</div>
-                  <div class="mt-2 flex flex-wrap items-center gap-2">
-                    <button
-                      v-for="option in stageFilterOptions"
-                      :key="option.value"
-                      class="rounded-full px-4 py-2 text-[10px] font-black uppercase tracking-[0.2em] transition"
-                      :class="stageFilter === option.value ? 'bg-sky-700 text-white' : 'border border-sky-100 bg-sky-50 text-sky-700 hover:bg-sky-100'"
-                      @click="stageFilter = option.value"
-                    >
-                      {{ option.label }} ({{ option.count }})
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              <div class="flex w-full flex-col gap-3 xl:max-w-xl xl:items-end">
-                <input
-                  v-model="suratSearch"
-                  type="text"
-                  placeholder="Cari nomor surat, batch, mitra, guru, atau siswa..."
-                  class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 outline-none transition focus:border-sky-400 focus:ring-2 focus:ring-sky-100"
-                />
-                <div class="flex flex-wrap items-center justify-end gap-2 text-[11px] font-medium text-slate-500">
-                  <span>Menampilkan {{ groupedTaskLetters.length }} batch dan {{ filteredTaskLetters.length }} surat.</span>
-                  <button
-                    class="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.2em] text-slate-600 transition hover:bg-slate-100"
-                    @click="resetMonitoringFilters"
-                  >
-                    Reset Filter
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="overflow-x-auto">
-          <table class="w-full min-w-[1420px] border-collapse text-left">
-            <thead>
-              <tr class="border-b border-slate-100 text-[10px] font-black uppercase tracking-[0.25em] text-slate-500">
-                <th class="px-6 py-5">Batch & Ringkasan</th>
-                <th v-for="stage in stageColumns" :key="stage.key" class="px-6 py-5 text-center">
-                  {{ stage.orderLabel }}. {{ stage.shortLabel }}
-                </th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-slate-100">
-              <tr v-if="loading">
-                <td colspan="4" class="px-6 py-10 text-center text-sm text-slate-500">
-                  Memuat histori surat tugas guru...
-                </td>
-              </tr>
-              <tr v-else-if="groupedTaskLetters.length === 0">
-                <td colspan="4" class="px-6 py-10 text-center text-sm text-slate-500">
-                  <div class="space-y-3">
-                    <div>Tidak ada surat tugas guru yang cocok dengan filter saat ini.</div>
-                    <button
-                      class="rounded-full border border-slate-200 bg-white px-4 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-slate-600 transition hover:bg-slate-100"
-                      @click="resetMonitoringFilters"
-                    >
-                      Tampilkan Semua Data
-                    </button>
-                  </div>
-                </td>
-              </tr>
-              <tr
-                v-for="row in groupedTaskLetters"
-                v-else
-                :key="row.batchKey"
-                class="align-top transition hover:bg-slate-50/60"
-              >
-                <td class="px-6 py-6">
-                  <div class="max-w-[360px] space-y-4">
-                    <div>
-                      <div class="inline-flex rounded-full bg-slate-900 px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-white">
-                        {{ row.batchLabel }}
-                      </div>
-                      <div class="mt-3 text-sm font-black text-sky-700">
-                        {{ row.perusahaanNama }}
-                      </div>
-                      <div class="mt-1 text-xs font-medium leading-relaxed text-slate-500">
-                        {{ row.alamat || "-" }}
-                      </div>
-                      <div class="mt-2 text-[11px] font-medium text-slate-500">
-                        {{ formatPeriod(row.periodeMulai, row.periodeSelesai) }} • {{ row.siswaCount }} siswa
-                      </div>
-                    </div>
-
-                    <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                      <div class="flex items-center justify-between gap-3">
-                        <div class="text-[10px] font-black uppercase tracking-[0.25em] text-slate-500">
-                          Progress Workflow
-                        </div>
-                        <div class="text-xs font-black text-slate-700">
-                          {{ row.summary.generatedStages }}/{{ stageColumns.length }} tahap
-                        </div>
-                      </div>
-                      <div class="mt-3 h-2 overflow-hidden rounded-full bg-slate-200">
-                        <div class="h-full rounded-full bg-sky-600 transition-all" :style="{ width: `${row.summary.progressPercent}%` }" />
-                      </div>
-                      <div class="mt-3 grid gap-2">
-                        <div
-                          v-for="stage in stageColumns"
-                          :key="stage.key"
-                          class="flex items-center justify-between rounded-xl bg-white px-3 py-2"
-                        >
-                          <div class="flex items-center gap-2">
-                            <span class="h-2.5 w-2.5 rounded-full" :class="getStageDotClass(getStageState(getStageItems(row, stage.key)))" />
-                            <span class="text-[11px] font-black uppercase tracking-[0.18em] text-slate-600">
-                              {{ stage.shortLabel }}
-                            </span>
-                          </div>
-                          <span
-                            class="rounded-full px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.18em]"
-                            :class="getStageStateClass(getStageState(getStageItems(row, stage.key)))"
-                          >
-                            {{ getStageStateLabel(getStageState(getStageItems(row, stage.key))) }}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div class="flex flex-wrap gap-2">
-                      <span
-                        class="inline-flex rounded-full px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.2em]"
-                        :class="getSummaryToneClass(row.summary.nextActionTone)"
-                      >
-                        {{ row.summary.nextActionLabel }}
-                      </span>
-                      <span class="inline-flex rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.2em] text-slate-600">
-                        {{ row.summary.currentStageLabel }}
-                      </span>
-                    </div>
-
-                    <div class="flex flex-wrap items-center gap-2">
+                  </td>
+                  <td class="px-8 py-6">
+                    <div class="flex flex-col gap-2">
                       <button
-                        class="rounded-full border border-slate-200 bg-white px-3 py-2 text-[10px] font-black uppercase tracking-[0.18em] text-slate-600 transition hover:bg-slate-100"
-                        @click="openParticipantModal({
-                          title: `Peserta Batch ${row.batchLabel}`,
-                          subtitle: 'Daftar siswa batch ini terhubung ke surat tugas yang tampil di tabel monitoring.',
-                          perusahaanNama: row.perusahaanNama,
-                          batchLabel: row.batchLabel,
-                          participants: row.participants,
-                          sourceLabel: 'Monitoring batch',
-                        })"
+                        v-for="stage in stageColumns"
+                        :key="stage.key"
+                        class="group/btn flex items-center justify-between gap-3 rounded-xl border px-4 py-2.5 transition-all active:scale-95"
+                        :class="[
+                          !getTargetStageSummary(row, stage.key).exists ? 'border-slate-200 bg-white hover:border-sky-300 hover:bg-sky-50' : 
+                          getTargetStageSummary(row, stage.key).state === 'draft' ? 'border-amber-200 bg-amber-50 hover:bg-amber-100' : 
+                          'border-slate-100 bg-slate-50 opacity-60 cursor-not-allowed'
+                        ]"
+                        :disabled="!canCreateStage(row, stage.key) && !canReviseStage(row, stage.key)"
+                        @click.stop="openConfigModal(stage.key, row)"
                       >
-                        Lihat Detail Siswa
+                        <span
+                          class="text-[10px] font-black uppercase tracking-wider transition-colors"
+                          :class="[
+                            !getTargetStageSummary(row, stage.key).exists ? 'text-slate-600 group-hover/btn:text-sky-600' : 
+                            getTargetStageSummary(row, stage.key).state === 'draft' ? 'text-amber-700' : 
+                            'text-slate-400'
+                          ]"
+                        >
+                          {{ getTargetStageActionLabel(row, stage.key) }}
+                        </span>
+                        <svg v-if="!getTargetStageSummary(row, stage.key).exists || getTargetStageSummary(row, stage.key).state === 'draft'" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-slate-400 group-hover/btn:text-sky-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                        </svg>
                       </button>
-                      <span class="text-[11px] font-medium text-slate-500">
-                        {{ row.summary.totalLetters }} surat tercatat untuk batch ini.
-                      </span>
                     </div>
-                  </div>
-                </td>
-                <td
-                  v-for="stage in stageColumns"
-                  :key="`${row.batchKey}-${stage.key}`"
-                  class="px-6 py-6"
-                >
-                  <div class="space-y-3">
-                    <div
-                      v-for="item in getStageItems(row, stage.key)"
-                      :key="item.surat.id"
-                      class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
-                    >
-                      <div class="flex items-start justify-between gap-3">
-                        <div class="space-y-2">
-                          <div class="flex flex-wrap items-center gap-2">
-                            <span class="rounded-full px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.2em]" :class="getTaskBadgeClass(item.meta.task_type)">
-                              {{ getTaskTypeLabel(item.meta.task_type) }}
-                            </span>
-                            <span class="rounded-full px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.2em]" :class="getStatusBadgeClass(item.surat.status)">
-                              {{ item.surat.status }}
-                            </span>
+                  </td>
+                </tr>
+
+                <!-- Expanded Detail -->
+                <tr v-if="isRowExpanded(row.targetKey)" class="bg-slate-50/30">
+                  <td colspan="4" class="px-8 py-0">
+                    <div class="mb-8 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                      <div class="flex items-center justify-between border-b border-slate-100 bg-slate-50/50 px-6 py-4">
+                        <h3 class="text-xs font-black uppercase tracking-wider text-slate-700">Histori Surat Tugas Guru</h3>
+                        <span class="text-[10px] font-bold text-slate-400">{{ row.letters.penerjunan.length + row.letters.monitoring.length + row.letters.penarikan.length }} Surat Ditemukan</span>
+                      </div>
+                      
+                      <div class="p-6">
+                        <div class="grid grid-cols-3 gap-6">
+                          <div v-for="stage in stageColumns" :key="stage.key" class="space-y-4">
+                            <div class="flex items-center gap-2 border-b border-slate-100 pb-2">
+                              <span class="h-2 w-2 rounded-full" :class="getStageDotClass(getStageState(row.letters[stage.key]))"></span>
+                              <h4 class="text-[11px] font-black uppercase tracking-widest text-slate-500">{{ stage.shortLabel }}</h4>
+                            </div>
+
+                            <div v-if="row.letters[stage.key].length === 0" class="flex flex-col items-center justify-center rounded-xl border border-dashed border-slate-200 py-8 text-center">
+                              <span class="text-[10px] font-bold text-slate-400 uppercase">Belum ada surat</span>
+                            </div>
+
+                            <div v-for="letter in row.letters[stage.key]" :key="letter.surat.id" class="space-y-3 rounded-xl border border-slate-200 bg-slate-50/30 p-4">
+                              <div class="flex items-start justify-between">
+                                <span class="rounded-lg px-2 py-0.5 text-[9px] font-black uppercase tracking-wider shadow-sm" :class="getStatusBadgeClass(letter.surat.status)">
+                                  {{ letter.surat.status }}
+                                </span>
+                                <span class="text-[9px] font-bold text-slate-400">{{ formatDate(letter.surat.tanggal_surat) }}</span>
+                              </div>
+                              
+                              <div class="space-y-1">
+                                <div class="text-[13px] font-bold text-slate-800">{{ letter.meta.guru_pelaksana_nama }}</div>
+                                <div class="text-[10px] font-medium text-slate-500">{{ letter.surat.nomor_surat }}</div>
+                              </div>
+
+                              <div class="flex flex-wrap gap-1.5 pt-2">
+                                <button
+                                  class="flex-1 rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-[9px] font-black uppercase tracking-tighter text-slate-600 transition hover:bg-slate-50"
+                                  @click="openLetterParticipants(letter)"
+                                >
+                                  Siswa
+                                </button>
+                                <button
+                                  class="flex-1 rounded-lg border border-sky-200 bg-sky-50 px-2 py-1.5 text-[9px] font-black uppercase tracking-tighter text-sky-700 transition hover:bg-sky-100"
+                                  @click="downloadFile(letter.surat.file_surat_pdf || letter.surat.file_surat)"
+                                >
+                                  PDF
+                                </button>
+                                <button
+                                  v-if="letter.surat.status === 'draft'"
+                                  class="flex-1 rounded-lg border border-blue-200 bg-blue-600 px-2 py-1.5 text-[9px] font-black uppercase tracking-tighter text-white transition hover:bg-blue-700"
+                                  @click="updateLetterStatus(letter, 'dikirim')"
+                                >
+                                  Kirim
+                                </button>
+                                <button
+                                  v-if="letter.surat.status === 'dikirim'"
+                                  class="flex-1 rounded-lg border border-emerald-200 bg-emerald-600 px-2 py-1.5 text-[9px] font-black uppercase tracking-tighter text-white transition hover:bg-emerald-700"
+                                  @click="updateLetterStatus(letter, 'diterima')"
+                                >
+                                  Terima
+                                </button>
+                              </div>
+                            </div>
                           </div>
-                          <div class="text-sm font-black text-slate-800">{{ item.meta.guru_pelaksana_nama }}</div>
-                        </div>
-                        <div class="text-right text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
-                          {{ formatDate(item.surat.tanggal_surat) }}
                         </div>
                       </div>
-
-                      <div class="mt-3 space-y-1 text-[11px] font-medium text-slate-500">
-                        <div>{{ item.surat.nomor_surat }}</div>
-                        <div>{{ item.surat.perihal }}</div>
-                        <div>Batch: {{ item.batch_label }}</div>
-                        <div>Periode tugas: {{ formatPeriod(item.meta.tanggal_mulai, item.meta.tanggal_selesai) }}</div>
-                      </div>
-
-                      <div class="mt-4 flex flex-wrap gap-2">
-                        <button
-                          class="rounded-full border border-slate-200 bg-white px-3 py-2 text-[10px] font-black uppercase tracking-[0.18em] text-slate-600 transition hover:bg-slate-100"
-                          @click="openLetterParticipants(item)"
-                        >
-                          Lihat Siswa
-                        </button>
-                        <button
-                          v-if="item.surat.status === 'draft' && getTargetByBatchKey(item.batch_key)"
-                          class="rounded-full border border-amber-200 bg-amber-50 px-3 py-2 text-[10px] font-black uppercase tracking-[0.18em] text-amber-700 transition hover:bg-amber-100"
-                          @click="openConfigModal(item.meta.task_type, getTargetByBatchKey(item.batch_key)!)"
-                        >
-                          Revisi Draft
-                        </button>
-                        <button
-                          class="rounded-full border border-blue-200 bg-blue-50 px-3 py-2 text-[10px] font-black uppercase tracking-[0.18em] text-blue-700 transition hover:bg-blue-100"
-                          @click="downloadFile(item.surat.file_surat_docx)"
-                        >
-                          Buka DOCX
-                        </button>
-                        <button
-                          class="rounded-full border border-rose-200 bg-rose-50 px-3 py-2 text-[10px] font-black uppercase tracking-[0.18em] text-rose-700 transition hover:bg-rose-100"
-                          @click="downloadFile(item.surat.file_surat_pdf || item.surat.file_surat)"
-                        >
-                          Buka PDF
-                        </button>
-                        <button
-                          v-if="item.surat.status === 'draft'"
-                          class="rounded-full border border-slate-200 bg-slate-100 px-3 py-2 text-[10px] font-black uppercase tracking-[0.18em] text-slate-700 transition hover:bg-slate-200"
-                          @click="updateLetterStatus(item, 'dikirim')"
-                        >
-                          Tandai Dikirim
-                        </button>
-                        <button
-                          v-if="item.surat.status === 'dikirim'"
-                          class="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-2 text-[10px] font-black uppercase tracking-[0.18em] text-emerald-700 transition hover:bg-emerald-100"
-                          @click="updateLetterStatus(item, 'diterima')"
-                        >
-                          Tandai Diterima
-                        </button>
-                      </div>
                     </div>
-                    <div
-                      v-if="getStageItems(row, stage.key).length === 0"
-                      class="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-5 text-center"
-                    >
-                      <div class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
-                        {{ stage.emptyLabel }}
-                      </div>
-                      <div class="mt-2 text-xs font-medium text-slate-400">
-                        Surat tahap ini belum dibuat untuk batch ini.
-                      </div>
-                    </div>
-                  </div>
-                </td>
-              </tr>
+                  </td>
+                </tr>
+              </template>
             </tbody>
           </table>
         </div>
       </div>
+
     </div>
 
     <UModal

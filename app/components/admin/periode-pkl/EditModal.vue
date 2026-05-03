@@ -83,6 +83,7 @@ const canEdit = computed(() => {
 const currentStatusConfig = computed(() => {
     return statusConfig[formData.value.status] || statusConfig.draft;
 });
+const today = computed(() => getLocalDateKey());
 
 // Validate form
 const validateForm = (): boolean => {
@@ -107,6 +108,16 @@ const validateForm = (): boolean => {
     if (formData.value.tanggal_mulai && formData.value.tanggal_selesai) {
         const start = new Date(formData.value.tanggal_mulai);
         const end = new Date(formData.value.tanggal_selesai);
+
+        if (formData.value.tanggal_mulai < today.value) {
+            errors.value.tanggal_mulai =
+                "Tanggal mulai tidak boleh sebelum hari ini";
+        }
+
+        if (formData.value.tanggal_selesai < today.value) {
+            errors.value.tanggal_selesai =
+                "Tanggal selesai tidak boleh sebelum hari ini";
+        }
 
         if (end <= start) {
             errors.value.tanggal_selesai =
@@ -358,6 +369,7 @@ fetchTahunAjaran();
                             <UInput
                                 v-model="formData.tanggal_mulai"
                                 type="date"
+                                :min="today"
                                 :disabled="submitting"
                                 size="lg"
                                 class="w-full"
@@ -379,6 +391,7 @@ fetchTahunAjaran();
                             <UInput
                                 v-model="formData.tanggal_selesai"
                                 type="date"
+                                :min="formData.tanggal_mulai || today"
                                 :disabled="submitting"
                                 size="lg"
                                 class="w-full"

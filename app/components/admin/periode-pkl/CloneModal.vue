@@ -31,6 +31,7 @@ const tahunAjaranOptions = ref<{ label: string; value: number }[]>([]);
 
 // Validation errors
 const errors = ref<Record<string, string>>({});
+const today = computed(() => getLocalDateKey());
 
 // Suggested name based on source
 const suggestedName = computed(() => {
@@ -72,6 +73,14 @@ const validateForm = (): boolean => {
         const start = new Date(formData.value.tanggal_mulai);
         const end = new Date(formData.value.tanggal_selesai);
 
+        if (formData.value.tanggal_mulai < today.value) {
+            errors.value.tanggal_mulai = "Tanggal mulai tidak boleh sebelum hari ini";
+        }
+
+        if (formData.value.tanggal_selesai < today.value) {
+            errors.value.tanggal_selesai = "Tanggal selesai tidak boleh sebelum hari ini";
+        }
+
         if (end <= start) {
             errors.value.tanggal_selesai = "Tanggal selesai harus setelah tanggal mulai";
         }
@@ -92,6 +101,10 @@ const initForm = () => {
     newStart.setFullYear(newStart.getFullYear() + 1);
     const newEnd = new Date(sourceEnd);
     newEnd.setFullYear(newEnd.getFullYear() + 1);
+
+    if (newStart.toISOString().split("T")[0] < today.value) {
+        newStart.setTime(new Date(`${today.value}T00:00:00.000Z`).getTime());
+    }
 
     formData.value = {
         nama_periode: suggestedName.value,
@@ -257,6 +270,7 @@ fetchTahunAjaran();
                             <UInput
                                 v-model="formData.tanggal_mulai"
                                 type="date"
+                                :min="today"
                                 :disabled="submitting"
                                 size="lg"
                                 class="w-full"
@@ -272,6 +286,7 @@ fetchTahunAjaran();
                             <UInput
                                 v-model="formData.tanggal_selesai"
                                 type="date"
+                                :min="formData.tanggal_mulai || today"
                                 :disabled="submitting"
                                 size="lg"
                                 class="w-full"

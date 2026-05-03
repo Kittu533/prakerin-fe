@@ -111,7 +111,9 @@
                             <UInput
                                 v-model="form.tanggal"
                                 type="date"
+                                :min="today"
                                 :max="today"
+                                disabled
                                 class="w-full"
                             />
                         </UFormField>
@@ -253,7 +255,7 @@ const form = reactive({
     fotoPreview: "",
 });
 
-const today = computed(() => new Date().toISOString().split("T")[0]);
+const today = computed(() => getLocalDateKey());
 
 // Filter logbooks based on status filter
 const filteredLogbooks = computed(() => {
@@ -368,7 +370,7 @@ function openModal(log?: any) {
         form.fotoPreview = log.foto || "";
     } else {
         Object.assign(form, {
-            tanggal: "",
+            tanggal: today.value,
             jamMulai: "",
             jamSelesai: "",
             judul: "",

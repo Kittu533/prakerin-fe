@@ -299,8 +299,8 @@ const cameraStream = ref<MediaStream | null>(null)
 const cameraReady = ref(false)
 const cameraError = ref('')
 
-const today = computed(() => new Date().toISOString().split('T')[0])
-const currentTime = computed(() => new Date().toTimeString().slice(0, 5))
+const today = computed(() => getLocalDateKey())
+const currentTime = computed(() => getLocalTimeHHmm())
 
 const { coords, resume, pause } = useGeolocation({ enableHighAccuracy: true, immediate: true })
 

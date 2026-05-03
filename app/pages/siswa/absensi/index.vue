@@ -638,7 +638,7 @@ async function handleCheckIn() {
     try {
         const res = await absensiApi.create({
             id_penempatan: penempatan.value.id_penempatan,
-            tanggal: new Date().toISOString().split("T")[0],
+            tanggal: getLocalDateKey(),
             status_absensi: "hadir",
             metode_absensi: "gps",
             latitude: userCoords.value[0],
@@ -663,8 +663,7 @@ async function handleCheckOut() {
 
     submitting.value = true;
     try {
-        const now = new Date();
-        const waktuKeluar = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+        const waktuKeluar = getLocalTimeHHmm();
 
         const res = await absensiApi.update(todayAttendance.value.id, {
             waktu_keluar: waktuKeluar,
@@ -708,7 +707,7 @@ async function loadData() {
         // Get absensi history
         const absensiRes = await absensiApi.getAll({ limit: 50 });
         if (absensiRes?.success && absensiRes?.data) {
-            const today = new Date().toISOString().split("T")[0];
+            const today = getLocalDateKey();
             
             absensi.value = absensiRes.data.map((item: SiswaAbsensi) => {
                 const itemDate = new Date(item.tanggal)

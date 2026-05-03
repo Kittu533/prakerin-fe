@@ -46,6 +46,7 @@ const statusOptions = [
     { label: "Draft", value: "draft" },
     { label: "Aktif", value: "aktif" },
 ];
+const today = computed(() => getLocalDateKey());
 
 // Validation errors
 const errors = ref<Record<string, string>>({});
@@ -229,6 +230,16 @@ const validateForm = (): boolean => {
         const start = new Date(formData.value.tanggal_mulai);
         const end = new Date(formData.value.tanggal_selesai);
 
+        if (formData.value.tanggal_mulai < today.value) {
+            errors.value.tanggal_mulai =
+                "Tanggal mulai tidak boleh sebelum hari ini";
+        }
+
+        if (formData.value.tanggal_selesai < today.value) {
+            errors.value.tanggal_selesai =
+                "Tanggal selesai tidak boleh sebelum hari ini";
+        }
+
         if (end <= start) {
             errors.value.tanggal_selesai =
                 "Tanggal selesai harus setelah tanggal mulai";
@@ -340,7 +351,9 @@ const autoFillDates = () => {
         const match = selectedTA.label.match(/(\d{4})\/(\d{4})/);
         if (match) {
             // Set start to July of first year, end to June of second year
-            formData.value.tanggal_mulai = `${match[1]}-07-01`;
+            const suggestedStart = `${match[1]}-07-01`;
+            formData.value.tanggal_mulai =
+                suggestedStart < today.value ? today.value : suggestedStart;
             formData.value.tanggal_selesai = `${match[2]}-06-30`;
         }
     }
@@ -487,6 +500,7 @@ fetchTahunAjaran();
                             <UInput
                                 v-model="formData.tanggal_mulai"
                                 type="date"
+                                :min="today"
                                 :disabled="submitting"
                                 size="lg"
                                 class="w-full"
@@ -508,6 +522,7 @@ fetchTahunAjaran();
                             <UInput
                                 v-model="formData.tanggal_selesai"
                                 type="date"
+                                :min="formData.tanggal_mulai || today"
                                 :disabled="submitting"
                                 size="lg"
                                 class="w-full"
