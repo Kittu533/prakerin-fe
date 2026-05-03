@@ -226,7 +226,6 @@ function showFilter(filterName: string): boolean {
         placement: ["tahun_ajaran", "periode", "jurusan", "perusahaan", "status"],
         attendance: ["date_range", "perusahaan"],
         logbook: ["date_range", "status"],
-        assessment: ["tahun_ajaran", "jurusan", "perusahaan"],
         monitoring: ["date_range", "perusahaan"],
         application: ["tahun_ajaran", "status", "perusahaan"],
         company: [],

@@ -379,18 +379,11 @@ const quickActions: QuickAction[] = [
     iconClass: "bg-rose-100 text-rose-600",
   },
   {
-    to: "/guru/absensi",
-    icon: "lucide:calendar-check",
-    label: "Validasi Absensi",
-    description: "Periksa kehadiran harian siswa yang sedang PKL.",
+    to: "/guru/siswa-bimbingan",
+    icon: "lucide:clipboard-check",
+    label: "Verifikasi Harian",
+    description: "Validasi absensi dan verifikasi logbook dari detail siswa bimbingan.",
     iconClass: "bg-emerald-100 text-emerald-600",
-  },
-  {
-    to: "/guru/verifikasi-logbook",
-    icon: "lucide:book-open-check",
-    label: "Verifikasi Logbook",
-    description: "Setujui atau minta revisi logbook dari siswa bimbingan.",
-    iconClass: "bg-amber-100 text-amber-600",
   },
 ];
 

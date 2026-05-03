@@ -441,6 +441,8 @@ async function submitSuratPermohonan() {
       isi_lampiran: form.value.isiLampiran.trim() || buildDefaultLampiran(),
       template_jenis: "surat_permohonan",
       template_payload: {
+        perusahaan_id: selectedCompany.value.id_perusahaan,
+        nama_perusahaan: selectedCompany.value.nama_perusahaan,
         siswa: selectedStudents.value.map((item) => ({
           id_siswa: item.id_siswa,
           nama: item.nama,

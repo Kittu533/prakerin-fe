@@ -4,6 +4,10 @@ import {
     usePeriodePKLApi,
     type PeriodePKL,
 } from "~/composables/api/use-periode-pkl";
+import {
+    useTahunAjaranApi,
+    type TahunAjaran,
+} from "~/composables/api/use-academic";
 import { formatDate } from "~/utils/format-date";
 import { createColumnHelper, type ColumnDef } from "@tanstack/vue-table";
 
@@ -13,13 +17,19 @@ const route = useRoute();
 const router = useRouter();
 const toast = useToast();
 const api = usePeriodePKLApi();
+const tahunAjaranApi = useTahunAjaranApi();
 
 // State
 const loading = ref(true);
+const tahunAjaranLoading = ref(true);
+const activeSubMenu = ref<"periode" | "tahun-ajaran">("periode");
 const search = ref("");
+const tahunAjaranSearch = ref("");
 const filterStatus = ref("Semua");
 const data = ref<PeriodePKL[]>([]);
+const tahunAjaranData = ref<TahunAjaran[]>([]);
 const processing = ref<string | null>(null);
+const tahunAjaranProcessing = ref(false);
 
 // Modal states
 const showCreateModal = ref(false);
@@ -28,6 +38,17 @@ const showEditModal = ref(false);
 const showCloneModal = ref(false);
 const showReportModal = ref(false);
 const selectedItem = ref<PeriodePKL | null>(null);
+const showTahunAjaranModal = ref(false);
+const editingTahunAjaran = ref(false);
+
+const tahunAjaranForm = ref({
+    id_tahun_ajaran: "",
+    nama_tahun_ajaran: "",
+    tanggal_mulai: "",
+    tanggal_selesai: "",
+    status_aktif: false,
+});
+const tahunAjaranErrors = ref<Record<string, string>>({});
 
 // Status options
 const statusOptions = ["Semua", "Draft", "Aktif", "Selesai", "Arsip"];
@@ -424,6 +445,135 @@ const columns: ColumnDef<PeriodePKL, any>[] = [
     },
 ];
 
+const tahunAjaranColumns: ColumnDef<TahunAjaran, any>[] = [
+    {
+        id: "nama_tahun_ajaran",
+        header: "Tahun Ajaran",
+        cell: ({ row }) =>
+            h("div", {}, [
+                h(
+                    "p",
+                    { class: "text-sm font-medium text-slate-900" },
+                    row.original.nama_tahun_ajaran,
+                ),
+                h(
+                    "p",
+                    { class: "text-xs text-slate-500" },
+                    row.original.id_tahun_ajaran,
+                ),
+            ]),
+    },
+    {
+        id: "tanggal",
+        header: "Rentang Tanggal",
+        cell: ({ row }) =>
+            h("div", {}, [
+                h(
+                    "p",
+                    { class: "text-sm text-slate-900" },
+                    formatDate(row.original.tanggal_mulai || ""),
+                ),
+                h(
+                    "p",
+                    { class: "text-xs text-slate-500" },
+                    `s/d ${formatDate(row.original.tanggal_selesai || "")}`,
+                ),
+            ]),
+    },
+    {
+        id: "status",
+        header: "Status",
+        cell: ({ row }) => {
+            const isActive = row.original.status_aktif;
+            return h("div", { class: "flex items-center gap-2" }, [
+                h(
+                    "span",
+                    {
+                        class: `px-2 py-1 rounded-md text-xs font-medium ${
+                            isActive
+                                ? "bg-green-50 text-green-700 border border-green-200"
+                                : "bg-slate-100 text-slate-700 border border-slate-200"
+                        }`,
+                    },
+                    isActive ? "Aktif" : "Nonaktif",
+                ),
+                !isActive &&
+                    h(
+                        "button",
+                        {
+                            class: "px-2.5 py-1 text-xs font-medium rounded-lg bg-green-50 text-green-700 border border-green-200 hover:bg-green-100 transition-colors",
+                            onClick: () => setActiveTahunAjaran(row.original),
+                        },
+                        "Aktifkan",
+                    ),
+            ]);
+        },
+    },
+    {
+        id: "aksi",
+        header: "Aksi",
+        cell: ({ row }) =>
+            h("div", { class: "flex items-center gap-2" }, [
+                h(
+                    "button",
+                    {
+                        class: "p-2 rounded-lg hover:bg-blue-50 text-blue-600 transition-colors",
+                        title: "Edit Tahun Ajaran",
+                        onClick: () => openTahunAjaranModal(row.original),
+                    },
+                    h(
+                        "svg",
+                        {
+                            class: "w-4 h-4",
+                            viewBox: "0 0 24 24",
+                            fill: "none",
+                            stroke: "currentColor",
+                            "stroke-width": 2,
+                        },
+                        [
+                            h("path", {
+                                d: "M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z",
+                            }),
+                        ],
+                    ),
+                ),
+                h(
+                    "button",
+                    {
+                        class: `p-2 rounded-lg transition-colors ${
+                            row.original.status_aktif
+                                ? "text-slate-300 cursor-not-allowed"
+                                : "hover:bg-red-50 text-red-600"
+                        }`,
+                        title: row.original.status_aktif
+                            ? "Tahun ajaran aktif tidak bisa dihapus"
+                            : "Hapus Tahun Ajaran",
+                        onClick: () => {
+                            if (!row.original.status_aktif) {
+                                deleteTahunAjaran(row.original);
+                            }
+                        },
+                    },
+                    h(
+                        "svg",
+                        {
+                            class: "w-4 h-4",
+                            viewBox: "0 0 24 24",
+                            fill: "none",
+                            stroke: "currentColor",
+                            "stroke-width": 2,
+                        },
+                        [
+                            h("path", {
+                                d: "M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14",
+                            }),
+                        ],
+                    ),
+                ),
+            ]),
+    },
+];
+
 // Filtered data
 const filteredData = computed(() => {
     let result = data.value.filter((d) => {
@@ -447,6 +597,17 @@ const filteredData = computed(() => {
     });
 
     return result;
+});
+
+const filteredTahunAjaranData = computed(() => {
+    const keyword = tahunAjaranSearch.value.toLowerCase();
+    return tahunAjaranData.value.filter((item) => {
+        if (!keyword) return true;
+        return (
+            item.nama_tahun_ajaran.toLowerCase().includes(keyword) ||
+            item.id_tahun_ajaran.toLowerCase().includes(keyword)
+        );
+    });
 });
 
 // ==================== STATUS CHANGE ACTIONS ====================
@@ -575,6 +736,156 @@ const deleteItem = async (item: PeriodePKL) => {
     }
 };
 
+// ==================== TAHUN AJARAN ACTIONS ====================
+
+const resetTahunAjaranForm = () => {
+    tahunAjaranForm.value = {
+        id_tahun_ajaran: "",
+        nama_tahun_ajaran: "",
+        tanggal_mulai: "",
+        tanggal_selesai: "",
+        status_aktif: false,
+    };
+    tahunAjaranErrors.value = {};
+};
+
+const openTahunAjaranModal = (item?: TahunAjaran) => {
+    editingTahunAjaran.value = Boolean(item);
+    if (item) {
+        tahunAjaranForm.value = {
+            id_tahun_ajaran: item.id_tahun_ajaran,
+            nama_tahun_ajaran: item.nama_tahun_ajaran,
+            tanggal_mulai: item.tanggal_mulai?.split("T")[0] || "",
+            tanggal_selesai: item.tanggal_selesai?.split("T")[0] || "",
+            status_aktif: item.status_aktif,
+        };
+    } else {
+        resetTahunAjaranForm();
+    }
+    showTahunAjaranModal.value = true;
+};
+
+const validateTahunAjaranForm = () => {
+    tahunAjaranErrors.value = {};
+
+    if (!tahunAjaranForm.value.nama_tahun_ajaran.trim()) {
+        tahunAjaranErrors.value.nama_tahun_ajaran =
+            "Nama tahun ajaran wajib diisi";
+    }
+    if (!tahunAjaranForm.value.tanggal_mulai) {
+        tahunAjaranErrors.value.tanggal_mulai = "Tanggal mulai wajib diisi";
+    }
+    if (!tahunAjaranForm.value.tanggal_selesai) {
+        tahunAjaranErrors.value.tanggal_selesai = "Tanggal selesai wajib diisi";
+    }
+    if (
+        tahunAjaranForm.value.tanggal_mulai &&
+        tahunAjaranForm.value.tanggal_selesai &&
+        tahunAjaranForm.value.tanggal_selesai <=
+            tahunAjaranForm.value.tanggal_mulai
+    ) {
+        tahunAjaranErrors.value.tanggal_selesai =
+            "Tanggal selesai harus setelah tanggal mulai";
+    }
+
+    return Object.keys(tahunAjaranErrors.value).length === 0;
+};
+
+const saveTahunAjaran = async () => {
+    if (!validateTahunAjaranForm()) return;
+
+    tahunAjaranProcessing.value = true;
+    try {
+        const payload = {
+            nama_tahun_ajaran: tahunAjaranForm.value.nama_tahun_ajaran.trim(),
+            tanggal_mulai: tahunAjaranForm.value.tanggal_mulai,
+            tanggal_selesai: tahunAjaranForm.value.tanggal_selesai,
+            status_aktif: tahunAjaranForm.value.status_aktif,
+        };
+
+        const response =
+            editingTahunAjaran.value && tahunAjaranForm.value.id_tahun_ajaran
+                ? await tahunAjaranApi.update(
+                      tahunAjaranForm.value.id_tahun_ajaran,
+                      payload,
+                  )
+                : await tahunAjaranApi.create(payload);
+
+        if (!response.success) {
+            throw new Error(response.message || "Gagal menyimpan tahun ajaran");
+        }
+
+        toast.add({
+            title: editingTahunAjaran.value
+                ? "Tahun ajaran berhasil diperbarui"
+                : "Tahun ajaran berhasil ditambahkan",
+            color: "success",
+        });
+        showTahunAjaranModal.value = false;
+        await fetchTahunAjaranData();
+    } catch (error: any) {
+        toast.add({
+            title: "Gagal menyimpan tahun ajaran",
+            description: error?.message || "Terjadi kesalahan",
+            color: "error",
+        });
+    } finally {
+        tahunAjaranProcessing.value = false;
+    }
+};
+
+const setActiveTahunAjaran = async (item: TahunAjaran) => {
+    tahunAjaranProcessing.value = true;
+    try {
+        const response = await tahunAjaranApi.update(item.id_tahun_ajaran, {
+            status_aktif: true,
+        });
+        if (!response.success) {
+            throw new Error(response.message || "Gagal mengaktifkan tahun ajaran");
+        }
+        toast.add({
+            title: `${item.nama_tahun_ajaran} diaktifkan`,
+            color: "success",
+        });
+        await fetchTahunAjaranData();
+    } catch (error: any) {
+        toast.add({
+            title: "Gagal mengaktifkan tahun ajaran",
+            description: error?.message,
+            color: "error",
+        });
+    } finally {
+        tahunAjaranProcessing.value = false;
+    }
+};
+
+const deleteTahunAjaran = async (item: TahunAjaran) => {
+    if (
+        !confirm(
+            `Hapus tahun ajaran "${item.nama_tahun_ajaran}"?\n\nData ini tidak dapat dihapus jika masih dipakai kelas, periode, penempatan, atau pengajuan.`,
+        )
+    )
+        return;
+
+    tahunAjaranProcessing.value = true;
+    try {
+        const response = await tahunAjaranApi.remove(item.id_tahun_ajaran);
+        if (!response.success) {
+            throw new Error(response.message || "Gagal menghapus tahun ajaran");
+        }
+        toast.add({ title: "Tahun ajaran berhasil dihapus", color: "success" });
+        await fetchTahunAjaranData();
+    } catch (error: any) {
+        toast.add({
+            title: "Gagal menghapus tahun ajaran",
+            description: error?.message,
+            color: "error",
+        });
+    } finally {
+        tahunAjaranProcessing.value = false;
+    }
+};
+
 // Fetch data
 const fetchData = async () => {
     loading.value = true;
@@ -592,6 +903,25 @@ const fetchData = async () => {
         });
     } finally {
         loading.value = false;
+    }
+};
+
+const fetchTahunAjaranData = async () => {
+    tahunAjaranLoading.value = true;
+    try {
+        const response = await tahunAjaranApi.getAll({ limit: 1000 });
+        if (response.success) {
+            tahunAjaranData.value = response.data || [];
+        }
+    } catch (error: any) {
+        console.error("Failed to fetch tahun ajaran:", error);
+        toast.add({
+            title: "Gagal memuat tahun ajaran",
+            description: error?.message,
+            color: "error",
+        });
+    } finally {
+        tahunAjaranLoading.value = false;
     }
 };
 
@@ -623,6 +953,7 @@ const handleSaved = () => {
 
 onMounted(() => {
     fetchData();
+    fetchTahunAjaranData();
 });
 
 watch(
@@ -647,16 +978,60 @@ useHead({ title: "Periode PKL | Admin" });
                     Periode PKL
                 </h1>
                 <p class="text-sm text-slate-500">
-                    Kelola periode Program Kerja Lapangan Kerja (PKL)
+                    Kelola periode PKL dan master data tahun ajaran
                 </p>
             </div>
-            <UButton icon="lucide:plus" @click="navigateToCreate">
+            <UButton
+                v-if="activeSubMenu === 'periode'"
+                icon="lucide:plus"
+                @click="navigateToCreate"
+            >
                 Tambah Periode
             </UButton>
+            <UButton
+                v-else
+                icon="lucide:plus"
+                @click="openTahunAjaranModal()"
+            >
+                Tambah Tahun Ajaran
+            </UButton>
+        </div>
+
+        <!-- Sub Menu -->
+        <div
+            class="flex flex-wrap gap-2 border-b border-slate-200 pb-3"
+        >
+            <button
+                type="button"
+                :class="[
+                    'inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+                    activeSubMenu === 'periode'
+                        ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                        : 'text-slate-600 hover:bg-slate-100 border border-transparent',
+                ]"
+                @click="activeSubMenu = 'periode'"
+            >
+                <Icon name="lucide:calendar-clock" class="w-4 h-4" />
+                Periode PKL
+            </button>
+            <button
+                type="button"
+                :class="[
+                    'inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+                    activeSubMenu === 'tahun-ajaran'
+                        ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                        : 'text-slate-600 hover:bg-slate-100 border border-transparent',
+                ]"
+                @click="activeSubMenu = 'tahun-ajaran'"
+            >
+                <Icon name="lucide:calendar-days" class="w-4 h-4" />
+                Tahun Ajaran
+            </button>
         </div>
 
         <!-- Flow Guide -->
         <div
+            v-if="activeSubMenu === 'periode'"
             class="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-100 p-4"
         >
             <div class="flex items-center gap-2 mb-2">
@@ -691,7 +1066,10 @@ useHead({ title: "Periode PKL | Admin" });
         </div>
 
         <!-- Quick Stats -->
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div
+            v-if="activeSubMenu === 'periode'"
+            class="grid grid-cols-2 sm:grid-cols-4 gap-4"
+        >
             <div class="bg-white rounded-xl border border-slate-200 p-4">
                 <div class="flex items-center gap-3">
                     <div
@@ -777,6 +1155,7 @@ useHead({ title: "Periode PKL | Admin" });
 
         <!-- Table -->
         <CommonAppDataTable
+            v-if="activeSubMenu === 'periode'"
             :data="filteredData"
             :columns="columns"
             :loading="loading"
@@ -804,6 +1183,34 @@ useHead({ title: "Periode PKL | Admin" });
                     :items="statusOptions"
                     class="w-full sm:w-40"
                 />
+            </template>
+        </CommonAppDataTable>
+
+        <!-- Tahun Ajaran Table -->
+        <CommonAppDataTable
+            v-else
+            :data="filteredTahunAjaranData"
+            :columns="tahunAjaranColumns"
+            :loading="tahunAjaranLoading"
+            :searchable="false"
+            with-time
+            empty-title="Tidak ada tahun ajaran"
+            empty-description="Belum ada master data tahun ajaran"
+            empty-icon="lucide:calendar-days"
+        >
+            <template #toolbar-left>
+                <UInput
+                    v-model="tahunAjaranSearch"
+                    placeholder="Cari tahun ajaran..."
+                    class="flex-1 max-w-xs"
+                >
+                    <template #leading>
+                        <Icon
+                            name="lucide:search"
+                            class="w-4 h-4 text-slate-400"
+                        />
+                    </template>
+                </UInput>
             </template>
         </CommonAppDataTable>
 
@@ -855,5 +1262,111 @@ useHead({ title: "Periode PKL | Admin" });
             :periode="selectedItem"
             @close="closeModal"
         />
+
+        <!-- Tahun Ajaran Modal -->
+        <UModal
+            :open="showTahunAjaranModal"
+            @update:open="showTahunAjaranModal = $event"
+            :title="editingTahunAjaran ? 'Edit Tahun Ajaran' : 'Tambah Tahun Ajaran'"
+            description="Kelola master data tahun ajaran untuk periode PKL"
+        >
+            <template #body>
+                <div class="space-y-4">
+                    <div>
+                        <label
+                            class="block text-sm font-medium text-slate-700 mb-1"
+                        >
+                            Nama Tahun Ajaran
+                            <span class="text-red-500">*</span>
+                        </label>
+                        <UInput
+                            v-model="tahunAjaranForm.nama_tahun_ajaran"
+                            placeholder="Contoh: 2026/2027"
+                            :disabled="tahunAjaranProcessing"
+                            class="w-full"
+                        />
+                        <p
+                            v-if="tahunAjaranErrors.nama_tahun_ajaran"
+                            class="text-xs text-red-500 mt-1"
+                        >
+                            {{ tahunAjaranErrors.nama_tahun_ajaran }}
+                        </p>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label
+                                class="block text-sm font-medium text-slate-700 mb-1"
+                            >
+                                Tanggal Mulai
+                                <span class="text-red-500">*</span>
+                            </label>
+                            <UInput
+                                v-model="tahunAjaranForm.tanggal_mulai"
+                                type="date"
+                                :disabled="tahunAjaranProcessing"
+                                class="w-full"
+                            />
+                            <p
+                                v-if="tahunAjaranErrors.tanggal_mulai"
+                                class="text-xs text-red-500 mt-1"
+                            >
+                                {{ tahunAjaranErrors.tanggal_mulai }}
+                            </p>
+                        </div>
+                        <div>
+                            <label
+                                class="block text-sm font-medium text-slate-700 mb-1"
+                            >
+                                Tanggal Selesai
+                                <span class="text-red-500">*</span>
+                            </label>
+                            <UInput
+                                v-model="tahunAjaranForm.tanggal_selesai"
+                                type="date"
+                                :min="tahunAjaranForm.tanggal_mulai"
+                                :disabled="tahunAjaranProcessing"
+                                class="w-full"
+                            />
+                            <p
+                                v-if="tahunAjaranErrors.tanggal_selesai"
+                                class="text-xs text-red-500 mt-1"
+                            >
+                                {{ tahunAjaranErrors.tanggal_selesai }}
+                            </p>
+                        </div>
+                    </div>
+
+                    <label class="flex items-center gap-2 text-sm text-slate-700">
+                        <input
+                            v-model="tahunAjaranForm.status_aktif"
+                            type="checkbox"
+                            class="w-4 h-4 rounded border-slate-300"
+                            :disabled="tahunAjaranProcessing"
+                        />
+                        Jadikan tahun ajaran aktif
+                    </label>
+                </div>
+            </template>
+            <template #footer>
+                <div class="flex justify-end gap-2 w-full">
+                    <UButton
+                        variant="outline"
+                        color="neutral"
+                        :disabled="tahunAjaranProcessing"
+                        @click="showTahunAjaranModal = false"
+                    >
+                        Batal
+                    </UButton>
+                    <UButton
+                        color="primary"
+                        :loading="tahunAjaranProcessing"
+                        @click="saveTahunAjaran"
+                    >
+                        Simpan
+                    </UButton>
+                </div>
+            </template>
+        </UModal>
     </div>
 </template>

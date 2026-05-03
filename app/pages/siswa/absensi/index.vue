@@ -407,6 +407,8 @@ import {
     useSiswaPenempatanApi,
     type SiswaPenempatan,
 } from "~/composables/api/use-siswa";
+import { APP_TIME_ZONE } from "~/utils/date-only";
+import { formatTime } from "~/utils/format-date";
 
 definePageMeta({ layout: "siswa" });
 
@@ -716,6 +718,7 @@ async function loadData() {
                 const formattedDate = new Date(item.tanggal).toLocaleDateString(
                     "id-ID",
                     {
+                        timeZone: APP_TIME_ZONE,
                         weekday: "long",
                         day: "numeric",
                         month: "short",
@@ -724,10 +727,11 @@ async function loadData() {
                 );
 
                 // Format waktu
-                const formatWaktu = (waktu: Date | null) => {
+                const formatWaktu = (waktu?: string | Date | null) => {
                     if (!waktu) return null;
-                    const d = new Date(waktu);
-                    return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+                    return typeof waktu === "string" && !waktu.includes("T")
+                        ? waktu.slice(0, 5)
+                        : formatTime(waktu);
                 };
 
                 const checkIn = formatWaktu(item.waktu_masuk);

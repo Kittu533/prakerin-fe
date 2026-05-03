@@ -435,6 +435,8 @@
 <script setup lang="ts">
 import { useSiswaProfileApi } from "~/composables/api/use-siswa";
 import { apiFetch } from "~/composables/api-fetch";
+import { APP_TIME_ZONE, getLocalDateKey } from "~/utils/date-only";
+import { formatDate, formatTime } from "~/utils/format-date";
 
 definePageMeta({ layout: "siswa" });
 
@@ -486,6 +488,7 @@ const allLogbooks = ref<any[]>([]);
 
 const currentDate = computed(() => {
     return new Date().toLocaleDateString("id-ID", {
+        timeZone: APP_TIME_ZONE,
         weekday: "long",
         day: "numeric",
         month: "long",
@@ -758,33 +761,24 @@ async function loadDashboardData() {
         allLogbooks.value = logbooks.slice(0, 20).map((l: any) => ({
             id: l.id_logbook,
             kegiatan: l.judul_kegiatan,
-            tanggal: new Date(l.tanggal).toLocaleDateString("id-ID", {
-                day: "numeric",
-                month: "short",
-                year: "numeric",
-            }),
+            tanggal: formatDate(l.tanggal),
             status: formatStatus(l.status_persetujuan),
         }));
 
         // --- Attendance: today check ---
         const absensiList: any[] = pen.absensi || [];
-        const todayStr = new Date().toISOString().split("T")[0];
+        const todayStr = getLocalDateKey();
         const todayAbsensi = absensiList.find((a: any) => {
-            const aDate = new Date(a.tanggal).toISOString().split("T")[0];
+            const aDate = getLocalDateKey(new Date(a.tanggal));
             return aDate === todayStr;
         });
 
         if (todayAbsensi && todayAbsensi.status_absensi === "hadir") {
             attendance.checkedIn = true;
             if (todayAbsensi.waktu_masuk) {
-                // waktu_masuk is a Time field — format it
                 const wm = todayAbsensi.waktu_masuk;
                 if (typeof wm === "string" && wm.includes("T")) {
-                    const dt = new Date(wm);
-                    attendance.checkInTime = dt.toLocaleTimeString("id-ID", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                    });
+                    attendance.checkInTime = formatTime(wm);
                 } else if (typeof wm === "string") {
                     attendance.checkInTime = wm.slice(0, 5);
                 }

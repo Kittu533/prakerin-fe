@@ -281,7 +281,7 @@ function formatTime(dt: string | null): string {
   if (!dt) return '-'
   try {
     const d = new Date(dt)
-    return d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
+    return d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jakarta' })
   } catch {
     return dt
   }

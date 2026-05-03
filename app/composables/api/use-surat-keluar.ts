@@ -14,12 +14,15 @@ import { apiFetch } from "~/composables/api-fetch";
 export type SuratKeluarTemplateJenis =
   | "surat_tugas_murid"
   | "surat_permohonan"
+  | "surat_permohonan_kerjasama"
   | "surat_perintah"
   | "surat_undangan";
 
 export type SuratKeluarStatus = "draft" | "dikirim" | "diterima";
 
 export interface SuratKeluarTemplatePayload {
+  perusahaan_id?: string;
+  nama_perusahaan?: string;
   siswa?: Array<{
     id_siswa?: string;
     nama: string;

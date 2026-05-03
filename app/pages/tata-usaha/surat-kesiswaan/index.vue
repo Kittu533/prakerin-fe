@@ -60,25 +60,49 @@
                 enter-from-class="opacity-0 -translate-y-4"
                 enter-to-class="opacity-100 translate-y-0"
             >
-                <div v-show="isFormExpanded" class="p-8 space-y-8">
-                    <!-- SECTION 1 & 2: DOKUMEN & DASAR -->
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                        <div class="group space-y-3">
+                <div v-show="isFormExpanded" class="p-6 lg:p-8 space-y-8">
+                    <!-- SECTION 1: JENIS DOKUMEN -->
+                    <div class="space-y-4">
+                        <div class="flex items-center justify-between gap-4">
                             <div class="flex items-center gap-2 text-blue-600 mb-1">
                                 <span class="flex items-center justify-center w-6 h-6 rounded-full bg-blue-600 text-white text-[10px] font-black">1</span>
-                                <h3 class="text-sm font-black uppercase tracking-wider group-hover:translate-x-1 transition-transform">Jenis Dokumen</h3>
+                                <h3 class="text-sm font-black uppercase tracking-wider">Jenis Dokumen</h3>
                             </div>
-                            <USelect
-                                v-model="form.jenis_dokumen"
-                                :items="jenisDokumenOptions"
-                                placeholder="Pilih tipe surat yang akan dibuat"
-                                size="lg"
-                                class="w-full font-semibold rounded-xl"
-                                icon="lucide:file-signature"
-                            />
+                            <UBadge :color="isSingleSiswaDocument ? 'warning' : 'primary'" variant="subtle" class="font-black rounded-full px-3 py-1 uppercase tracking-wider">
+                                {{ isSingleSiswaDocument ? 'Satu penerima' : 'Bisa banyak penerima' }}
+                            </UBadge>
                         </div>
 
-                        <div class="group space-y-3">
+                        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
+                            <button
+                                v-for="item in jenisDokumenCards"
+                                :key="item.value"
+                                type="button"
+                                :class="[
+                                    'text-left rounded-xl border p-4 transition-all min-h-[138px] group bg-white',
+                                    form.jenis_dokumen === item.value
+                                        ? 'border-blue-500 ring-2 ring-blue-100 shadow-sm'
+                                        : 'border-slate-200 hover:border-blue-200 hover:bg-blue-50/30'
+                                ]"
+                                @click="form.jenis_dokumen = item.value"
+                            >
+                                <div class="flex items-start justify-between gap-3">
+                                    <div :class="[
+                                        'w-10 h-10 rounded-xl flex items-center justify-center border transition-colors',
+                                        form.jenis_dokumen === item.value ? 'bg-blue-600 border-blue-600 text-white' : 'bg-slate-50 border-slate-200 text-slate-500 group-hover:text-blue-600'
+                                    ]">
+                                        <Icon :name="item.icon" class="w-5 h-5" />
+                                    </div>
+                                    <UBadge variant="subtle" color="neutral" class="text-[9px] font-black uppercase rounded-full">
+                                        {{ item.badge }}
+                                    </UBadge>
+                                </div>
+                                <p class="mt-4 text-sm font-black text-slate-900 leading-snug">{{ item.label }}</p>
+                                <p class="mt-2 text-xs text-slate-500 font-medium leading-relaxed">{{ item.description }}</p>
+                            </button>
+                        </div>
+
+                        <div v-if="isTugasDocument" class="group space-y-3 pt-2">
                             <div class="flex items-center gap-2 text-blue-600 mb-1">
                                 <span class="flex items-center justify-center w-6 h-6 rounded-full bg-blue-600 text-white text-[10px] font-black">2</span>
                                 <h3 class="text-sm font-black uppercase tracking-wider group-hover:translate-x-1 transition-transform">Dasar Penugasan (Referensi)</h3>
@@ -103,12 +127,29 @@
                         </div>
                         
                         <div class="flex items-center gap-2 text-blue-600 mb-2">
-                            <span class="flex items-center justify-center w-6 h-6 rounded-full bg-blue-600 text-white text-[10px] font-black">3</span>
-                            <h3 class="text-sm font-black uppercase tracking-wider group-hover:translate-x-1 transition-transform">Detail Informasi Penugasan</h3>
+                            <span class="flex items-center justify-center w-6 h-6 rounded-full bg-blue-600 text-white text-[10px] font-black">{{ isTugasDocument ? '3' : '2' }}</span>
+                            <h3 class="text-sm font-black uppercase tracking-wider group-hover:translate-x-1 transition-transform">
+                                {{ isTugasDocument ? 'Detail Informasi Penugasan' : isDispensasiDocument ? 'Detail Dispensasi' : 'Detail Surat Keterangan' }}
+                            </h3>
+                        </div>
+
+                        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 rounded-xl bg-white border border-slate-100 shadow-sm">
+                            <div class="flex items-start gap-3">
+                                <div class="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100">
+                                    <Icon :name="activeDocumentCard.icon" class="w-5 h-5" />
+                                </div>
+                                <div>
+                                    <p class="text-sm font-black text-slate-900">{{ activeDocumentCard.label }}</p>
+                                    <p class="text-xs font-medium text-slate-500 leading-relaxed">{{ activeDocumentCard.description }}</p>
+                                </div>
+                            </div>
+                            <UBadge :color="isSingleSiswaDocument ? 'warning' : 'primary'" variant="soft" class="font-black rounded-full px-3 py-1 uppercase tracking-wider self-start md:self-auto">
+                                {{ activeDocumentCard.badge }}
+                            </UBadge>
                         </div>
                         
                         <div class="space-y-5">
-                            <UFormField label="Maksud / Keperluan Penugasan" help="Isi perihal tugas secara lengkap dan jelas.">
+                            <UFormField v-if="isTugasDocument" label="Maksud / Keperluan Penugasan" help="Isi perihal tugas secara lengkap dan jelas.">
                                 <UTextarea 
                                     v-model="form.keperluan" 
                                     placeholder="Contoh: Mengikuti Lomba LKS Tingkat Provinsi Bidang Web Technologies..." 
@@ -116,6 +157,72 @@
                                     class="w-full bg-white font-medium rounded-xl ring-1 ring-slate-200 focus:ring-blue-500"
                                 />
                             </UFormField>
+
+                            <div v-else-if="isDispensasiDocument" class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+                                <UFormField label="Jenis Dispensasi" required>
+                                    <USelect
+                                        v-model="form.jenis_dispensasi"
+                                        :items="jenisDispensasiOptions"
+                                        placeholder="Pilih jenis dispensasi"
+                                        class="w-full bg-white font-semibold rounded-xl"
+                                        icon="lucide:badge-info"
+                                    />
+                                </UFormField>
+                                <UFormField label="Alasan Dispensasi" required class="lg:col-span-2">
+                                    <UTextarea 
+                                        v-model="form.alasan_dispensasi" 
+                                        placeholder="Contoh: Mengikuti lomba kompetensi siswa tingkat kabupaten..."
+                                        :rows="3"
+                                        class="w-full bg-white font-medium rounded-xl ring-1 ring-slate-200 focus:ring-blue-500"
+                                    />
+                                </UFormField>
+                            </div>
+
+                            <div v-else-if="isKeteranganSiswaDocument" class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+                                <UFormField label="Keperluan Surat" required>
+                                    <USelect
+                                        v-model="form.keperluan_keterangan"
+                                        :items="keperluanSiswaOptions"
+                                        placeholder="Pilih keperluan"
+                                        class="w-full bg-white font-semibold rounded-xl"
+                                        icon="lucide:file-check-2"
+                                    />
+                                </UFormField>
+                                <UFormField v-if="form.keperluan_keterangan === 'lainnya'" label="Keperluan Lainnya" required>
+                                    <UInput v-model="form.keperluan_lainnya" placeholder="Tulis keperluan surat" class="w-full bg-white font-medium rounded-xl" icon="lucide:pencil-line" />
+                                </UFormField>
+                                <UFormField label="Keterangan Tambahan" :class="form.keperluan_keterangan === 'lainnya' ? '' : 'lg:col-span-2'">
+                                    <UTextarea 
+                                        v-model="form.keterangan_tambahan" 
+                                        placeholder="Catatan tambahan jika diperlukan..."
+                                        :rows="3"
+                                        class="w-full bg-white font-medium rounded-xl ring-1 ring-slate-200 focus:ring-blue-500"
+                                    />
+                                </UFormField>
+                            </div>
+
+                            <div v-else-if="isKeteranganAlumniDocument" class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+                                <UFormField label="Keperluan Surat" required>
+                                    <USelect
+                                        v-model="form.keperluan_alumni"
+                                        :items="keperluanAlumniOptions"
+                                        placeholder="Pilih keperluan"
+                                        class="w-full bg-white font-semibold rounded-xl"
+                                        icon="lucide:badge-check"
+                                    />
+                                </UFormField>
+                                <UFormField v-if="form.keperluan_alumni === 'lainnya'" label="Keperluan Lainnya" required>
+                                    <UInput v-model="form.keperluan_lainnya" placeholder="Tulis keperluan alumni" class="w-full bg-white font-medium rounded-xl" icon="lucide:pencil-line" />
+                                </UFormField>
+                                <UFormField label="Keterangan Tambahan" :class="form.keperluan_alumni === 'lainnya' ? '' : 'lg:col-span-2'">
+                                    <UTextarea 
+                                        v-model="form.keterangan_tambahan" 
+                                        placeholder="Catatan tambahan jika diperlukan..."
+                                        :rows="3"
+                                        class="w-full bg-white font-medium rounded-xl ring-1 ring-slate-200 focus:ring-blue-500"
+                                    />
+                                </UFormField>
+                            </div>
 
                             <UFormField label="Penandatangan Guru" required>
                                 <USelect
@@ -128,7 +235,7 @@
                                 />
                             </UFormField>
 
-                            <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+                            <div v-if="isTugasDocument" class="grid grid-cols-1 md:grid-cols-3 gap-5">
                                 <UFormField label="Tempat Pelaksanaan">
                                     <UInput v-model="form.tempat" placeholder="Contoh: Hotel Horison" class="w-full bg-white font-medium rounded-xl" icon="lucide:map-pin" />
                                 </UFormField>
@@ -139,14 +246,25 @@
                                     <UInput v-model="form.waktu_jam" placeholder="Contoh: 08.00 s/d Selesai" class="w-full bg-white font-medium rounded-xl" icon="lucide:clock" />
                                 </UFormField>
                             </div>
+
+                            <UFormField v-if="isDispensasiDocument" label="Keterangan Pendukung">
+                                <UTextarea 
+                                    v-model="form.keterangan_tambahan" 
+                                    placeholder="Contoh: Lampiran undangan lomba, surat dokter, atau keterangan pendukung lain..."
+                                    :rows="2"
+                                    class="w-full bg-white font-medium rounded-xl ring-1 ring-slate-200 focus:ring-blue-500"
+                                />
+                            </UFormField>
                         </div>
                     </div>
 
                     <!-- SECTION 4: PERSONIL & WAKTU -->
                     <div class="space-y-6 p-6 border border-slate-100 rounded-2xl bg-white shadow-inner shadow-slate-100/50 group">
                         <div class="flex items-center gap-2 text-blue-600 mb-2">
-                            <span class="flex items-center justify-center w-6 h-6 rounded-full bg-blue-600 text-white text-[10px] font-black">4</span>
-                            <h3 class="text-sm font-black uppercase tracking-wider group-hover:translate-x-1 transition-transform">Pilih Personil & Tentukan Waktu</h3>
+                            <span class="flex items-center justify-center w-6 h-6 rounded-full bg-blue-600 text-white text-[10px] font-black">{{ isTugasDocument ? '4' : '3' }}</span>
+                            <h3 class="text-sm font-black uppercase tracking-wider group-hover:translate-x-1 transition-transform">
+                                {{ showDateSection ? `Pilih ${selectedPersonLabel} & Tentukan Waktu` : `Pilih ${selectedPersonLabel}` }}
+                            </h3>
                         </div>
 
                         <div class="grid grid-cols-1 lg:grid-cols-12 gap-10">
@@ -172,8 +290,9 @@
                                 </div>
 
                                 <div class="flex items-center justify-between px-1">
-                                    <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Daftar Siswa ({{ filteredSiswaList.length }})</span>
+                                    <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Daftar {{ selectedPersonLabel }} ({{ filteredSiswaList.length }})</span>
                                     <UButton 
+                                        v-if="!isSingleSiswaDocument"
                                         variant="link" 
                                         color="primary" 
                                         size="xs" 
@@ -192,13 +311,18 @@
                                         </div>
                                         <div v-else-if="filteredSiswaList.length === 0" class="p-12 text-center">
                                             <Icon name="lucide:users" class="w-10 h-10 text-slate-200 mb-2 mx-auto" />
-                                            <p class="text-slate-400 text-sm italic font-medium">Data siswa tidak ditemukan</p>
+                                            <p class="text-slate-400 text-sm italic font-medium">Data {{ selectedPersonLabel.toLowerCase() }} tidak ditemukan</p>
                                         </div>
                                         <div v-for="siswa in filteredSiswaList" :key="siswa.id_siswa" 
-                                            class="group flex items-center gap-4 p-3 rounded-xl hover:bg-white hover:shadow-sm transition-all border border-transparent hover:border-slate-100 cursor-pointer"
+                                            :class="[
+                                                'group flex items-center gap-4 p-3 rounded-xl transition-all border cursor-pointer',
+                                                isSiswaSelected(siswa.id_siswa)
+                                                    ? 'bg-white border-blue-200 shadow-sm ring-1 ring-blue-100'
+                                                    : 'border-transparent hover:bg-white hover:shadow-sm hover:border-slate-100'
+                                            ]"
                                             @click="toggleSiswa(siswa)"
                                         >
-                                            <div class="relative flex items-center justify-center">
+                                            <div v-if="!isSingleSiswaDocument" class="relative flex items-center justify-center">
                                                 <input 
                                                     type="checkbox"
                                                     :checked="isSiswaSelected(siswa.id_siswa)"
@@ -208,6 +332,12 @@
                                                     @change.stop="toggleSiswa(siswa)"
                                                 />
                                             </div>
+                                            <div v-else :class="[
+                                                'w-5 h-5 rounded-full border flex items-center justify-center transition-all',
+                                                isSiswaSelected(siswa.id_siswa) ? 'border-blue-600 bg-blue-600' : 'border-slate-300 bg-white'
+                                            ]">
+                                                <div v-if="isSiswaSelected(siswa.id_siswa)" class="w-2 h-2 rounded-full bg-white"></div>
+                                            </div>
                                             <div class="flex flex-col flex-1">
                                                 <span class="text-sm font-black text-slate-800 uppercase tracking-tight group-hover:text-blue-700 transition-colors">{{ siswa.nama_siswa }}</span>
                                                 <div class="flex items-center gap-2 text-[10px] text-slate-500 font-bold uppercase">
@@ -216,6 +346,7 @@
                                                     <span>NIS: {{ siswa.nis }}</span>
                                                 </div>
                                             </div>
+                                            <Icon v-if="isSiswaSelected(siswa.id_siswa)" name="lucide:check-circle-2" class="w-4 h-4 text-blue-600" />
                                         </div>
                                     </div>
                                 </div>
@@ -226,7 +357,7 @@
                                 <div class="space-y-3">
                                     <div class="flex items-center justify-between">
                                         <label class="text-xs font-black text-slate-700 uppercase tracking-wider flex items-center gap-2">
-                                            Daftar Nama Terpilih
+                                            Daftar {{ selectedPersonLabel }} Terpilih
                                             <span v-if="selectedSiswa.length > 0" class="px-2 py-0.5 bg-blue-600 text-white rounded-full text-[10px] shadow-sm">{{ selectedSiswa.length }}</span>
                                         </label>
                                         <UButton 
@@ -237,14 +368,14 @@
                                             class="font-bold text-[10px] uppercase tracking-tighter hover:bg-red-50"
                                             @click="selectedSiswa = []"
                                         >
-                                            Hapus Semua
+                                            {{ isSingleSiswaDocument ? 'Hapus Pilihan' : 'Hapus Semua' }}
                                         </UButton>
                                     </div>
                                     
                                     <div class="border-2 border-dashed border-slate-200 rounded-2xl bg-slate-50/50 p-5 min-h-[180px] max-h-[220px] overflow-y-auto custom-scrollbar transition-all duration-300 hover:border-blue-200 shadow-inner ring-1 ring-blue-50">
                                         <div v-if="selectedSiswa.length === 0" class="flex flex-col items-center justify-center h-full py-8 text-slate-400">
                                             <Icon name="lucide:user-plus" class="w-8 h-8 mb-2 opacity-20" />
-                                            <p class="text-sm font-bold uppercase tracking-tighter opacity-50">Belum ada nama yang dipilih</p>
+                                            <p class="text-sm font-bold uppercase tracking-tighter opacity-50">Belum ada {{ selectedPersonLabel.toLowerCase() }} yang dipilih</p>
                                         </div>
                                         <div v-else class="flex flex-wrap gap-2">
                                             <div 
@@ -268,7 +399,7 @@
                                     </div>
                                 </div>
 
-                                <div class="bg-blue-50/50 p-6 rounded-2xl border border-blue-100 space-y-5 shadow-sm ring-1 ring-blue-50">
+                                <div v-if="showDateSection" class="bg-blue-50/50 p-6 rounded-2xl border border-blue-100 space-y-5 shadow-sm ring-1 ring-blue-50">
                                     <h4 class="text-xs font-black text-blue-700 uppercase tracking-widest flex items-center gap-2">
                                         <Icon name="lucide:calendar-clock" class="w-4 h-4" />
                                         Waktu Pelaksanaan
@@ -277,7 +408,7 @@
                                         <UFormField label="Tanggal Mulai">
                                             <UInput v-model="form.tgl_mulai" type="date" class="w-full bg-white font-bold rounded-xl" icon="lucide:calendar" size="lg" />
                                         </UFormField>
-                                        <UFormField label="Tanggal Selesai" help="*Kosongkan jika hanya 1 hari.">
+                                        <UFormField label="Tanggal Selesai" :help="isTugasDocument ? '*Kosongkan jika hanya 1 hari.' : 'Wajib diisi untuk dispensasi.'">
                                             <UInput v-model="form.tgl_selesai" type="date" class="w-full bg-white font-bold rounded-xl" icon="lucide:calendar-days" size="lg" />
                                         </UFormField>
                                     </div>
@@ -311,12 +442,12 @@
                                 :loading="saving"
                             >
                                 <Icon :name="isEditing ? 'lucide:save' : 'lucide:printer'" class="w-6 h-6 mr-3 group-hover:rotate-12 transition-transform" />
-                                {{ isEditing ? 'UPDATE DATA SURAT' : 'GENERATE & CATAT SURAT TUGAS' }}
+                                {{ submitButtonLabel }}
                             </UButton>
                         </div>
                         <p v-if="!isEditing" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
                             <Icon name="lucide:info" class="w-3 h-3" />
-                            Sistem akan membuat record terpisah untuk setiap siswa terpilih
+                            {{ submitHelpText }}
                         </p>
                     </div>
                 </div>
@@ -368,10 +499,17 @@
                     </div>
                     <UTable v-else :data="suratKesiswaan" :columns="columns" class="w-full">
                         <template #nomor_surat-cell="{ row }">
-                            <div class="flex items-center gap-2 px-2">
-                                <div class="w-1.5 h-1.5 rounded-full bg-blue-500"></div>
+                            <div class="flex items-center gap-3 px-2">
+                                <div class="w-8 h-8 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600">
+                                    <Icon name="lucide:file-text" class="w-4 h-4" />
+                                </div>
                                 <span class="font-black text-blue-700 tracking-tight text-[11px]">{{ row.original.nomor_surat || 'BELUM TERBIT' }}</span>
                             </div>
+                        </template>
+                        <template #jenis-cell="{ row }">
+                            <UBadge :color="getJenisSuratColor(row.original.jenis)" variant="soft" size="sm" class="font-black uppercase text-[9px] tracking-widest px-3 py-1 rounded-full border border-current/10">
+                                {{ getJenisSuratLabel(row.original.jenis) }}
+                            </UBadge>
                         </template>
                         <template #nama-cell="{ row }">
                             <div class="flex flex-col py-1">
@@ -578,9 +716,24 @@ const {
     guruPenandatanganOptions,
     tingkatOptions,
     kelasOptions,
-    jenisDokumenOptions,
+    jenisDokumenCards,
+    jenisDispensasiOptions,
+    keperluanSiswaOptions,
+    keperluanAlumniOptions,
     columns,
     filteredSiswaList,
+    activeDocumentCard,
+    isTugasDocument,
+    isDispensasiDocument,
+    isKeteranganSiswaDocument,
+    isKeteranganAlumniDocument,
+    isSingleSiswaDocument,
+    showDateSection,
+    selectedPersonLabel,
+    submitButtonLabel,
+    submitHelpText,
+    getJenisSuratLabel,
+    getJenisSuratColor,
     formatDate,
     getStatusColor,
     onDasarPenugasanChange,

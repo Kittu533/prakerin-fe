@@ -36,6 +36,7 @@ const props = defineProps<{
   suratMasukSelectOptions: SuratMasukSelectOption[];
   managementList: ManagementOption[];
   selectedRecipientNames: string[];
+  formError: string;
 }>();
 
 const emit = defineEmits<{
@@ -70,6 +71,14 @@ function isInstruksiSelected(value: string) {
   >
     <template #body>
       <div class="w-full space-y-6 p-4 sm:p-6">
+        <UAlert
+          v-if="formError"
+          color="error"
+          variant="soft"
+          icon="lucide:circle-alert"
+          :description="formError"
+        />
+
         <div class="grid grid-cols-1 gap-4 xl:grid-cols-2">
           <UFormField label="Surat masuk" class="w-full">
             <USelectMenu

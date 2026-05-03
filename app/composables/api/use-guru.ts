@@ -458,6 +458,38 @@ export function useGuruApi() {
     return data;
   }
 
+  async function validateAbsensi(idAbsensi: string, keterangan?: string) {
+    const { data } = await apiFetch<SingleResponse<any>>(
+      "PlacementService",
+      `/absensi/${idAbsensi}/validate`,
+      {
+        method: "POST",
+        data: { validasi_guru: true, keterangan },
+      },
+      true,
+    );
+    return data;
+  }
+
+  async function reviewLogbook(
+    idLogbook: string,
+    payload: {
+      status_persetujuan: "disetujui" | "ditolak";
+      catatan_pembimbing?: string;
+    },
+  ) {
+    const { data } = await apiFetch<SingleResponse<any>>(
+      "PlacementService",
+      `/logbook/${idLogbook}/review`,
+      {
+        method: "POST",
+        data: payload,
+      },
+      true,
+    );
+    return data;
+  }
+
   /**
    * Get stats for specific penempatan (kehadiran, logbook count, etc)
    */
@@ -494,6 +526,8 @@ export function useGuruApi() {
     getLogbookByPenempatan,
     getAbsensiByPenempatan,
     getAbsensiSelfieSignedUrl,
+    validateAbsensi,
+    reviewLogbook,
     getStatsByPenempatan,
   };
 }

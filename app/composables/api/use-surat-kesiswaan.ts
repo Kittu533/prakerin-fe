@@ -173,9 +173,17 @@ async function safeFetch(
     };
   } catch (error: any) {
     console.error("[SuratKesiswaanAPI] Error:", error);
+    const responseData = error?.response?.data || error?.data;
+    const validationErrors = responseData?.errors;
+    const validationMessage = validationErrors && typeof validationErrors === "object"
+      ? Object.entries(validationErrors)
+          .map(([field, messages]) => `${field}: ${Array.isArray(messages) ? messages.join(", ") : String(messages)}`)
+          .join("; ")
+      : undefined;
+
     return {
       success: false,
-      message: error?.message || "Network error",
+      message: validationMessage || responseData?.message || error?.message || "Network error",
     };
   }
 }
@@ -195,6 +203,34 @@ function buildListEndpoint(jenisSurat: string, params?: { page?: number; limit?:
 }
 
 export function useSuratKesiswaan() {
+  async function getAll(params?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+  }): Promise<{ success: boolean; data?: SuratKesiswaanListResponse; message: string }> {
+    const endpoint = buildListEndpoint("", params);
+    const res = await safeFetch(endpoint, { method: "GET" });
+
+    if (!res.success || !res.payload) {
+      return { success: false, message: res.message };
+    }
+
+    const payload = res.payload;
+    const records: SuratKesiswaanApiRecord[] = Array.isArray(payload.data) ? payload.data : [];
+
+    return {
+      success: true,
+      message: payload.message ?? "Success",
+      data: {
+        success: true,
+        data: records.map(mapSurat),
+        page: payload.page ?? 1,
+        limit: payload.limit ?? 10,
+        total: payload.total ?? records.length,
+      },
+    };
+  }
+
   async function getTugas(params?: {
     page?: number;
     limit?: number;
@@ -415,6 +451,7 @@ export function useSuratKesiswaan() {
   }
 
   return {
+    getAll,
     getTugas,
     getDispensasi,
     getKeteranganSiswa,

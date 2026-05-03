@@ -27,9 +27,12 @@
                 :loading="loadingSiswa"
                 class="w-full" 
                 size="lg"
-                value-attribute="value"
+                value-key="value"
               >
-                <template #option="{ item }">
+                <template #default>
+                  {{ selectedSiswaOption?.label || 'Pilih siswa yang dikunjungi' }}
+                </template>
+                <template #item="{ item }">
                   <div class="flex flex-col">
                     <span class="font-medium">{{ item.label }}</span>
                     <span class="text-xs text-slate-500">{{ item.perusahaan }}</span>
@@ -144,21 +147,34 @@ interface SiswaOption {
   value: string
   label: string
   perusahaan: string
+  kelas?: string
 }
 
 const siswaOptions = ref<SiswaOption[]>([])
-const selectedOption = ref<string | null>(null)
+const selectedOption = ref<string | SiswaOption | null>(null)
 
 // Sync selectedOption to form.id_penempatan
 watch(selectedOption, (val) => {
-  form.id_penempatan = val
+  form.id_penempatan = getSelectedPenempatanId(val)
 })
 
 const selectedPerusahaan = computed(() => {
-  if (!selectedOption.value) return ''
-  const selected = siswaOptions.value.find(s => s.value === selectedOption.value)
-  return selected?.perusahaan || ''
+  const selectedId = getSelectedPenempatanId(selectedOption.value)
+  if (!selectedId) return ''
+  return selectedSiswaOption.value?.perusahaan || ''
 })
+
+const selectedSiswaOption = computed(() => {
+  const selectedId = getSelectedPenempatanId(selectedOption.value)
+  if (!selectedId) return null
+  return siswaOptions.value.find(s => s.value === selectedId) || null
+})
+
+function getSelectedPenempatanId(value: string | SiswaOption | null) {
+  if (!value) return null
+  if (typeof value === 'string') return value
+  return value.value || null
+}
 
 const kondisiOptions = [
   { value: 'sangat-baik', label: 'Sangat Baik', icon: 'lucide:smile', iconColor: 'text-green-600', bgColor: 'bg-green-100' },
@@ -195,7 +211,8 @@ async function loadSiswaOptions() {
         .map((p: any) => ({
           value: p.id_penempatan,
           label: p.siswa?.nama_siswa || '-',
-          perusahaan: p.perusahaan?.nama_perusahaan || '-'
+          perusahaan: p.perusahaan?.nama_perusahaan || '-',
+          kelas: p.siswa?.kelas?.nama_kelas || '-'
         }))
     }
   } catch (error) {
@@ -207,9 +224,7 @@ async function loadSiswaOptions() {
 }
 
 const submit = async () => {
-  const penempatanId = typeof form.id_penempatan === 'object' && form.id_penempatan !== null
-    ? (form.id_penempatan as any).value 
-    : form.id_penempatan
+  const penempatanId = getSelectedPenempatanId(selectedOption.value) || form.id_penempatan
 
   if (!penempatanId || !form.tanggal || !form.hasil_monitoring) {
     toast.add({ title: 'Lengkapi semua field wajib', color: 'error' })

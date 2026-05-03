@@ -3,6 +3,10 @@ import { computed, onMounted, ref, watch } from "vue";
 import { useGuruApi } from "~/composables/api/use-academic";
 import { usePerusahaanApi } from "~/composables/api/use-partner";
 import { usePeriodePKLApi } from "~/composables/api/use-periode-pkl";
+import {
+  useSuratKeluar,
+  type SuratKeluar,
+} from "~/composables/api/use-surat-keluar";
 
 definePageMeta({
   layout: "admin",
@@ -18,15 +22,25 @@ interface PlotItem {
   selected: boolean;
 }
 
+interface MitraOption {
+  value: string;
+  label: string;
+  bidang_usaha?: string;
+  kabupaten_kota?: string;
+  kapasitas_siswa?: number;
+}
+
 const toast = useToast();
 const route = useRoute();
 
 const guruApi = useGuruApi();
 const perusahaanApi = usePerusahaanApi();
 const periodeApi = usePeriodePKLApi();
+const suratKeluarApi = useSuratKeluar();
 
 const loading = ref(false);
 const plotting = ref(false);
+const loadingApproval = ref(false);
 
 const search = ref("");
 const selectedKelas = ref("");
@@ -40,10 +54,13 @@ const activeTanggalMulai = ref("");
 const activeTanggalSelesai = ref("");
 const defaultDurasiBulan = ref(1);
 const hasAppliedRouteFocus = ref(false);
+const mitraEligibleCount = ref(0);
+const mitraBlockedCount = ref(0);
 
 const siswaItems = ref<PlotItem[]>([]);
+const approvedStudentIds = ref<Set<string>>(new Set());
 
-const mitraOptions = ref<Array<{ value: string; label: string }>>([]);
+const mitraOptions = ref<MitraOption[]>([]);
 const guruOptions = ref<Array<{ value: string; label: string }>>([]);
 const focusedSiswaId = computed(() =>
   typeof route.query.siswa_id === "string" ? route.query.siswa_id : "",
@@ -77,13 +94,31 @@ const totalSelectedCount = computed(
   () => siswaItems.value.filter((item) => item.selected).length,
 );
 
+const selectedMitraOption = computed(() =>
+  mitraOptions.value.find((mitra) => mitra.value === selectedMitra.value) || null,
+);
+
+const approvedStudentCount = computed(() =>
+  selectedMitra.value
+    ? siswaItems.value.filter((item) => approvedStudentIds.value.has(item.id_siswa)).length
+    : 0,
+);
+
+const unapprovedStudentCount = computed(() =>
+  selectedMitra.value ? siswaItems.value.length - approvedStudentCount.value : 0,
+);
+
 const isAllFilteredSelected = computed({
   get: () =>
-    filteredRows.value.length > 0 &&
-    filteredRows.value.every((item) => item.selected),
+    filteredRows.value.some((item) => canSelectStudent(item)) &&
+    filteredRows.value
+      .filter((item) => canSelectStudent(item))
+      .every((item) => item.selected),
   set: (checked: boolean) => {
     filteredRows.value.forEach((item) => {
-      item.selected = checked;
+      if (canSelectStudent(item)) {
+        item.selected = checked;
+      }
     });
   },
 });
@@ -128,6 +163,48 @@ function getDurasiRangePreview(durasiBulan: number) {
   return `${formatDateId(activeTanggalMulai.value)} - ${formatDateId(endDate.toISOString())}`;
 }
 
+function getErrorMessage(error: any, fallback: string) {
+  const responseData = error?.data || error?.response?._data || error?.response?.data;
+  const message = responseData?.message || error?.message;
+
+  if (responseData?.errors && typeof responseData.errors === "object") {
+    const firstError = Object.values(responseData.errors)
+      .flat()
+      .find(Boolean);
+    if (firstError) return String(firstError);
+  }
+
+  return message || fallback;
+}
+
+function getSuratPerusahaanId(surat: SuratKeluar) {
+  return String(surat.template_payload?.perusahaan_id || "").trim();
+}
+
+function getSuratStudentIds(surat: SuratKeluar) {
+  return (surat.template_payload?.siswa || [])
+    .map((siswa) => String(siswa.id_siswa || "").trim())
+    .filter(Boolean);
+}
+
+function isSuratPermohonanDiterimaForSelectedMitra(surat: SuratKeluar) {
+  return (
+    surat.status === "diterima" &&
+    surat.template_jenis === "surat_permohonan" &&
+    getSuratPerusahaanId(surat) === selectedMitra.value
+  );
+}
+
+function canSelectStudent(item: PlotItem) {
+  return Boolean(selectedMitra.value && approvedStudentIds.value.has(item.id_siswa));
+}
+
+function clearSelectedStudents() {
+  siswaItems.value.forEach((item) => {
+    item.selected = false;
+  });
+}
+
 function applyRouteFocusToRows() {
   if (!focusedSiswaId.value || hasAppliedRouteFocus.value) return;
 
@@ -148,19 +225,66 @@ function applyRouteFocusToRows() {
   }
 
   search.value = target.nama_siswa;
-  target.selected = true;
+  target.selected = canSelectStudent(target);
+}
+
+async function loadAcceptedLettersForSelectedMitra() {
+  approvedStudentIds.value = new Set();
+  clearSelectedStudents();
+
+  if (!selectedMitra.value) {
+    return;
+  }
+
+  loadingApproval.value = true;
+
+  try {
+    const suratRes = await suratKeluarApi.getAll({
+      page: 1,
+      limit: 1000,
+      klasifikasi_surat: "permohonan",
+      status: "diterima",
+    });
+
+    if (!suratRes.success || !suratRes.data) {
+      throw new Error(suratRes.message || "Gagal memuat surat permohonan diterima");
+    }
+
+    const approvedIds = new Set<string>();
+    for (const surat of suratRes.data.data || []) {
+      if (!isSuratPermohonanDiterimaForSelectedMitra(surat)) continue;
+      for (const siswaId of getSuratStudentIds(surat)) {
+        approvedIds.add(siswaId);
+      }
+    }
+
+    approvedStudentIds.value = approvedIds;
+  } catch (error: any) {
+    toast.add({
+      title: "Gagal memuat persetujuan perusahaan",
+      description: error?.message || "Data surat permohonan diterima tidak berhasil dimuat",
+      color: "error",
+    });
+  } finally {
+    loadingApproval.value = false;
+  }
 }
 
 async function loadInitialData() {
   loading.value = true;
 
   try {
-    const [periodeRes, mitraRes, guruRes] = await Promise.all([
+    const [periodeRes, mitraRes, mitraBlockedStatsRes, guruRes] = await Promise.all([
       periodeApi.getActive(),
       perusahaanApi.getAll({
         limit: 1000,
         status_kerjasama: true,
         mou_aktif: true,
+        arsip: false,
+      }),
+      perusahaanApi.getStats({
+        status_kerjasama: true,
+        mou_aktif: false,
         arsip: false,
       }),
       guruApi.getAll({ limit: 1000 }),
@@ -188,7 +312,15 @@ async function loadInitialData() {
       mitraOptions.value = (mitraRes.data || []).map((mitra) => ({
         value: mitra.id_perusahaan,
         label: mitra.nama_perusahaan,
+        bidang_usaha: mitra.bidang_usaha,
+        kabupaten_kota: mitra.kabupaten_kota,
+        kapasitas_siswa: mitra.kapasitas_siswa,
       }));
+      mitraEligibleCount.value = mitraRes.meta?.total || mitraOptions.value.length;
+    }
+
+    if (mitraBlockedStatsRes.success) {
+      mitraBlockedCount.value = mitraBlockedStatsRes.data?.total || 0;
     }
 
     if (guruRes.success) {
@@ -249,6 +381,10 @@ async function handlePlotSelected() {
   if (!selectedMitra.value) {
     toast.add({
       title: "Pilih mitra terlebih dahulu",
+      description:
+        mitraOptions.value.length === 0
+          ? "Belum ada mitra dengan MoU aktif lengkap yang bisa dipakai untuk penempatan PKL."
+          : undefined,
       color: "warning",
     });
     return;
@@ -261,6 +397,16 @@ async function handlePlotSelected() {
     toast.add({
       title: "Pilih minimal 1 siswa",
       color: "warning",
+    });
+    return;
+  }
+
+  const unapprovedSelected = selectedItems.filter((item) => !canSelectStudent(item));
+  if (unapprovedSelected.length > 0) {
+    toast.add({
+      title: "Ada siswa belum disetujui perusahaan",
+      description: unapprovedSelected.map((item) => item.nama_siswa).join(", "),
+      color: "error",
     });
     return;
   }
@@ -306,7 +452,10 @@ async function handlePlotSelected() {
   } catch (error: any) {
     toast.add({
       title: "Gagal melakukan plot siswa",
-      description: error?.message || "Terjadi kesalahan saat memproses plot",
+      description: getErrorMessage(
+        error,
+        "Terjadi kesalahan saat memproses plot",
+      ),
       color: "error",
     });
   } finally {
@@ -316,6 +465,10 @@ async function handlePlotSelected() {
 
 watch(selectedKelas, () => {
   isAllFilteredSelected.value = false;
+});
+
+watch(selectedMitra, () => {
+  void loadAcceptedLettersForSelectedMitra();
 });
 
 onMounted(() => {
@@ -345,8 +498,48 @@ useHead({
         </div>
       </div>
 
-      <div class="bg-amber-50 border-l-4 border-amber-400 p-4 rounded-r-xl text-sm text-amber-800">
-        Hanya mitra dengan MoU aktif yang tampil. Siswa yang sudah terplot pada periode aktif tidak ditampilkan.
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-3">
+        <div class="bg-emerald-50 border border-emerald-100 p-4 rounded-2xl text-sm text-emerald-800">
+          <div class="flex items-center justify-between gap-3">
+            <div class="flex items-center gap-2 font-bold">
+              <Icon name="lucide:check-circle" class="w-4 h-4" />
+              Mitra siap ditempati
+            </div>
+            <span class="text-lg font-black text-emerald-700">{{ mitraEligibleCount }}</span>
+          </div>
+          <p class="mt-1 text-xs leading-relaxed">
+            Hanya perusahaan dengan kerja sama aktif dan MoU lengkap yang bisa dipilih.
+          </p>
+        </div>
+
+        <div class="bg-amber-50 border border-amber-100 p-4 rounded-2xl text-sm text-amber-800">
+          <div class="flex items-center justify-between gap-3">
+            <div class="flex items-center gap-2 font-bold">
+              <Icon name="lucide:alert-triangle" class="w-4 h-4" />
+              Perlu MoU aktif
+            </div>
+            <span class="text-lg font-black text-amber-700">{{ mitraBlockedCount }}</span>
+          </div>
+          <p class="mt-1 text-xs leading-relaxed">
+            Lengkapi nomor, perihal, tanggal berlaku, dan dokumen MoU sebelum penempatan.
+          </p>
+        </div>
+
+        <NuxtLink
+          to="/admin/mitra/mou"
+          class="bg-blue-50 border border-blue-100 p-4 rounded-2xl text-sm text-blue-800 flex items-center justify-between gap-3 hover:bg-blue-100 transition-colors"
+        >
+          <div>
+            <div class="flex items-center gap-2 font-bold">
+              <Icon name="lucide:file-text" class="w-4 h-4" />
+              Kelola MoU
+            </div>
+            <p class="mt-1 text-xs leading-relaxed">
+              Tambah atau perbarui dokumen kerja sama mitra.
+            </p>
+          </div>
+          <Icon name="lucide:arrow-right" class="w-4 h-4 shrink-0" />
+        </NuxtLink>
       </div>
         <div class="bg-blue-50 border-l-4 border-blue-400 p-4 rounded-r-xl text-sm text-blue-800">
           Durasi magang diisi per siswa (1-12 bulan). Tanggal selesai dihitung otomatis dari tanggal mulai periode aktif.
@@ -390,11 +583,28 @@ useHead({
             v-model="selectedMitra"
             class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none"
           >
-            <option value="">Pilih Mitra</option>
+            <option value="">Pilih Mitra dengan MoU Aktif</option>
             <option v-for="mitra in mitraOptions" :key="mitra.value" :value="mitra.value">
-              {{ mitra.label }}
+              {{ mitra.label }}{{ mitra.kabupaten_kota ? ` - ${mitra.kabupaten_kota}` : "" }}
             </option>
           </select>
+          <p v-if="!loading && mitraOptions.length === 0" class="text-xs text-red-500">
+            Belum ada mitra dengan MoU aktif lengkap. Lengkapi data MoU dulu.
+          </p>
+          <div
+            v-else-if="selectedMitraOption"
+            class="rounded-xl border border-emerald-100 bg-emerald-50 px-3 py-2 text-xs text-emerald-800"
+          >
+            <div class="flex items-center justify-between gap-2">
+              <span class="font-bold">MoU Aktif</span>
+              <span v-if="selectedMitraOption.kapasitas_siswa !== undefined">
+                Kapasitas {{ selectedMitraOption.kapasitas_siswa }} siswa
+              </span>
+            </div>
+            <p class="mt-0.5 text-emerald-700">
+              {{ selectedMitraOption.bidang_usaha || "Bidang usaha belum diisi" }}
+            </p>
+          </div>
         </div>
 
         <div class="space-y-2">
@@ -412,11 +622,22 @@ useHead({
       </div>
 
       <div class="flex items-center justify-between border-t border-slate-100 pt-4 flex-wrap gap-3">
-        <p class="text-sm text-slate-500">
-          Terpilih: <span class="font-bold text-slate-800">{{ totalSelectedCount }}</span> siswa
-        </p>
+        <div class="flex flex-wrap items-center gap-2 text-xs font-bold">
+          <span class="rounded-full bg-slate-100 px-3 py-1 text-slate-600">
+            Terpilih: {{ totalSelectedCount }}
+          </span>
+          <span class="rounded-full bg-emerald-100 px-3 py-1 text-emerald-700">
+            Disetujui perusahaan: {{ approvedStudentCount }}
+          </span>
+          <span class="rounded-full bg-amber-100 px-3 py-1 text-amber-700">
+            Belum disetujui: {{ unapprovedStudentCount }}
+          </span>
+          <span v-if="loadingApproval" class="rounded-full bg-blue-100 px-3 py-1 text-blue-700">
+            Memuat persetujuan...
+          </span>
+        </div>
         <button
-          :disabled="plotting || totalSelectedCount === 0"
+          :disabled="plotting || loadingApproval || totalSelectedCount === 0 || !selectedMitra"
           @click="handlePlotSelected"
           class="bg-green-700 hover:bg-green-800 disabled:bg-slate-300 disabled:cursor-not-allowed text-white px-6 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2"
         >
@@ -441,22 +662,28 @@ useHead({
           <thead>
             <tr class="text-[11px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-100 bg-slate-50/30">
               <th class="px-6 py-4 w-10">
-                <input v-model="isAllFilteredSelected" type="checkbox" class="w-4 h-4 rounded border-slate-300 text-blue-600" />
+                <input
+                  v-model="isAllFilteredSelected"
+                  type="checkbox"
+                  :disabled="!selectedMitra || loadingApproval"
+                  class="w-4 h-4 rounded border-slate-300 text-blue-600 disabled:opacity-40"
+                />
               </th>
               <th class="px-4 py-4 w-16 text-center">No</th>
               <th class="px-4 py-4">Nama Siswa</th>
               <th class="px-4 py-4">NIS</th>
               <th class="px-4 py-4">Kelas</th>
               <th class="px-4 py-4">Jurusan</th>
+              <th class="px-4 py-4">Persetujuan</th>
               <th class="px-4 py-4 w-40">Durasi (Bulan)</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-100">
             <tr v-if="loading">
-              <td colspan="7" class="px-6 py-10 text-center text-slate-500">Memuat data...</td>
+              <td colspan="8" class="px-6 py-10 text-center text-slate-500">Memuat data...</td>
             </tr>
             <tr v-else-if="filteredRows.length === 0">
-              <td colspan="7" class="px-6 py-10 text-center text-slate-500">
+              <td colspan="8" class="px-6 py-10 text-center text-slate-500">
                 Tidak ada siswa siap PKL yang cocok dengan filter.
               </td>
             </tr>
@@ -465,9 +692,15 @@ useHead({
               v-else
               :key="row.id_siswa"
               class="hover:bg-slate-50/50 transition-colors"
+              :class="selectedMitra && !canSelectStudent(row) ? 'opacity-60' : ''"
             >
               <td class="px-6 py-4">
-                <input v-model="row.selected" type="checkbox" class="w-4 h-4 rounded border-slate-300 text-blue-600" />
+                <input
+                  v-model="row.selected"
+                  type="checkbox"
+                  :disabled="!canSelectStudent(row) || loadingApproval"
+                  class="w-4 h-4 rounded border-slate-300 text-blue-600 disabled:opacity-40"
+                />
               </td>
               <td class="px-4 py-4 text-center text-sm text-slate-500">{{ index + 1 }}</td>
               <td class="px-4 py-4 font-semibold text-slate-800">{{ row.nama_siswa }}</td>
@@ -475,13 +708,33 @@ useHead({
               <td class="px-4 py-4 text-slate-600">{{ row.kelas }}</td>
               <td class="px-4 py-4 text-slate-600">{{ row.jurusan }}</td>
               <td class="px-4 py-4">
+                <span
+                  v-if="canSelectStudent(row)"
+                  class="rounded-full bg-emerald-100 px-3 py-1 text-[10px] font-black uppercase tracking-wider text-emerald-700"
+                >
+                  Disetujui
+                </span>
+                <span
+                  v-else-if="selectedMitra"
+                  class="rounded-full bg-amber-100 px-3 py-1 text-[10px] font-black uppercase tracking-wider text-amber-700"
+                >
+                  Belum disetujui
+                </span>
+                <span
+                  v-else
+                  class="rounded-full bg-slate-100 px-3 py-1 text-[10px] font-black uppercase tracking-wider text-slate-500"
+                >
+                  Pilih mitra
+                </span>
+              </td>
+              <td class="px-4 py-4">
                 <div class="space-y-1.5">
                   <input
                     v-model.number="row.durasi_bulan"
                     type="number"
                     min="1"
                     max="12"
-                    :disabled="!row.selected"
+                    :disabled="!row.selected || !canSelectStudent(row)"
                     class="w-24 bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-100 disabled:text-slate-400"
                   />
                   <p class="text-[10px] leading-tight" :class="row.selected ? 'text-blue-700 font-semibold' : 'text-slate-400'">

@@ -103,8 +103,8 @@
                         <p class="text-sm text-sky-700 mt-1">
                             Anda sudah memiliki penempatan PKL yang aktif.
                             Silakan lakukan aktivitas PKL seperti absensi
-                            harian, mengisi logbook kegiatan, dan melihat
-                            penilaian melalui menu yang tersedia.
+                            harian dan mengisi logbook kegiatan melalui menu
+                            yang tersedia.
                         </p>
                     </div>
                 </div>

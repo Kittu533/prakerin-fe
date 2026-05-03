@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch, computed } from "vue";
+import { ref, watch, computed, onMounted } from "vue";
 import { usePeriodePKLApi } from "~/composables/api/use-periode-pkl";
 import {
     useTahunAjaranApi,
@@ -47,6 +47,45 @@ const statusOptions = [
     { label: "Aktif", value: "aktif" },
 ];
 const today = computed(() => getLocalDateKey());
+
+const toApiDate = (dateKey: string) => dateKey;
+
+const getSelectValue = (value: unknown): string => {
+    if (typeof value === "string") return value;
+    if (value && typeof value === "object") {
+        const candidate = value as Record<string, unknown>;
+        if (typeof candidate.value === "string") return candidate.value;
+        if (typeof candidate.id_tahun_ajaran === "string") {
+            return candidate.id_tahun_ajaran;
+        }
+    }
+    return "";
+};
+
+const getApiErrorMessage = (error: any, fallback: string) => {
+    const data = error?.response?.data || error?.data || error;
+    if (!data?.errors) return data?.message || error?.message || fallback;
+
+    const firstMessage = Object.values(data.errors)
+        .flat()
+        .find((message) => typeof message === "string");
+
+    return typeof firstMessage === "string"
+        ? firstMessage
+        : data.message || fallback;
+};
+
+const applyApiErrors = (error: any) => {
+    const apiErrors = error?.response?.data?.errors || error?.errors;
+    if (!apiErrors || typeof apiErrors !== "object") return;
+
+    Object.entries(apiErrors).forEach(([field, messages]) => {
+        const message = Array.isArray(messages) ? messages[0] : messages;
+        if (typeof message === "string") {
+            errors.value[field] = message;
+        }
+    });
+};
 
 // Validation errors
 const errors = ref<Record<string, string>>({});
@@ -209,10 +248,7 @@ const validateForm = (): boolean => {
         errors.value.nama_periode = "Nama periode wajib diisi";
     }
 
-    const tahunAjaranId =
-        typeof formData.value.id_tahun_ajaran === "string"
-            ? formData.value.id_tahun_ajaran
-            : (formData.value.id_tahun_ajaran as any)?.value;
+    const tahunAjaranId = getSelectValue(formData.value.id_tahun_ajaran);
 
     if (!tahunAjaranId) {
         errors.value.id_tahun_ajaran = "Tahun ajaran wajib dipilih";
@@ -245,17 +281,6 @@ const validateForm = (): boolean => {
                 "Tanggal selesai harus setelah tanggal mulai";
         }
 
-        // Check duration (6-12 months)
-        const diffTime = Math.abs(end.getTime() - start.getTime());
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        const diffMonths = Math.round(diffDays / 30);
-
-        if (diffMonths < 6) {
-            errors.value.tanggal_selesai = "Durasi minimal 6 bulan";
-        }
-        if (diffMonths > 12) {
-            errors.value.tanggal_selesai = "Durasi maksimal 12 bulan";
-        }
     }
 
     return Object.keys(errors.value).length === 0;
@@ -286,23 +311,24 @@ const submit = async () => {
 
     submitting.value = true;
     try {
-        const tahunAjaranId =
-            typeof formData.value.id_tahun_ajaran === "string"
-                ? formData.value.id_tahun_ajaran
-                : (formData.value.id_tahun_ajaran as any)?.value;
+        const tahunAjaranId = getSelectValue(formData.value.id_tahun_ajaran);
+        const status = getSelectValue(formData.value.status) || "draft";
 
         const payload = {
-            nama_periode: formData.value.nama_periode,
+            nama_periode: formData.value.nama_periode.trim(),
             id_tahun_ajaran: tahunAjaranId,
-            tanggal_mulai: new Date(formData.value.tanggal_mulai).toISOString(),
-            tanggal_selesai: new Date(
-                formData.value.tanggal_selesai,
-            ).toISOString(),
-            status: formData.value.status,
-            deskripsi: formData.value.deskripsi || undefined,
+            tanggal_mulai: toApiDate(formData.value.tanggal_mulai),
+            tanggal_selesai: toApiDate(formData.value.tanggal_selesai),
+            status,
+            deskripsi: formData.value.deskripsi.trim() || undefined,
         };
 
         const response = await api.create(payload);
+
+        if (!response.success) {
+            applyApiErrors(response);
+            throw response;
+        }
 
         if (response.success) {
             toast.add({
@@ -313,9 +339,13 @@ const submit = async () => {
         }
     } catch (error: any) {
         console.error("Failed to create periode:", error);
+        applyApiErrors(error);
         toast.add({
             title: "Gagal membuat periode",
-            description: error.response?.data?.message || error.message,
+            description: getApiErrorMessage(
+                error,
+                "Periksa kembali data periode PKL",
+            ),
             color: "error",
         });
     } finally {
@@ -338,10 +368,7 @@ const resetForm = () => {
 
 // Auto-suggest dates based on tahun ajaran
 const autoFillDates = () => {
-    const selectedId =
-        typeof formData.value.id_tahun_ajaran === "string"
-            ? formData.value.id_tahun_ajaran
-            : (formData.value.id_tahun_ajaran as any)?.value;
+    const selectedId = getSelectValue(formData.value.id_tahun_ajaran);
 
     const selectedTA = tahunAjaranOptions.value.find(
         (ta) => ta.value === selectedId,
@@ -371,8 +398,10 @@ const handleBackdropClick = (e: MouseEvent) => {
     }
 };
 
-// Fetch options on mount
-fetchTahunAjaran();
+// Fetch options on client after auth token is available.
+onMounted(() => {
+    fetchTahunAjaran();
+});
 </script>
 
 <template>
@@ -453,7 +482,7 @@ fetchTahunAjaran();
                                 :disabled="submitting"
                                 class="flex-1"
                                 size="lg"
-                                value-attribute="value"
+                                value-key="value"
                             />
                             <UButton
                                 type="button"
@@ -571,8 +600,7 @@ fetchTahunAjaran();
                         <USelectMenu
                             v-model="formData.status"
                             :items="statusOptions"
-                            option-attribute="value"
-                            value-attribute="value"
+                            value-key="value"
                             :disabled="submitting"
                             size="lg"
                             class="w-full"
@@ -594,7 +622,7 @@ fetchTahunAjaran();
                         <UTextarea
                             v-model="formData.deskripsi"
                             placeholder="Deskripsi periode PKL..."
-                            rows="2"
+                            :rows="2"
                             :disabled="submitting"
                             class="w-full"
                         />
@@ -612,8 +640,8 @@ fetchTahunAjaran();
                             <div class="text-sm text-blue-700">
                                 <p class="font-medium">Informasi</p>
                                 <p class="text-xs text-blue-600 mt-1">
-                                    Durasi periode PKL adalah 6-12 bulan. Hanya
-                                    siswa kelas 12 yang dapat mengikuti PKL.
+                                    Periode PKL dapat disesuaikan dengan jadwal sekolah.
+                                    Tanggal selesai harus setelah tanggal mulai.
                                 </p>
                             </div>
                         </div>

@@ -7,7 +7,7 @@
           Master Data TTD Digital
         </h1>
         <p class="text-slate-500 font-medium">
-          Aktifkan penandatangan guru lalu simpan payload TTD digital (image/QR) per id guru.
+          Aktifkan penandatangan guru lalu generate QR verifikasi untuk tanda tangan digital.
         </p>
       </div>
 
@@ -73,12 +73,41 @@
           :key="guru.id_guru"
           class="border border-slate-100 rounded-xl p-4 space-y-4"
         >
-          <div class="flex flex-col md:flex-row md:items-center gap-3">
+          <div class="grid gap-4 xl:grid-cols-[minmax(0,1fr)_160px_minmax(0,auto)] xl:items-center">
             <div class="flex-1 min-w-0">
               <p class="font-bold text-slate-800 truncate">{{ guru.nama_guru }}</p>
               <p class="text-xs text-slate-500">NIP: {{ guru.nip }}</p>
               <p class="text-xs text-slate-400">ID Guru: {{ guru.id_guru }}</p>
               <p class="text-xs text-slate-400 mt-1">{{ guru.jabatan || "-" }}</p>
+            </div>
+
+            <div class="rounded-xl border border-slate-100 bg-slate-50 p-3">
+              <div class="flex items-center justify-between gap-2 xl:block">
+                <p class="text-[11px] font-black uppercase tracking-wider text-slate-500">
+                  Preview TTD
+                </p>
+                <div
+                  class="mt-0 grid h-20 w-20 shrink-0 place-items-center rounded-lg border border-slate-200 bg-white xl:mt-2 xl:h-28 xl:w-28"
+                >
+                  <img
+                    v-if="qrPreviewMap[guru.id_guru]"
+                    :src="qrPreviewMap[guru.id_guru]"
+                    :alt="`QR TTD ${guru.nama_guru}`"
+                    class="h-full w-full object-contain p-1"
+                  />
+                  <Icon
+                    v-else
+                    name="lucide:qr-code"
+                    class="h-8 w-8 text-slate-300"
+                  />
+                </div>
+              </div>
+              <p
+                class="mt-2 hidden truncate text-[11px] font-semibold xl:block"
+                :class="signatureStateMap[guru.id_guru]?.exists ? 'text-sky-700' : 'text-slate-400'"
+              >
+                {{ signatureStateMap[guru.id_guru]?.exists ? "QR aktif" : "Belum dibuat" }}
+              </p>
             </div>
 
             <div class="flex flex-wrap items-center gap-2">
@@ -140,45 +169,30 @@
             v-if="editingGuruId === guru.id_guru"
             class="rounded-xl border border-sky-100 bg-sky-50/40 p-4 space-y-3"
           >
-            <div class="flex flex-col gap-4 xl:flex-row xl:items-start">
-              <div class="flex min-w-0 flex-1 flex-col">
-                <label class="text-xs font-semibold text-slate-600 block mb-1">
-                  Payload TTD (Data URL image / teks QR)
-                </label>
-                <UTextarea
-                  v-model="signatureDraftMap[guru.id_guru]"
-                  :rows="6"
-                  :placeholder="`Contoh: data:image/png;base64,... atau teks payload QR untuk ${guru.nama_guru}`"
-                  class="w-full"
-                  :ui="{
-                    base: 'w-full min-h-40'
-                  }"
-                />
+            <div class="rounded-xl border border-sky-100 bg-white p-4">
+              <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div class="min-w-0">
+                  <p class="text-sm font-black text-slate-800">Mode QR Verifikasi</p>
+                  <p class="mt-1 text-sm text-slate-500">
+                    QR akan membuka halaman publik verifikasi TTD. Tidak perlu upload gambar tanda tangan.
+                  </p>
+                  <p
+                    v-if="signatureDraftMap[guru.id_guru]"
+                    class="mt-2 truncate text-xs font-semibold text-sky-700"
+                  >
+                    {{ signatureDraftMap[guru.id_guru] }}
+                  </p>
+                </div>
+                <div class="grid h-24 w-24 shrink-0 place-items-center rounded-xl border border-slate-200 bg-slate-50">
+                  <img
+                    v-if="qrPreviewMap[guru.id_guru]"
+                    :src="qrPreviewMap[guru.id_guru]"
+                    :alt="`QR TTD ${guru.nama_guru}`"
+                    class="h-full w-full object-contain p-1"
+                  />
+                  <Icon v-else name="lucide:qr-code" class="h-12 w-12 text-sky-600" />
+                </div>
               </div>
-
-              <div class="flex w-full flex-col gap-2 xl:w-[320px] xl:shrink-0">
-                <label class="text-xs font-semibold text-slate-600 block">Upload Gambar TTD</label>
-                <input
-                  type="file"
-                  accept="image/*"
-                  class="block w-full text-xs text-slate-500 file:mr-2 file:mb-2 file:w-full file:rounded-lg file:border-0 file:bg-sky-100 file:px-3 file:py-2 file:text-sm file:font-medium file:text-sky-700 sm:file:mb-0 sm:file:w-auto"
-                  @change="onPickSignatureImage($event, guru.id_guru)"
-                />
-                <p class="text-[11px] text-slate-500">
-                  Jika upload gambar, payload otomatis diisi data URL. Jika teks biasa, backend akan render sebagai QR.
-                </p>
-              </div>
-            </div>
-
-            <div
-              v-if="isImagePayload(signatureDraftMap[guru.id_guru])"
-              class="inline-flex w-full rounded-lg border border-slate-200 bg-white p-2 sm:w-auto"
-            >
-              <img
-                :src="signatureDraftMap[guru.id_guru]"
-                alt="Preview TTD"
-                class="max-h-28 w-full object-contain sm:w-auto"
-              />
             </div>
 
             <div class="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
@@ -189,7 +203,7 @@
                 @click="saveSignature(guru)"
               >
                 <Icon name="lucide:save" class="w-4 h-4 mr-1" />
-                Simpan Signature Guru
+                Generate QR TTD
               </UButton>
               <UButton
                 color="error"
@@ -199,7 +213,7 @@
                 @click="resetSignature(guru)"
               >
                 <Icon name="lucide:trash-2" class="w-4 h-4 mr-1" />
-                Reset Signature
+                Reset QR
               </UButton>
               <span
                 v-if="signatureStateMap[guru.id_guru]?.timestamp"
@@ -250,6 +264,7 @@
 </template>
 
 <script setup lang="ts">
+import QRCode from "qrcode";
 import { useGuruApi, type Guru } from "~/composables/api/use-academic";
 import { useSignatureApi } from "~/composables/api/use-signature";
 import { useSweetAlert } from "~/composables/use-sweet-alert";
@@ -278,6 +293,7 @@ const guruList = ref<Guru[]>([]);
 const pagination = ref({ page: 1, limit: 10, total: 0 });
 const filters = ref({ search: "" });
 const signatureDraftMap = ref<Record<string, string>>({});
+const qrPreviewMap = ref<Record<string, string>>({});
 const verificationMap = ref<
   Record<
     string,
@@ -295,6 +311,7 @@ const signatureStateMap = ref<
     {
       exists: boolean;
       hasImagePayload: boolean;
+      signatureData?: string;
       timestamp?: string;
     }
   >
@@ -356,6 +373,7 @@ async function fetchData() {
 async function refreshSignatureStates() {
   if (!guruList.value.length) {
     signatureStateMap.value = {};
+    qrPreviewMap.value = {};
     return;
   }
 
@@ -369,6 +387,7 @@ async function refreshSignatureStates() {
           {
             exists: Boolean(latest),
             hasImagePayload: Boolean(latest?.hasImagePayload),
+            signatureData: latest?.signatureData,
             timestamp: latest?.timestamp,
           },
         ] as const;
@@ -389,8 +408,10 @@ async function refreshSignatureStates() {
       acc[guruId] = state;
       return acc;
     },
-    {} as Record<string, { exists: boolean; hasImagePayload: boolean; timestamp?: string }>,
+    {} as Record<string, { exists: boolean; hasImagePayload: boolean; signatureData?: string; timestamp?: string }>,
   );
+
+  await refreshQrPreviews();
 }
 
 async function verifyAllSignatures() {
@@ -446,12 +467,40 @@ function signatureStatusColor(guruId: string) {
 function signatureStatusLabel(guruId: string) {
   const state = signatureStateMap.value[guruId];
   if (!state?.exists) return "TTD Belum Disimpan";
-  if (state.hasImagePayload) return "TTD Image Tersimpan";
-  return "TTD QR/Teks Tersimpan";
+  return "QR TTD Tersimpan";
 }
 
-function isImagePayload(value?: string) {
-  return String(value || "").trim().toLowerCase().startsWith("data:image/");
+async function buildQrPreview(payload?: string) {
+  const value = String(payload || "").trim();
+  if (!value) return "";
+
+  try {
+    return await QRCode.toDataURL(value, {
+      errorCorrectionLevel: "M",
+      margin: 1,
+      width: 220,
+    });
+  } catch (error) {
+    console.error("[TTD Master] QR preview error:", error);
+    return "";
+  }
+}
+
+async function refreshQrPreviews() {
+  const previews = await Promise.all(
+    guruList.value.map(async (guru) => {
+      const payload = signatureStateMap.value[guru.id_guru]?.signatureData;
+      return [guru.id_guru, await buildQrPreview(payload)] as const;
+    }),
+  );
+
+  qrPreviewMap.value = previews.reduce(
+    (acc, [guruId, preview]) => {
+      if (preview) acc[guruId] = preview;
+      return acc;
+    },
+    {} as Record<string, string>,
+  );
 }
 
 function formatTimestamp(value?: string) {
@@ -476,8 +525,10 @@ async function openSignatureEditor(guruId: string) {
       signatureStateMap.value[guruId] = {
         exists: true,
         hasImagePayload: Boolean(result.data.hasImagePayload),
+        signatureData: result.data.signatureData,
         timestamp: result.data.timestamp,
       };
+      qrPreviewMap.value[guruId] = await buildQrPreview(result.data.signatureData);
       return;
     }
 
@@ -491,27 +542,8 @@ async function openSignatureEditor(guruId: string) {
   }
 }
 
-async function onPickSignatureImage(event: Event, guruId: string) {
-  const input = event.target as HTMLInputElement;
-  const file = input.files?.[0];
-  if (!file) return;
-
-  const reader = new FileReader();
-  reader.onload = () => {
-    signatureDraftMap.value[guruId] = String(reader.result || "");
-  };
-  reader.onerror = () => {
-    showError("Gagal", "Gagal membaca file gambar TTD.");
-  };
-  reader.readAsDataURL(file);
-}
-
 async function saveSignature(guru: Guru) {
-  const signatureData = String(signatureDraftMap.value[guru.id_guru] || "").trim();
-  if (!signatureData) {
-    await showError("Validasi", "Payload TTD tidak boleh kosong.");
-    return;
-  }
+  const signatureData = `QR_TTD_GURU:${guru.id_guru}`;
 
   savingSignatureId.value = guru.id_guru;
   try {
@@ -529,11 +561,17 @@ async function saveSignature(guru: Guru) {
 
     signatureStateMap.value[guru.id_guru] = {
       exists: true,
-      hasImagePayload: isImagePayload(signatureData),
+      hasImagePayload: false,
+      signatureData: result.data?.signatureData,
       timestamp: new Date().toISOString(),
     };
 
-    await showSuccess("Berhasil", `TTD digital untuk ${guru.nama_guru} berhasil disimpan.`);
+    if (result.data?.signatureData) {
+      signatureDraftMap.value[guru.id_guru] = result.data.signatureData;
+      qrPreviewMap.value[guru.id_guru] = await buildQrPreview(result.data.signatureData);
+    }
+
+    await showSuccess("Berhasil", `QR TTD digital untuk ${guru.nama_guru} berhasil disimpan.`);
   } catch (error) {
     console.error("[TTD Master] save signature error:", error);
     await showError("Gagal", "Terjadi kesalahan saat menyimpan TTD digital.");
@@ -563,6 +601,7 @@ async function resetSignature(guru: Guru) {
       exists: false,
       hasImagePayload: false,
     };
+    delete qrPreviewMap.value[guru.id_guru];
     verificationMap.value[guru.id_guru] = {
       isValid: false,
       message: "Belum memiliki master signature aktif",

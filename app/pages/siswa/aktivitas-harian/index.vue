@@ -75,7 +75,7 @@
         color="success"
         variant="soft"
         title="Absensi hari ini sudah tercatat"
-        :description="`Waktu masuk: ${todayAttendance.waktu_masuk || '-'} . Lanjut ke langkah logbook.`"
+        :description="`Waktu masuk: ${formatAttendanceTime(todayAttendance.waktu_masuk)}. Lanjut ke langkah logbook.`"
       />
 
       <div class="flex gap-3">
@@ -264,6 +264,7 @@
 
 <script setup lang="ts">
 import { useSiswaAbsensiApi, useSiswaLogbookApi, useSiswaPenempatanApi, type SiswaAbsensi, type SiswaLogbook } from '~/composables/api/use-siswa'
+import { formatTime } from '~/utils/format-date'
 
 definePageMeta({ layout: 'siswa' })
 
@@ -301,6 +302,11 @@ const cameraError = ref('')
 
 const today = computed(() => getLocalDateKey())
 const currentTime = computed(() => getLocalTimeHHmm())
+
+function formatAttendanceTime(value?: string | null) {
+  if (!value) return '-'
+  return value.includes('T') ? formatTime(value) : value.slice(0, 5)
+}
 
 const { coords, resume, pause } = useGeolocation({ enableHighAccuracy: true, immediate: true })
 

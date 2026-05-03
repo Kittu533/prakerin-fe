@@ -104,13 +104,6 @@ const menuSections: MenuSection[] = [
       { to: "/guru/kunjungan", icon: "lucide:map-pin", label: "Kunjungan" },
     ],
   },
-  {
-    label: "Verifikasi",
-    items: [
-      { to: "/guru/absensi", icon: "lucide:calendar-check", label: "Absensi" },
-      { to: "/guru/verifikasi-logbook", icon: "lucide:book-open", label: "Logbook" },
-    ],
-  },
 ];
 
 const isActiveRoute = (path: string) => {

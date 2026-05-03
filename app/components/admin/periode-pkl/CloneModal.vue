@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch, computed } from "vue";
+import { ref, watch, computed, onMounted } from "vue";
 import { usePeriodePKLApi, type PeriodePKL } from "~/composables/api/use-periode-pkl";
 import { useTahunAjaranApi } from "~/composables/api/use-academic";
 
@@ -21,17 +21,31 @@ const submitting = ref(false);
 // Form state
 const formData = ref({
     nama_periode: "",
-    id_tahun_ajaran: 0,
+    id_tahun_ajaran: "",
     tanggal_mulai: "",
     tanggal_selesai: "",
 });
 
 // Options
-const tahunAjaranOptions = ref<{ label: string; value: number }[]>([]);
+const tahunAjaranOptions = ref<{ label: string; value: string }[]>([]);
 
 // Validation errors
 const errors = ref<Record<string, string>>({});
 const today = computed(() => getLocalDateKey());
+
+const toApiDate = (dateKey: string) => dateKey;
+
+const getSelectValue = (value: unknown): string => {
+    if (typeof value === "string") return value;
+    if (value && typeof value === "object") {
+        const candidate = value as Record<string, unknown>;
+        if (typeof candidate.value === "string") return candidate.value;
+        if (typeof candidate.id_tahun_ajaran === "string") {
+            return candidate.id_tahun_ajaran;
+        }
+    }
+    return "";
+};
 
 // Suggested name based on source
 const suggestedName = computed(() => {
@@ -57,7 +71,7 @@ const validateForm = (): boolean => {
         errors.value.nama_periode = "Nama periode wajib diisi";
     }
 
-    if (!formData.value.id_tahun_ajaran) {
+    if (!getSelectValue(formData.value.id_tahun_ajaran)) {
         errors.value.id_tahun_ajaran = "Tahun ajaran wajib dipilih";
     }
 
@@ -108,7 +122,7 @@ const initForm = () => {
 
     formData.value = {
         nama_periode: suggestedName.value,
-        id_tahun_ajaran: 0, // User needs to select
+        id_tahun_ajaran: "", // User needs to select
         tanggal_mulai: newStart.toISOString().split("T")[0],
         tanggal_selesai: newEnd.toISOString().split("T")[0],
     };
@@ -137,10 +151,10 @@ const submit = async () => {
     submitting.value = true;
     try {
         const payload = {
-            nama_periode: formData.value.nama_periode,
-            id_tahun_ajaran: formData.value.id_tahun_ajaran,
-            tanggal_mulai: new Date(formData.value.tanggal_mulai).toISOString(),
-            tanggal_selesai: new Date(formData.value.tanggal_selesai).toISOString(),
+            nama_periode: formData.value.nama_periode.trim(),
+            id_tahun_ajaran: getSelectValue(formData.value.id_tahun_ajaran),
+            tanggal_mulai: toApiDate(formData.value.tanggal_mulai),
+            tanggal_selesai: toApiDate(formData.value.tanggal_selesai),
         };
 
         const response = await api.clone(props.sourcePeriode.id_periode_pkl, payload);
@@ -180,8 +194,10 @@ watch(() => props.sourcePeriode, (newPeriode) => {
     }
 }, { immediate: true });
 
-// Fetch options on mount
-fetchTahunAjaran();
+// Fetch options on client after auth token is available.
+onMounted(() => {
+    fetchTahunAjaran();
+});
 </script>
 
 <template>
@@ -254,6 +270,7 @@ fetchTahunAjaran();
                             placeholder="Pilih tahun ajaran"
                             :disabled="submitting"
                             size="lg"
+                            value-key="value"
                             class="w-full"
                         />
                         <p v-if="errors.id_tahun_ajaran" class="text-xs text-red-500 mt-1">

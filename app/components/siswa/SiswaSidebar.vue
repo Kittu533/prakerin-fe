@@ -81,6 +81,13 @@
                         :badge="pendingLogbook"
                         badge-color="warning"
                     />
+                    <NavItem
+                        to="/siswa/riwayat-harian"
+                        icon="lucide:table-2"
+                        label="Riwayat Harian"
+                        :active="$route.path.startsWith('/siswa/riwayat-harian')"
+                        :minimized="isMinimized"
+                    />
                 </div>
             </div>
 
@@ -94,13 +101,6 @@
                 </p>
                 <div v-show="isMinimized" class="h-px bg-slate-200 mx-3 mb-3" />
                 <div class="space-y-1">
-                    <NavItem
-                        to="/siswa/nilai"
-                        icon="lucide:award"
-                        label="Nilai PKL"
-                        :active="$route.path.startsWith('/siswa/nilai')"
-                        :minimized="isMinimized"
-                    />
                     <NavItem
                         to="/siswa/profil"
                         icon="lucide:user"

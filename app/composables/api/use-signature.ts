@@ -5,6 +5,7 @@ export interface DigitalSignature {
   signerId: string;
   signerName: string;
   signerRole: string;
+  signatureData?: string;
   timestamp: string;
   ipAddress?: string | null;
 }

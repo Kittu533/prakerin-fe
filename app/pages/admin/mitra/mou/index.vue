@@ -159,6 +159,12 @@ const {
                     <Icon name="lucide:file-x" class="w-3.5 h-3.5" />
                     Dokumen Tidak Ada
                   </span>
+                  <div
+                    v-if="item.status === 'AKTIF' && !item.link_dokumen"
+                    class="rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-2 text-[10px] font-semibold leading-relaxed text-amber-800"
+                  >
+                    Belum bisa dipakai penempatan PKL sampai dokumen PDF MoU diunggah.
+                  </div>
                 </div>
               </td>
               <td class="px-6 py-6">
@@ -324,6 +330,9 @@ const {
                   {{ dokumenUpload.name || 'Belum ada file dipilih' }}
                 </span>
               </div>
+              <p class="text-[11px] text-slate-500">
+                Wajib diisi agar mitra terbaca sebagai tempat PKL yang valid.
+              </p>
             </div>
           </div>
         </div>

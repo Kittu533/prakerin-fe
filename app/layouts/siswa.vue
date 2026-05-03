@@ -116,7 +116,7 @@ const pageTitle = computed(() => {
   const titles: Record<string, string> = {
     '/siswa': 'Dashboard',
     '/siswa/aktivitas-harian': 'Flow Harian Siswa',
-    '/siswa/nilai': 'Nilai PKL',
+    '/siswa/riwayat-harian': 'Riwayat Harian PKL',
     '/siswa/profil': 'Profil Saya',
     '/siswa/ubah-password': 'Ubah Password'
   }
@@ -133,6 +133,7 @@ const pageTitle = computed(() => {
 const bottomNavItems = [
   { to: '/siswa', icon: 'lucide:home', label: 'Home' },
   { to: '/siswa/aktivitas-harian', icon: 'lucide:list-checks', label: 'Flow', badge: 1 },
+  { to: '/siswa/riwayat-harian', icon: 'lucide:table-2', label: 'Riwayat' },
   { to: '/siswa/profil', icon: 'lucide:user', label: 'Profil' }
 ]
 

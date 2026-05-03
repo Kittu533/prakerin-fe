@@ -108,8 +108,6 @@ const pageTitle = computed(() => {
     "/guru/siswa-bimbingan": "Siswa Bimbingan",
     "/guru/penempatan": "Penempatan PKL",
     "/guru/kunjungan": "Monitoring Kunjungan",
-    "/guru/absensi": "Validasi Absensi",
-    "/guru/verifikasi-logbook": "Verifikasi Logbook",
   };
 
   if (titles[route.path]) {
@@ -129,8 +127,7 @@ const bottomNavItems = [
   { to: "/guru", icon: "lucide:home", label: "Home" },
   { to: "/guru/siswa-bimbingan", icon: "lucide:users", label: "Siswa" },
   { to: "/guru/penempatan", icon: "lucide:building-2", label: "Tempat" },
-  { to: "/guru/verifikasi-logbook", icon: "lucide:book-open", label: "Logbook" },
-  { to: "/guru/absensi", icon: "lucide:calendar-check", label: "Absensi" },
+  { to: "/guru/kunjungan", icon: "lucide:map-pin", label: "Kunjungan" },
 ];
 
 const isActiveRoute = (path: string) => {

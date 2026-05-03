@@ -84,21 +84,6 @@ export function useReporting() {
           { accessorKey: "status_persetujuan", header: "Status" },
         ];
 
-      case "assessment":
-        return [
-          { accessorKey: "siswa.nis", header: "NIS" },
-          { accessorKey: "siswa.nama_siswa", header: "Nama Siswa" },
-          {
-            accessorKey: "siswa.kelas.jurusan.nama_jurusan",
-            header: "Jurusan",
-          },
-          {
-            accessorKey: "perusahaan.nama_perusahaan",
-            header: "Perusahaan",
-          },
-          { accessorKey: "nilai_akhir", header: "Nilai Akhir" },
-        ];
-
       case "monitoring":
         return [
           { accessorKey: "guru.nama_guru", header: "Guru" },
@@ -181,9 +166,6 @@ export function useReporting() {
           break;
         case "logbook":
           response = await api.getLogbookReport(params);
-          break;
-        case "assessment":
-          response = await api.getAssessmentReport(params);
           break;
         case "monitoring":
           response = await api.getMonitoringReport(params);

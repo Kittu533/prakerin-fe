@@ -143,6 +143,11 @@ export interface SiswaAbsensi {
   created_at?: string;
 }
 
+export interface SiswaAbsensiSelfieUrl {
+  url: string;
+  expiresAt: string;
+}
+
 export interface SiswaLogbook {
   id_logbook: string;
   id_penempatan: string;
@@ -448,7 +453,16 @@ export function useSiswaAbsensiApi() {
     );
   }
 
-  return { getAll, getById, create, update, uploadSelfie, resetDailyFlowDev };
+  async function getSelfieSignedUrl(idAbsensi: string) {
+    return await safeFetch<SiswaAbsensiSelfieUrl>(
+      'PlacementService',
+      `/absensi/${idAbsensi}/selfie-signed-url`,
+      { method: 'GET' },
+      true,
+    );
+  }
+
+  return { getAll, getById, create, update, uploadSelfie, resetDailyFlowDev, getSelfieSignedUrl };
 }
 
 // =============================================

@@ -74,7 +74,7 @@ export function useDisposisiPage() {
     useDisposisi();
   const { getAll: getAllSuratMasuk } = useSuratMasuk();
   const { getAllGuru } = useGuruApi();
-  const { showConfirmation, showError, showSuccess, showWarning } =
+  const { showConfirmation, showError, showSuccess } =
     useSweetAlert();
 
   const loading = ref(false);
@@ -93,6 +93,7 @@ export function useDisposisiPage() {
     prioritas: "",
   });
   const form = ref<DisposisiForm>(createDefaultForm());
+  const formError = ref("");
   const formMeta = ref<DisposisiFormMeta>(createDefaultMeta());
 
   const columns = [
@@ -221,6 +222,7 @@ export function useDisposisiPage() {
 
   function resetForm() {
     form.value = createDefaultForm();
+    formError.value = "";
     isEditing.value = false;
     selectedDisposisi.value = null;
   }
@@ -231,6 +233,7 @@ export function useDisposisiPage() {
   }
 
   function toggleRecipient(id: string) {
+    formError.value = "";
     const index = form.value.penerima_disposisi_ids.indexOf(id);
     if (index > -1) {
       form.value.penerima_disposisi_ids.splice(index, 1);
@@ -240,6 +243,7 @@ export function useDisposisiPage() {
   }
 
   function toggleInstruksi(value: string) {
+    formError.value = "";
     const current = new Set(form.value.instruksi);
     if (current.has(value as DisposisiInstruksi)) {
       current.delete(value as DisposisiInstruksi);
@@ -362,6 +366,7 @@ export function useDisposisiPage() {
 
     selectedDisposisi.value = disposisi;
     isEditing.value = true;
+    formError.value = "";
     form.value = {
       surat_masuk_id: disposisi.surat_masuk_id,
       tanggal_disposisi: disposisi.tanggal_disposisi.split("T")[0],
@@ -375,35 +380,25 @@ export function useDisposisiPage() {
   }
 
   async function validateForm() {
+    formError.value = "";
+
     if (!form.value.surat_masuk_id) {
-      blurActiveElement();
-      await showWarning("Surat belum dipilih", "Pilih surat masuk yang akan didisposisikan.", {
-        showCancelButton: false,
-      });
+      formError.value = "Pilih surat masuk yang akan didisposisikan.";
       return false;
     }
 
     if (form.value.penerima_disposisi_ids.length === 0) {
-      blurActiveElement();
-      await showWarning("Penerima belum diisi", "Tambahkan minimal satu penerima disposisi.", {
-        showCancelButton: false,
-      });
+      formError.value = "Tambahkan minimal satu penerima disposisi.";
       return false;
     }
 
     if (form.value.instruksi.length === 0) {
-      blurActiveElement();
-      await showWarning("Instruksi belum dipilih", "Pilih minimal satu instruksi disposisi.", {
-        showCancelButton: false,
-      });
+      formError.value = "Pilih minimal satu instruksi disposisi.";
       return false;
     }
 
     if (form.value.batas_waktu && form.value.batas_waktu < form.value.tanggal_disposisi) {
-      blurActiveElement();
-      await showWarning("Batas waktu tidak valid", "Batas waktu tidak boleh lebih awal dari tanggal disposisi.", {
-        showCancelButton: false,
-      });
+      formError.value = "Batas waktu tidak boleh lebih awal dari tanggal disposisi.";
       return false;
     }
 
@@ -446,21 +441,19 @@ export function useDisposisiPage() {
           : await create(payload);
 
       if (!result.success) {
-        blurActiveElement();
-        await showError("Gagal menyimpan disposisi", result.message, {
-          showCancelButton: false,
-        });
+        formError.value = result.message;
         return;
       }
 
       blurActiveElement();
+      showCreateModal.value = false;
+      await nextTick();
       await showSuccess(
         "Disposisi tersimpan",
         isEditing.value
           ? "Perubahan disposisi berhasil diperbarui."
           : "Disposisi baru berhasil dibuat.",
       );
-      showCreateModal.value = false;
       resetForm();
       await Promise.all([fetchData(), fetchFormOptions()]);
     } finally {
@@ -549,6 +542,7 @@ export function useDisposisiPage() {
     pagination,
     filters,
     form,
+    formError,
     formMeta,
     columns,
     statusFilterOptions,

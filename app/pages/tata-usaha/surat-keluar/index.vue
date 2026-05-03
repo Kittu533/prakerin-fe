@@ -12,7 +12,7 @@
                     </div>
                     <div>
                         <h2 class="text-sm font-bold text-blue-900 uppercase tracking-wider">Form Input Surat Keluar</h2>
-                        <p class="text-xs text-slate-500 font-medium">Input data surat baru atau gunakan template</p>
+                        <p class="text-xs text-slate-500 font-medium">Input data surat dan pilih jenis dokumen resmi yang akan digenerate</p>
                     </div>
                 </div>
                 <Icon 
@@ -30,137 +30,172 @@
                 leave-to-class="transform scale-95 opacity-0"
             >
                 <div v-show="isFormExpanded" class="p-6 space-y-6">
-                    <div class="bg-slate-50 p-4 rounded-xl border border-slate-100">
-                        <UFormField label="Metode Pembuatan Surat" help="Pilih bagaimana Anda ingin membuat nomor dan konten surat">
-                            <div class="flex flex-wrap items-center gap-6 mt-2">
-                                <label class="flex items-center gap-3 cursor-pointer group bg-white px-4 py-2.5 rounded-lg border border-slate-200 hover:border-blue-400 transition-all shadow-sm">
-                                    <input 
-                                        type="radio" 
-                                        v-model="formMetode" 
-                                        value="manual" 
-                                        class="w-4 h-4 text-blue-600 border-slate-300 focus:ring-blue-500"
-                                    />
-                                    <span class="text-sm font-semibold text-slate-700">Hanya Ambil Nomor (Manual)</span>
-                                </label>
-                                <label class="flex items-center gap-3 cursor-pointer group bg-white px-4 py-2.5 rounded-lg border border-slate-200 hover:border-blue-400 transition-all shadow-sm">
-                                    <input 
-                                        type="radio" 
-                                        v-model="formMetode" 
-                                        value="otomatis" 
-                                        class="w-4 h-4 text-blue-600 border-slate-300 focus:ring-blue-500"
-                                    />
-                                    <span class="text-sm font-semibold text-slate-700">Gunakan Template Otomatis</span>
-                                </label>
-                            </div>
-                        </UFormField>
-                    </div>
-
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        <!-- Template Selection -->
-                        <div v-if="formMetode === 'otomatis'" class="lg:col-span-2">
-                            <UFormField label="Pilih Template Dokumen" required>
-                                <div class="flex gap-3 mt-1">
-                                    <USelect
-                                        v-model="form.template_id"
-                                        :items="templateOptions"
-                                        :disabled="templateOptions.length === 0"
-                                        placeholder="-- Pilih Template Surat --"
-                                        class="flex-1"
-                                        icon="lucide:file-text"
-                                    />
-                                    <UButton variant="soft" color="primary" class="shrink-0" @click="showTemplateModal = true">
-                                        <Icon name="lucide:plus-circle" class="w-4 h-4 mr-2" />
-                                        Template Baru
-                                    </UButton>
-                                </div>
-                                <p v-if="templateOptions.length === 0" class="text-xs text-amber-600 mt-2 font-medium">
-                                    Belum ada template tersedia. Tambahkan template baru terlebih dahulu.
-                                </p>
-                            </UFormField>
+                    <section class="space-y-4">
+                        <div class="flex items-center gap-2 border-b border-slate-100 pb-2">
+                            <Icon name="lucide:file-text" class="h-5 w-5 text-blue-600" />
+                            <h3 class="text-sm font-black uppercase tracking-wider text-slate-700">Data Surat</h3>
                         </div>
 
-                        <UFormField label="Jenis Template Surat" required>
-                            <USelect
-                                v-model="form.template_jenis"
-                                :items="templateJenisOptions"
-                                placeholder="-- Pilih Jenis Template --"
-                                class="w-full mt-1"
-                                icon="lucide:layout-template"
-                            />
-                        </UFormField>
+                        <div class="grid grid-cols-1 gap-5 lg:grid-cols-2">
+                            <UFormField label="Nomor Surat" required>
+                                <div class="mt-1 flex gap-2">
+                                    <UInput
+                                        v-model="form.nomor_surat"
+                                        placeholder="Contoh: 421.5/001/PKL/SMKN2WNG/V/2026"
+                                        class="flex-1"
+                                        icon="lucide:hash"
+                                    />
+                                    <UButton
+                                        v-if="!isEditing"
+                                        variant="soft"
+                                        color="primary"
+                                        :loading="generatingNomor"
+                                        @click="fillNomorSurat"
+                                    >
+                                        Auto
+                                    </UButton>
+                                </div>
+                            </UFormField>
 
-                        <UFormField label="Klasifikasi Surat" required>
-                            <USelect
-                                v-model="form.klasifikasi_surat"
-                                :items="klasifikasiOptions"
-                                placeholder="-- Pilih Klasifikasi --"
-                                class="w-full mt-1"
-                                icon="lucide:tag"
-                            />
-                        </UFormField>
+                            <UFormField label="Tanggal Surat" required>
+                                <UInput
+                                    v-model="form.tanggal_surat"
+                                    type="date"
+                                    class="mt-1 w-full"
+                                    icon="lucide:calendar"
+                                />
+                            </UFormField>
 
-                        <UFormField label="Ditujukan Kepada" required>
-                            <UInput 
-                                v-model="form.ditujukan_kepada" 
-                                placeholder="Contoh: Kepala Dinas Pendidikan Kota Semarang" 
-                                class="w-full mt-1"
-                                icon="lucide:user"
-                            />
-                        </UFormField>
+                            <UFormField
+                                label="Jenis Dokumen Surat"
+                                required
+                                help="Menentukan format isi dan layout dokumen yang digenerate."
+                            >
+                                <USelect
+                                    v-model="form.template_jenis"
+                                    :items="templateJenisOptions"
+                                    placeholder="-- Pilih Jenis Dokumen --"
+                                    class="mt-1 w-full"
+                                    icon="lucide:layout-template"
+                                />
+                            </UFormField>
 
-                        <UFormField label="Penandatangan Guru" required>
-                            <USelect
-                                v-model="form.penandatangan_guru_id"
-                                :items="guruPenandatanganOptions"
-                                :loading="loadingGuru"
-                                placeholder="-- Pilih Guru Penandatangan --"
-                                class="w-full mt-1"
-                                icon="lucide:user-check"
-                            />
-                        </UFormField>
+                            <UFormField label="Klasifikasi Surat" required>
+                                <USelect
+                                    v-model="form.klasifikasi_surat"
+                                    :items="klasifikasiOptions"
+                                    placeholder="-- Pilih Klasifikasi --"
+                                    class="mt-1 w-full"
+                                    icon="lucide:tag"
+                                />
+                            </UFormField>
 
-                        <UFormField label="Perihal Surat" required class="lg:col-span-1">
-                            <UTextarea 
-                                v-model="form.perihal" 
-                                placeholder="Jelaskan isi singkat perihal surat..." 
-                                :rows="3"
-                                class="w-full mt-1"
-                            />
-                        </UFormField>
+                            <UFormField label="Sifat Surat" required>
+                                <USelect
+                                    v-model="form.sifat_surat"
+                                    :items="sifatOptions"
+                                    placeholder="-- Pilih Sifat Surat --"
+                                    class="mt-1 w-full"
+                                    icon="lucide:flag"
+                                />
+                            </UFormField>
 
-                        <UFormField label="Dasar / Lampiran (Opsional)" class="lg:col-span-1">
-                            <UTextarea 
-                                v-model="form.isi_lampiran" 
-                                placeholder="Sebutkan dasar hukum atau lampiran terkait..." 
-                                :rows="3"
-                                class="w-full mt-1"
-                            />
-                        </UFormField>
+                            <UFormField v-if="isEditing" label="Status Surat">
+                                <USelect
+                                    v-model="form.status"
+                                    :items="statusOptions"
+                                    class="mt-1 w-full"
+                                    icon="lucide:activity"
+                                />
+                            </UFormField>
+                        </div>
+                    </section>
+
+                    <section class="space-y-4">
+                        <div class="flex items-center gap-2 border-b border-slate-100 pb-2">
+                            <Icon name="lucide:send" class="h-5 w-5 text-blue-600" />
+                            <h3 class="text-sm font-black uppercase tracking-wider text-slate-700">Tujuan Surat</h3>
+                        </div>
+
+                        <div class="grid grid-cols-1 gap-5 lg:grid-cols-2">
+                            <UFormField label="Ditujukan Kepada" required>
+                                <UInput
+                                    v-model="form.ditujukan_kepada"
+                                    placeholder="Contoh: Pimpinan CV Beta Network Nusantara"
+                                    class="mt-1 w-full"
+                                    icon="lucide:user"
+                                />
+                            </UFormField>
+
+                            <UFormField label="Alamat Tujuan">
+                                <UTextarea
+                                    v-model="form.alamat_tujuan"
+                                    placeholder="Contoh: Jl. A. Yani No. 77, Wonogiri"
+                                    :rows="2"
+                                    class="mt-1 w-full"
+                                />
+                            </UFormField>
+                        </div>
+                    </section>
+
+                    <section class="space-y-4">
+                        <div class="flex items-center gap-2 border-b border-slate-100 pb-2">
+                            <Icon name="lucide:align-left" class="h-5 w-5 text-blue-600" />
+                            <h3 class="text-sm font-black uppercase tracking-wider text-slate-700">Isi Surat</h3>
+                        </div>
+
+                        <div class="grid grid-cols-1 gap-5 lg:grid-cols-2">
+                            <UFormField label="Perihal Surat" required>
+                                <UTextarea
+                                    v-model="form.perihal"
+                                    placeholder="Contoh: Permohonan Kerja Sama Penempatan Peserta PKL"
+                                    :rows="3"
+                                    class="mt-1 w-full"
+                                />
+                            </UFormField>
+
+                            <UFormField label="Isi / Dasar / Lampiran">
+                                <UTextarea
+                                    v-model="form.isi_lampiran"
+                                    placeholder="Contoh: Daftar peserta PKL dan jadwal pelaksanaan terlampir."
+                                    :rows="3"
+                                    class="mt-1 w-full"
+                                />
+                            </UFormField>
+                        </div>
+                    </section>
+
+                    <section
+                        v-if="form.template_jenis === 'surat_tugas_murid' || form.template_jenis === 'surat_permohonan'"
+                        class="space-y-4 rounded-xl border border-blue-100 bg-blue-50/40 p-4"
+                    >
+                        <div class="flex items-center gap-2">
+                            <Icon name="lucide:users" class="h-5 w-5 text-blue-600" />
+                            <h3 class="text-sm font-black uppercase tracking-wider text-slate-700">Data Siswa Pada Surat</h3>
+                        </div>
 
                         <UFormField
                             v-if="form.template_jenis === 'surat_tugas_murid'"
                             label="Peserta Didik Ditugaskan"
                             required
-                            class="lg:col-span-2"
                         >
                             <USelect
                                 v-model="selectedSiswaTugasId"
                                 :items="siswaOptions"
                                 :loading="loadingSiswa"
                                 placeholder="-- Pilih satu siswa --"
-                                class="w-full mt-1"
+                                class="mt-1 w-full"
                                 icon="lucide:user-round"
                             />
-                            <p class="text-xs text-slate-500 mt-2">Data Nama, NIS, dan Kelas pada surat tugas akan terisi otomatis.</p>
+                            <p class="mt-2 text-xs text-slate-500">Nama, NIS, dan kelas akan masuk ke dokumen otomatis.</p>
                         </UFormField>
 
                         <UFormField
                             v-if="form.template_jenis === 'surat_permohonan'"
                             label="Daftar Siswa PKL"
                             required
-                            class="lg:col-span-2"
                         >
-                            <div class="space-y-2 mt-1">
+                            <div class="mt-1 space-y-2">
                                 <div
                                     v-for="(_, index) in form.siswa_ids"
                                     :key="`siswa-row-${index}`"
@@ -183,7 +218,7 @@
                                     />
                                 </div>
                                 <div class="flex items-center justify-between pt-1">
-                                    <p class="text-xs text-slate-500">Tabel Nama, NIS, dan Kelas pada surat permohonan mengikuti daftar ini.</p>
+                                    <p class="text-xs text-slate-500">Khusus surat permohonan penerimaan PKL. Untuk MoU/kerja sama, pilih jenis dokumen permohonan kerja sama.</p>
                                     <UButton
                                         variant="soft"
                                         color="primary"
@@ -195,7 +230,37 @@
                                 </div>
                             </div>
                         </UFormField>
-                    </div>
+                    </section>
+
+                    <section class="space-y-4">
+                        <div class="flex items-center gap-2 border-b border-slate-100 pb-2">
+                            <Icon name="lucide:signature" class="h-5 w-5 text-blue-600" />
+                            <h3 class="text-sm font-black uppercase tracking-wider text-slate-700">Penandatangan & Pengiriman</h3>
+                        </div>
+
+                        <div class="grid grid-cols-1 gap-5 lg:grid-cols-2">
+                            <UFormField label="Guru Penandatangan" required>
+                                <USelect
+                                    v-model="form.penandatangan_guru_id"
+                                    :items="guruPenandatanganOptions"
+                                    :loading="loadingGuru"
+                                    placeholder="-- Pilih Guru Penandatangan --"
+                                    class="mt-1 w-full"
+                                    icon="lucide:user-check"
+                                />
+                                <p class="mt-2 text-xs text-slate-500">Guru harus aktif sebagai penandatangan dan punya QR TTD digital.</p>
+                            </UFormField>
+
+                            <UFormField label="Tanggal Kirim">
+                                <UInput
+                                    v-model="form.tanggal_kirim"
+                                    type="date"
+                                    class="mt-1 w-full"
+                                    icon="lucide:calendar-check"
+                                />
+                            </UFormField>
+                        </div>
+                    </section>
 
                     <div class="flex justify-end pt-4 border-t border-slate-100">
                         <UButton 
@@ -206,7 +271,7 @@
                             :loading="saving"
                         >
                             <Icon name="lucide:send" class="w-5 h-5 mr-2" />
-                            PROSES & SIMPAN DATA
+                            GENERATE & SIMPAN SURAT
                         </UButton>
                     </div>
                 </div>
@@ -713,6 +778,7 @@
 <script setup lang="ts">
 import { useSuratKeluar, type SuratKeluar, type SuratKeluarTemplateJenis } from "~/composables/api/use-surat-keluar";
 import { useGuruApi } from "~/composables/api/use-guru";
+import { useSiswaApi, type Siswa } from "~/composables/api/use-academic";
 import { useSweetAlert } from "~/composables/use-sweet-alert";
 import { buildStoredFileUrl, normalizeStoredFileRef, resolveStoredFileUrl } from "~/utils/stored-file";
 
@@ -720,11 +786,14 @@ definePageMeta({ layout: "tata-usaha" });
 
 const { getAll, create, update, remove, generateNomor } = useSuratKeluar();
 const { getAllGuru } = useGuruApi();
+const { getAll: getAllSiswa } = useSiswaApi();
 const { showConfirmation, showSuccess, showWarning, showError } = useSweetAlert();
 
 const loading = ref(false);
 const loadingGuru = ref(false);
+const loadingSiswa = ref(false);
 const saving = ref(false);
+const generatingNomor = ref(false);
 const showDetailModal = ref(false);
 const showTemplateModal = ref(false);
 const isEditing = ref(false);
@@ -750,6 +819,9 @@ const filters = ref({
 });
 
 const guruPenandatanganOptions = ref<{ label: string; value: string }[]>([]);
+const siswaList = ref<Siswa[]>([]);
+const siswaOptions = ref<{ label: string; value: string }[]>([]);
+const selectedSiswaTugasId = ref("");
 
 const form = ref({
     nomor_surat: "",
@@ -765,7 +837,9 @@ const form = ref({
     penandatangan: "",
     tanggal_kirim: "",
     bukti_pengiriman: "",
+    status: "draft",
     template_id: undefined,
+    siswa_ids: [""] as string[],
 });
 
 const columns = [
@@ -839,15 +913,16 @@ type TemplateOption = { label: string; value: string };
 const templateOptions = ref<TemplateOption[]>([]);
 
 const templateJenisOptions = [
-    { label: "Surat Tugas Murid", value: "surat_tugas_murid" },
-    { label: "Surat Permohonan", value: "surat_permohonan" },
-    { label: "Surat Perintah", value: "surat_perintah" },
+    { label: "Surat Permohonan Kerja Sama/MoU", value: "surat_permohonan_kerjasama" },
+    { label: "Surat Permohonan PKL (Dengan Siswa)", value: "surat_permohonan" },
     { label: "Surat Undangan", value: "surat_undangan" },
+    { label: "Surat Tugas Siswa", value: "surat_tugas_murid" },
+    { label: "Surat Perintah Tugas", value: "surat_perintah" },
 ];
 
 const klasifikasiOptions = [
     { label: 'Undangan', value: 'undangan' },
-    { label: 'Edaran', value: 'ebaran' },
+    { label: 'Edaran', value: 'edaran' },
     { label: 'Permohonan', value: 'permohonan' },
     { label: 'Pemberitahuan', value: 'pemberitahuan' },
     { label: 'Laporan', value: 'laporan' },
@@ -859,6 +934,12 @@ const sifatOptions = [
     { value: "penting", label: "Penting" },
     { value: "rahasia", label: "Rahasia" },
     { value: "segera", label: "Segera" },
+];
+
+const statusOptions = [
+    { value: "draft", label: "Draft" },
+    { value: "dikirim", label: "Dikirim" },
+    { value: "diterima", label: "Diterima" },
 ];
 
 const TEMPLATE_STORAGE_KEY = "tu_surat_keluar_templates";
@@ -964,7 +1045,9 @@ function formatDateRange(start?: string, end?: string): string {
 }
 
 function inferTemplateJenisFromSurat(surat: SuratKeluar): SuratKeluarTemplateJenis {
+    if (surat.template_jenis) return surat.template_jenis;
     const perihal = String(surat.perihal || "").toLowerCase();
+    if (perihal.includes("mou") || perihal.includes("kerja sama") || perihal.includes("kerjasama")) return "surat_permohonan_kerjasama";
     if (surat.klasifikasi_surat === "permohonan") return "surat_permohonan";
     if (surat.klasifikasi_surat === "undangan") return "surat_undangan";
     if (perihal.includes("perintah")) return "surat_perintah";
@@ -975,16 +1058,13 @@ function inferTemplateJenisFromSurat(surat: SuratKeluar): SuratKeluarTemplateJen
 function resolveKlasifikasiByTemplate(
     templateJenis: SuratKeluarTemplateJenis,
     fallback?: string,
-): "undangan" | "permohonan" | "lainnya" {
-    if (templateJenis === "surat_permohonan") {
-        return "permohonan";
+): "undangan" | "edaran" | "permohonan" | "pemberitahuan" | "laporan" | "lainnya" {
+    const allowed = ["undangan", "edaran", "permohonan", "pemberitahuan", "laporan", "lainnya"] as const;
+    if (allowed.includes(fallback as any)) {
+        return fallback as any;
     }
-    if (templateJenis === "surat_undangan") {
-        return "undangan";
-    }
-    if (fallback === "permohonan" || fallback === "undangan") {
-        return fallback;
-    }
+    if (templateJenis === "surat_permohonan" || templateJenis === "surat_permohonan_kerjasama") return "permohonan";
+    if (templateJenis === "surat_undangan") return "undangan";
     return "lainnya";
 }
 
@@ -1107,8 +1187,11 @@ function resetForm() {
         penandatangan: "",
         tanggal_kirim: "",
         bukti_pengiriman: "",
+        status: "draft",
         template_id: undefined,
+        siswa_ids: [""],
     };
+    selectedSiswaTugasId.value = "";
     isEditing.value = false;
     selectedSurat.value = null;
 }
@@ -1163,6 +1246,76 @@ async function fetchGuruPenandatangan() {
     }
 }
 
+function getSiswaKelasLabel(siswa: Siswa): string {
+    const kelas = siswa.kelas;
+    if (!kelas) return "-";
+    const jurusan = kelas.jurusan?.nama_jurusan ? ` ${kelas.jurusan.nama_jurusan}` : "";
+    return `${kelas.nama_kelas}${jurusan}`;
+}
+
+function getSelectedSiswa(id?: string) {
+    if (!id) return null;
+    return siswaList.value.find((siswa) => siswa.id_siswa === id) || null;
+}
+
+function mapSiswaPayload(ids: string[]) {
+    return ids
+        .map((id) => getSelectedSiswa(id))
+        .filter(Boolean)
+        .map((siswa) => ({
+            id_siswa: siswa!.id_siswa,
+            nama: siswa!.nama_siswa,
+            nis: siswa!.nis,
+            kelas: getSiswaKelasLabel(siswa!),
+        }));
+}
+
+async function fetchSiswaOptions() {
+    loadingSiswa.value = true;
+    try {
+        const result = await getAllSiswa({ page: 1, limit: 300 });
+        if (result.success && result.data) {
+            siswaList.value = result.data || [];
+            siswaOptions.value = siswaList.value
+                .filter((siswa) => siswa.status_siswa !== "lulus" && siswa.status_siswa !== "dikeluarkan")
+                .map((siswa) => ({
+                    label: `${siswa.nama_siswa} (${siswa.nis}) - ${getSiswaKelasLabel(siswa)}`,
+                    value: siswa.id_siswa,
+                }));
+        }
+    } catch (err) {
+        console.error("[SuratKeluar] Error fetching siswa:", err);
+    } finally {
+        loadingSiswa.value = false;
+    }
+}
+
+function addSiswaRow() {
+    form.value.siswa_ids.push("");
+}
+
+function removeSiswaRow(index: number) {
+    if (form.value.siswa_ids.length <= 1) return;
+    form.value.siswa_ids.splice(index, 1);
+}
+
+async function fillNomorSurat() {
+    generatingNomor.value = true;
+    try {
+        const nomorResult = await generateNomor("surat_keluar");
+        if (!nomorResult.success || !nomorResult.data?.nomor_surat) {
+            await showError("Gagal generate nomor", nomorResult.message || "Nomor surat tidak berhasil dibuat.");
+            return;
+        }
+        form.value.nomor_surat = nomorResult.data.nomor_surat;
+    } catch (err) {
+        console.error("[SuratKeluar] Error generating nomor:", err);
+        await showError("Gagal generate nomor", "Terjadi kesalahan saat mengambil nomor surat.");
+    } finally {
+        generatingNomor.value = false;
+    }
+}
+
 function viewDetail(surat: SuratKeluar) {
     selectedSurat.value = surat;
     showDetailModal.value = true;
@@ -1186,21 +1339,47 @@ function editSurat(surat: SuratKeluar) {
         penandatangan: surat.penandatangan,
         tanggal_kirim: surat.tanggal_kirim?.split("T")[0] || "",
         bukti_pengiriman: surat.bukti_pengiriman || "",
+        status: surat.status || "draft",
         template_id: undefined,
+        siswa_ids: [""],
     };
+    selectedSiswaTugasId.value = "";
     
     // Scroll to top of form
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 async function saveSurat() {
-    if (!form.value.ditujukan_kepada || !form.value.perihal || !form.value.template_jenis || !form.value.penandatangan_guru_id) {
-        await showWarning("Data belum lengkap", "Tujuan, perihal, jenis template, dan penandatangan wajib diisi.");
+    if (!form.value.nomor_surat || !form.value.tanggal_surat || !form.value.ditujukan_kepada || !form.value.perihal || !form.value.template_jenis || !form.value.klasifikasi_surat || !form.value.sifat_surat || !form.value.penandatangan_guru_id) {
+        await showWarning("Data belum lengkap", "Nomor, tanggal, tujuan, perihal, jenis, klasifikasi, sifat, dan penandatangan wajib diisi.");
         return;
     }
 
-    if (formMetode.value === "otomatis" && !form.value.template_id) {
-        await showWarning("Template wajib dipilih", "Pilih template yang tersedia untuk metode otomatis.");
+    let templatePayload: { siswa?: Array<{ id_siswa?: string; nama: string; nis: string; kelas: string }> } | undefined;
+    if (form.value.template_jenis === "surat_tugas_murid") {
+        const siswa = getSelectedSiswa(selectedSiswaTugasId.value);
+        if (!siswa) {
+            await showWarning("Siswa belum dipilih", "Pilih satu peserta didik untuk surat tugas murid.");
+            return;
+        }
+        templatePayload = {
+            siswa: mapSiswaPayload([siswa.id_siswa]),
+        };
+    }
+
+    if (form.value.template_jenis === "surat_permohonan") {
+        const siswaPayload = mapSiswaPayload(form.value.siswa_ids.filter(Boolean));
+        if (siswaPayload.length === 0) {
+            await showWarning("Daftar siswa belum lengkap", "Pilih minimal satu siswa untuk surat permohonan.");
+            return;
+        }
+        templatePayload = {
+            siswa: siswaPayload,
+        };
+    }
+
+    if (isEditing.value && form.value.status !== "draft" && !form.value.tanggal_kirim) {
+        await showWarning("Tanggal kirim belum diisi", "Isi tanggal kirim sebelum mengubah status surat.");
         return;
     }
 
@@ -1228,9 +1407,11 @@ async function saveSurat() {
             ),
             sifat_surat: form.value.sifat_surat,
             isi_lampiran: form.value.isi_lampiran || undefined,
+            template_payload: templatePayload,
             penandatangan_guru_id: form.value.penandatangan_guru_id,
             tanggal_kirim: form.value.tanggal_kirim ? new Date(form.value.tanggal_kirim).toISOString() : undefined,
             bukti_pengiriman: form.value.bukti_pengiriman || undefined,
+            ...(isEditing.value ? { status: form.value.status } : {}),
         };
 
         let result;
@@ -1319,6 +1500,7 @@ onMounted(() => {
     loadTemplateOptions();
     fetchData();
     fetchGuruPenandatangan();
+    fetchSiswaOptions();
 });
 
 useHead({ title: "Surat Keluar | Tata Usaha" });

@@ -129,43 +129,6 @@ const displayedStats = computed(() => {
                 },
             };
 
-        case "assessment":
-            return {
-                total: {
-                    label: "Total Penilaian",
-                    value: props.statistics.total_assessments || 0,
-                    icon: "lucide:award",
-                    bgColor: "bg-sky-50",
-                    iconColor: "text-sky-600",
-                },
-                avgGrade: {
-                    label: "Rata-rata Nilai Akhir",
-                    value: props.statistics.average_final_grade?.toFixed(1) || 0,
-                    icon: "lucide:trending-up",
-                    bgColor: "bg-emerald-50",
-                    iconColor: "text-emerald-600",
-                    progress: props.statistics.average_final_grade || 0,
-                    progressColor: (props.statistics.average_final_grade || 0) >= 75 ? "bg-emerald-500" : "bg-amber-400",
-                    progressLabel: `Dari skala 100`,
-                },
-                excellent: {
-                    label: "Nilai A (90–100)",
-                    value: props.statistics.grade_distribution?.range_90_100 || 0,
-                    icon: "lucide:star",
-                    bgColor: "bg-yellow-50",
-                    iconColor: "text-yellow-500",
-                    badge: "Terbaik",
-                    badgeClass: "text-yellow-700 bg-yellow-100",
-                },
-                good: {
-                    label: "Nilai B (80–89)",
-                    value: props.statistics.grade_distribution?.range_80_89 || 0,
-                    icon: "lucide:thumbs-up",
-                    bgColor: "bg-blue-50",
-                    iconColor: "text-blue-600",
-                },
-            };
-
         case "company":
             return {
                 total: {

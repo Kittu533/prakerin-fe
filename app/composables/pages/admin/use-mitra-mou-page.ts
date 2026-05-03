@@ -192,6 +192,20 @@ export function useMitraMouPage() {
     };
   }
 
+  function getErrorMessage(error: any, fallback: string) {
+    const responseData = error?.data || error?.response?._data || error?.response?.data;
+    const message = responseData?.message || error?.message;
+
+    if (responseData?.errors && typeof responseData.errors === "object") {
+      const firstError = Object.values(responseData.errors)
+        .flat()
+        .find(Boolean);
+      if (firstError) return String(firstError);
+    }
+
+    return message || fallback;
+  }
+
   async function fetchMouData() {
     loading.value = true;
     try {
@@ -319,6 +333,15 @@ export function useMitraMouPage() {
       return;
     }
 
+    if (!dokumenUpload.value.file && !form.value.link_dokumen) {
+      toast.add({
+        title: "Dokumen MoU wajib diunggah",
+        description: "Perusahaan baru bisa dipakai untuk penempatan PKL setelah dokumen MoU PDF tersimpan.",
+        color: "error",
+      });
+      return;
+    }
+
     const normalizedMapUrl = String(form.value.link_maps || "").trim();
     if (normalizedMapUrl && !isExternalUrl(normalizedMapUrl)) {
       toast.add({ title: "Link Google Maps harus diawali http:// atau https://", color: "error" });
@@ -360,11 +383,19 @@ export function useMitraMouPage() {
         closeModal();
         await fetchMouData();
       } else {
-        toast.add({ title: response.message || "Gagal menyimpan data MoU", color: "error" });
+        toast.add({
+          title: "Gagal menyimpan data MoU",
+          description: getErrorMessage(response, "Periksa kembali data MoU yang diisi"),
+          color: "error",
+        });
       }
     } catch (error) {
       console.error("Failed to create MoU:", error);
-      toast.add({ title: "Gagal menyimpan data MoU", color: "error" });
+      toast.add({
+        title: "Gagal menyimpan data MoU",
+        description: getErrorMessage(error, "Periksa kembali data MoU yang diisi"),
+        color: "error",
+      });
     } finally {
       submitting.value = false;
     }

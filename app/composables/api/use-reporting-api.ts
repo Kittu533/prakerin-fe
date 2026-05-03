@@ -338,31 +338,6 @@ export function useReportingApi() {
   }
 
   /**
-   * Get assessment report
-   */
-  async function getAssessmentReport(
-    params: AssessmentReportParams = {},
-  ): Promise<ReportResponse<any, AssessmentStatistics>> {
-    try {
-      const response = await $fetch<ReportResponse<any, AssessmentStatistics>>(
-        `${baseURL}/reporting/assessments`,
-        {
-          method: "GET",
-          params,
-          headers: {
-            Authorization: `Bearer ${getToken()}`,
-          },
-        },
-      );
-
-      return response;
-    } catch (error: any) {
-      console.error("[API] Error fetching assessment report:", error);
-      throw error;
-    }
-  }
-
-  /**
    * Get monitoring report
    */
   async function getMonitoringReport(
@@ -518,7 +493,6 @@ export function useReportingApi() {
     getPlacementReport,
     getAttendanceReport,
     getLogbookReport,
-    getAssessmentReport,
     getMonitoringReport,
     getApplicationReport,
     getCompanyReport,

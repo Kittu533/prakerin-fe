@@ -6,7 +6,11 @@ import { useGuruApi } from "~/composables/api/use-guru";
 import { useSweetAlert } from "~/composables/use-sweet-alert";
 import { buildStoredFileUrl, normalizeStoredFileRef, resolveStoredFileUrl } from "~/utils/stored-file";
 
-const DEFAULT_JENIS_DOKUMEN = "Surat Tugas (Kegiatan Luar Sekolah)";
+const DOC_TUGAS = "Surat Tugas (Kegiatan Luar Sekolah)";
+const DOC_KETERANGAN_SISWA = "Surat Keterangan Siswa Aktif";
+const DOC_DISPENSASI = "Surat Izin / Dispensasi";
+const DOC_KETERANGAN_ALUMNI = "Surat Keterangan Alumni";
+const DEFAULT_JENIS_DOKUMEN = DOC_TUGAS;
 const MAX_LOCATION_LENGTH = 200;
 const MAX_WAKTU_LENGTH = 100;
 
@@ -20,6 +24,12 @@ function createDefaultForm() {
     waktu_jam: "",
     tgl_mulai: new Date().toISOString().split("T")[0],
     tgl_selesai: "",
+    jenis_dispensasi: "lomba",
+    alasan_dispensasi: "",
+    keperluan_keterangan: "beasiswa",
+    keperluan_alumni: "melamar_kerja",
+    keperluan_lainnya: "",
+    keterangan_tambahan: "",
     penandatangan_guru_id: "",
   };
 }
@@ -31,7 +41,15 @@ function pickList<T>(payload: any): T[] {
 }
 
 export function useSuratKesiswaanPage() {
-  const { getTugas, createTugas, update, remove } = useSuratKesiswaan();
+  const {
+    getAll: getAllSuratKesiswaan,
+    createTugas,
+    createDispensasi,
+    createKeteranganSiswa,
+    createKeteranganAlumni,
+    update,
+    remove,
+  } = useSuratKesiswaan();
   const { getAll: getAllSuratMasuk } = useSuratMasuk();
   const { getAll: getAllSiswa } = useSiswaApi();
   const { getAllGuru } = useGuruApi();
@@ -70,13 +88,73 @@ export function useSuratKesiswaanPage() {
   const kelasOptions = ref<Array<{ label: string; value: string }>>([]);
 
   const jenisDokumenOptions = [
-    { label: "Surat Tugas (Kegiatan Luar Sekolah)", value: "Surat Tugas (Kegiatan Luar Sekolah)" },
-    { label: "Surat Keterangan Siswa Aktif", value: "Surat Keterangan Siswa Aktif" },
-    { label: "Surat Izin / Dispensasi", value: "Surat Izin / Dispensasi" },
+    { label: DOC_TUGAS, value: DOC_TUGAS },
+    { label: DOC_DISPENSASI, value: DOC_DISPENSASI },
+    { label: DOC_KETERANGAN_SISWA, value: DOC_KETERANGAN_SISWA },
+    { label: DOC_KETERANGAN_ALUMNI, value: DOC_KETERANGAN_ALUMNI },
+  ];
+
+  const jenisDokumenCards = [
+    {
+      label: DOC_TUGAS,
+      value: DOC_TUGAS,
+      icon: "lucide:clipboard-check",
+      color: "blue",
+      badge: "Multi siswa",
+      description: "Untuk kegiatan luar sekolah, lomba, undangan, atau penugasan resmi.",
+    },
+    {
+      label: DOC_DISPENSASI,
+      value: DOC_DISPENSASI,
+      icon: "lucide:file-clock",
+      color: "amber",
+      badge: "1 siswa",
+      description: "Untuk izin atau dispensasi siswa pada rentang tanggal tertentu.",
+    },
+    {
+      label: DOC_KETERANGAN_SISWA,
+      value: DOC_KETERANGAN_SISWA,
+      icon: "lucide:badge-check",
+      color: "emerald",
+      badge: "Siswa aktif",
+      description: "Untuk kebutuhan administrasi seperti KTP, beasiswa, rekening, atau SKCK.",
+    },
+    {
+      label: DOC_KETERANGAN_ALUMNI,
+      value: DOC_KETERANGAN_ALUMNI,
+      icon: "lucide:graduation-cap",
+      color: "violet",
+      badge: "Alumni",
+      description: "Untuk lulusan atau siswa nonaktif yang membutuhkan surat keterangan.",
+    },
+  ];
+
+  const jenisDispensasiOptions = [
+    { label: "Lomba / Kompetisi", value: "lomba" },
+    { label: "Kegiatan Keagamaan", value: "keagamaan" },
+    { label: "Keperluan Keluarga", value: "keluarga" },
+    { label: "Kesehatan", value: "kesehatan" },
+    { label: "Lainnya", value: "lainnya" },
+  ];
+
+  const keperluanSiswaOptions = [
+    { label: "Pembuatan KTP", value: "ktp" },
+    { label: "Beasiswa", value: "beasiswa" },
+    { label: "Pembukaan Rekening Bank", value: "rekening_bank" },
+    { label: "SKCK", value: "skck" },
+    { label: "Lainnya", value: "lainnya" },
+  ];
+
+  const keperluanAlumniOptions = [
+    { label: "Melamar Kerja", value: "melamar_kerja" },
+    { label: "Studi Lanjut", value: "studi_lanjut" },
+    { label: "Kelengkapan Dokumen", value: "dokumen" },
+    { label: "Lainnya", value: "lainnya" },
   ];
 
   const columns = [
     { accessorKey: "nomor_surat", header: "No. Surat" },
+    { accessorKey: "jenis", header: "Jenis" },
     { accessorKey: "nama", header: "Nama / Personil" },
     { accessorKey: "tanggal_surat", header: "Tgl Surat" },
     { accessorKey: "status", header: "Status" },
@@ -91,6 +169,67 @@ export function useSuratKesiswaanPage() {
       (s) => s.nama_siswa.toLowerCase().includes(search) || s.nis.includes(search),
     );
   });
+
+  const isTugasDocument = computed(() => form.value.jenis_dokumen === DOC_TUGAS);
+  const isDispensasiDocument = computed(() => form.value.jenis_dokumen === DOC_DISPENSASI);
+  const isKeteranganSiswaDocument = computed(() => form.value.jenis_dokumen === DOC_KETERANGAN_SISWA);
+  const isKeteranganAlumniDocument = computed(() => form.value.jenis_dokumen === DOC_KETERANGAN_ALUMNI);
+  const isSingleSiswaDocument = computed(() => !isTugasDocument.value);
+  const showDateSection = computed(() => isTugasDocument.value || isDispensasiDocument.value);
+
+  const selectedPersonLabel = computed(() =>
+    isKeteranganAlumniDocument.value ? "Alumni" : "Siswa",
+  );
+
+  const submitButtonLabel = computed(() => {
+    if (isEditing.value) return "UPDATE DATA SURAT";
+    if (isDispensasiDocument.value) return "GENERATE & CATAT DISPENSASI";
+    if (isKeteranganSiswaDocument.value) return "GENERATE SURAT KETERANGAN SISWA";
+    if (isKeteranganAlumniDocument.value) return "GENERATE SURAT KETERANGAN ALUMNI";
+    return "GENERATE & CATAT SURAT TUGAS";
+  });
+
+  const submitHelpText = computed(() => {
+    if (isEditing.value) return "";
+    if (isTugasDocument.value) {
+      return "Sistem akan membuat record terpisah untuk setiap siswa terpilih";
+    }
+    return `Sistem akan membuat satu surat untuk ${selectedPersonLabel.value.toLowerCase()} yang dipilih`;
+  });
+
+  const activeDocumentCard = computed(() =>
+    jenisDokumenCards.find((item) => item.value === form.value.jenis_dokumen) || jenisDokumenCards[0],
+  );
+
+  function getJenisSuratLabel(jenis?: string): string {
+    switch (jenis) {
+      case "tugas":
+        return "Surat Tugas";
+      case "dispensasi":
+        return "Dispensasi";
+      case "keterangan_siswa":
+        return "Ket. Siswa";
+      case "keterangan_alumni":
+        return "Ket. Alumni";
+      default:
+        return jenis || "-";
+    }
+  }
+
+  function getJenisSuratColor(jenis?: string): "primary" | "warning" | "success" | "info" | "neutral" {
+    switch (jenis) {
+      case "tugas":
+        return "primary";
+      case "dispensasi":
+        return "warning";
+      case "keterangan_siswa":
+        return "success";
+      case "keterangan_alumni":
+        return "info";
+      default:
+        return "neutral";
+    }
+  }
 
   function formatDate(dateStr: string): string {
     if (!dateStr) return "-";
@@ -317,6 +456,8 @@ export function useSuratKesiswaanPage() {
     const idx = selectedSiswa.value.findIndex((s) => s.id_siswa === siswa.id_siswa);
     if (idx > -1) {
       selectedSiswa.value.splice(idx, 1);
+    } else if (isSingleSiswaDocument.value) {
+      selectedSiswa.value = [siswa];
     } else {
       selectedSiswa.value.push(siswa);
     }
@@ -327,7 +468,7 @@ export function useSuratKesiswaanPage() {
   }
 
   function selectAllSiswa() {
-    if (isEditing.value) return;
+    if (isEditing.value || isSingleSiswaDocument.value) return;
     filteredSiswaList.value.forEach((s) => {
       if (!isSiswaSelected(s.id_siswa)) {
         selectedSiswa.value.push(s);
@@ -338,7 +479,7 @@ export function useSuratKesiswaanPage() {
   async function fetchData() {
     loading.value = true;
     try {
-      const res = await getTugas({
+      const res = await getAllSuratKesiswaan({
         page: pagination.value.page,
         limit: pagination.value.limit,
         search: filters.value.search || undefined,
@@ -352,6 +493,79 @@ export function useSuratKesiswaanPage() {
     }
   }
 
+  async function warnAndStop(title: string, message: string): Promise<false> {
+    blurActiveElement();
+    await showConfirmation(title, message, { showCancelButton: false });
+    return false;
+  }
+
+  async function validateForm(): Promise<boolean> {
+    if (!form.value.penandatangan_guru_id) {
+      return warnAndStop("Data Tidak Lengkap", "Pilih guru penandatangan terlebih dahulu.");
+    }
+
+    if (!isEditing.value && selectedSiswa.value.length === 0) {
+      return warnAndStop(
+        "Peringatan",
+        `Silakan pilih ${isSingleSiswaDocument.value ? "satu" : "setidaknya satu"} ${selectedPersonLabel.value.toLowerCase()} untuk surat ini.`,
+      );
+    }
+
+    if (!isEditing.value && isSingleSiswaDocument.value && selectedSiswa.value.length !== 1) {
+      return warnAndStop("Data Tidak Valid", `Jenis surat ini hanya boleh memilih satu ${selectedPersonLabel.value.toLowerCase()}.`);
+    }
+
+    if ((form.value.tempat || "").length > MAX_LOCATION_LENGTH) {
+      return warnAndStop("Data Tidak Valid", "Tempat pelaksanaan maksimal 200 karakter.");
+    }
+
+    if ((form.value.alamat || "").length > MAX_LOCATION_LENGTH) {
+      return warnAndStop("Data Tidak Valid", "Alamat lengkap maksimal 200 karakter.");
+    }
+
+    if ((form.value.waktu_jam || "").length > MAX_WAKTU_LENGTH) {
+      return warnAndStop("Data Tidak Valid", "Waktu maksimal 100 karakter.");
+    }
+
+    if (isTugasDocument.value || isEditing.value) {
+      if (!form.value.keperluan) {
+        return warnAndStop("Data Tidak Lengkap", "Kolom Maksud / Keperluan harus diisi.");
+      }
+
+      if (!form.value.tgl_mulai) {
+        return warnAndStop("Data Tidak Lengkap", "Tanggal mulai wajib diisi.");
+      }
+    }
+
+    if (isDispensasiDocument.value) {
+      if (!form.value.alasan_dispensasi) {
+        return warnAndStop("Data Tidak Lengkap", "Alasan dispensasi wajib diisi.");
+      }
+
+      if (!form.value.tgl_mulai || !form.value.tgl_selesai) {
+        return warnAndStop("Data Tidak Lengkap", "Tanggal mulai dan tanggal selesai dispensasi wajib diisi.");
+      }
+    }
+
+    if (showDateSection.value && form.value.tgl_mulai && form.value.tgl_selesai) {
+      const startDate = new Date(form.value.tgl_mulai);
+      const endDate = new Date(form.value.tgl_selesai);
+      if (endDate < startDate) {
+        return warnAndStop("Data Tidak Valid", "Tanggal selesai tidak boleh sebelum tanggal mulai.");
+      }
+    }
+
+    if (isKeteranganSiswaDocument.value && form.value.keperluan_keterangan === "lainnya" && !form.value.keperluan_lainnya.trim()) {
+      return warnAndStop("Data Tidak Lengkap", "Keperluan lainnya wajib diisi.");
+    }
+
+    if (isKeteranganAlumniDocument.value && form.value.keperluan_alumni === "lainnya" && !form.value.keperluan_lainnya.trim()) {
+      return warnAndStop("Data Tidak Lengkap", "Keperluan lainnya wajib diisi.");
+    }
+
+    return true;
+  }
+
   function resetForm() {
     form.value = createDefaultForm();
     selectedSiswa.value = [];
@@ -362,53 +576,7 @@ export function useSuratKesiswaanPage() {
   async function handleGenerate() {
     let processingModalOpen = false;
 
-    if (!form.value.keperluan) {
-      blurActiveElement();
-      await showConfirmation("Data Tidak Lengkap", "Kolom Maksud / Keperluan harus diisi.", {
-        showCancelButton: false,
-      });
-      return;
-    }
-
-    if (!form.value.penandatangan_guru_id) {
-      blurActiveElement();
-      await showConfirmation("Data Tidak Lengkap", "Pilih guru penandatangan terlebih dahulu.", {
-        showCancelButton: false,
-      });
-      return;
-    }
-
-    if (!isEditing.value && selectedSiswa.value.length === 0) {
-      blurActiveElement();
-      await showConfirmation("Peringatan", "Silakan pilih setidaknya satu siswa untuk surat ini.", {
-        showCancelButton: false,
-      });
-      return;
-    }
-
-    if ((form.value.tempat || "").length > MAX_LOCATION_LENGTH) {
-      blurActiveElement();
-      await showConfirmation("Data Tidak Valid", "Tempat pelaksanaan maksimal 200 karakter.", {
-        showCancelButton: false,
-      });
-      return;
-    }
-
-    if ((form.value.alamat || "").length > MAX_LOCATION_LENGTH) {
-      blurActiveElement();
-      await showConfirmation("Data Tidak Valid", "Alamat lengkap maksimal 200 karakter.", {
-        showCancelButton: false,
-      });
-      return;
-    }
-
-    if ((form.value.waktu_jam || "").length > MAX_WAKTU_LENGTH) {
-      blurActiveElement();
-      await showConfirmation("Data Tidak Valid", "Waktu maksimal 100 karakter.", {
-        showCancelButton: false,
-      });
-      return;
-    }
+    if (!(await validateForm())) return;
 
     saving.value = true;
     try {
@@ -432,30 +600,62 @@ export function useSuratKesiswaanPage() {
         showLoading("Memproses Surat...", "Sistem sedang membuat dokumen dan PDF. Mohon tunggu.");
         processingModalOpen = true;
 
-        const res = await createTugas({
-          siswa_ids: selectedSiswa.value.map((s) => s.id_siswa),
-          jenis_dokumen: form.value.jenis_dokumen,
-          dasar_penugasan_id: form.value.dasar_penugasan_id,
-          keperluan: form.value.keperluan,
-          tempat: form.value.tempat,
-          alamat: form.value.alamat,
-          waktu_jam: form.value.waktu_jam,
-          tgl_mulai: new Date(form.value.tgl_mulai).toISOString(),
-          tgl_selesai: form.value.tgl_selesai ? new Date(form.value.tgl_selesai).toISOString() : undefined,
-          penandatangan_guru_id: form.value.penandatangan_guru_id,
-        });
+        const selected = selectedSiswa.value[0];
+        let res: { success: boolean; message: string };
+        let successMessage = `${selectedSiswa.value.length} data surat berhasil dibuat dan dicatat.`;
+
+        if (isDispensasiDocument.value) {
+          res = await createDispensasi({
+            siswa_id: selected.id_siswa,
+            alasan_dispensasi: form.value.alasan_dispensasi,
+            jenis_dispensasi: form.value.jenis_dispensasi,
+            tanggal_mulai: new Date(form.value.tgl_mulai).toISOString(),
+            tanggal_selesai: new Date(form.value.tgl_selesai).toISOString(),
+            keterangan_pendukung: form.value.keterangan_tambahan || undefined,
+            penandatangan_guru_id: form.value.penandatangan_guru_id,
+          });
+          successMessage = "Surat dispensasi berhasil dibuat dan dicatat.";
+        } else if (isKeteranganSiswaDocument.value) {
+          res = await createKeteranganSiswa({
+            siswa_id: selected.id_siswa,
+            keperluan: form.value.keperluan_keterangan,
+            keperluan_lainnya: form.value.keperluan_lainnya || undefined,
+            keterangan_tambahan: form.value.keterangan_tambahan || undefined,
+            penandatangan_guru_id: form.value.penandatangan_guru_id,
+          });
+          successMessage = "Surat keterangan siswa aktif berhasil dibuat dan dicatat.";
+        } else if (isKeteranganAlumniDocument.value) {
+          res = await createKeteranganAlumni({
+            siswa_id: selected.id_siswa,
+            keperluan: form.value.keperluan_alumni,
+            keperluan_lainnya: form.value.keperluan_lainnya || undefined,
+            keterangan_tambahan: form.value.keterangan_tambahan || undefined,
+            penandatangan_guru_id: form.value.penandatangan_guru_id,
+          });
+          successMessage = "Surat keterangan alumni berhasil dibuat dan dicatat.";
+        } else {
+          res = await createTugas({
+            siswa_ids: selectedSiswa.value.map((s) => s.id_siswa),
+            jenis_dokumen: form.value.jenis_dokumen,
+            dasar_penugasan_id: form.value.dasar_penugasan_id,
+            keperluan: form.value.keperluan,
+            tempat: form.value.tempat,
+            alamat: form.value.alamat,
+            waktu_jam: form.value.waktu_jam,
+            tgl_mulai: new Date(form.value.tgl_mulai).toISOString(),
+            tgl_selesai: form.value.tgl_selesai ? new Date(form.value.tgl_selesai).toISOString() : undefined,
+            penandatangan_guru_id: form.value.penandatangan_guru_id,
+          });
+        }
 
         if (!res.success) {
-          throw new Error(res.message || "Gagal membuat surat tugas.");
+          throw new Error(res.message || "Gagal membuat surat kesiswaan.");
         }
 
         closeLoading();
         processingModalOpen = false;
 
-        await showSuccess(
-          "Berhasil",
-          `${selectedSiswa.value.length} data surat berhasil dibuat dan dicatat.`,
-        );
+        await showSuccess("Berhasil", successMessage);
       }
 
       resetForm();
@@ -565,6 +765,24 @@ export function useSuratKesiswaanPage() {
     },
   );
 
+  watch(
+    () => form.value.jenis_dokumen,
+    () => {
+      if (isEditing.value) return;
+      selectedSiswa.value = [];
+      form.value.dasar_penugasan_id = undefined;
+      form.value.keperluan = "";
+      form.value.tempat = "";
+      form.value.alamat = "";
+      form.value.waktu_jam = "";
+      form.value.tgl_mulai = new Date().toISOString().split("T")[0];
+      form.value.tgl_selesai = "";
+      form.value.alasan_dispensasi = "";
+      form.value.keperluan_lainnya = "";
+      form.value.keterangan_tambahan = "";
+    },
+  );
+
   onMounted(() => {
     fetchData();
     fetchSuratMasuk();
@@ -594,8 +812,24 @@ export function useSuratKesiswaanPage() {
     tingkatOptions,
     kelasOptions,
     jenisDokumenOptions,
+    jenisDokumenCards,
+    jenisDispensasiOptions,
+    keperluanSiswaOptions,
+    keperluanAlumniOptions,
     columns,
     filteredSiswaList,
+    activeDocumentCard,
+    isTugasDocument,
+    isDispensasiDocument,
+    isKeteranganSiswaDocument,
+    isKeteranganAlumniDocument,
+    isSingleSiswaDocument,
+    showDateSection,
+    selectedPersonLabel,
+    submitButtonLabel,
+    submitHelpText,
+    getJenisSuratLabel,
+    getJenisSuratColor,
     formatDate,
     getStatusColor,
     onDasarPenugasanChange,

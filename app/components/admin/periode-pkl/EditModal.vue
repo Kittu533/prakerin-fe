@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch, computed } from "vue";
+import { ref, watch, computed, onMounted } from "vue";
 import {
     usePeriodePKLApi,
     type PeriodePKL,
@@ -42,6 +42,45 @@ const statusOptions = [
     { label: "Arsip", value: "arsip" },
 ];
 
+const toApiDate = (dateKey: string) => dateKey;
+
+const getSelectValue = (value: unknown): string => {
+    if (typeof value === "string") return value;
+    if (value && typeof value === "object") {
+        const candidate = value as Record<string, unknown>;
+        if (typeof candidate.value === "string") return candidate.value;
+        if (typeof candidate.id_tahun_ajaran === "string") {
+            return candidate.id_tahun_ajaran;
+        }
+    }
+    return "";
+};
+
+const getApiErrorMessage = (error: any, fallback: string) => {
+    const data = error?.response?.data || error?.data || error;
+    if (!data?.errors) return data?.message || error?.message || fallback;
+
+    const firstMessage = Object.values(data.errors)
+        .flat()
+        .find((message) => typeof message === "string");
+
+    return typeof firstMessage === "string"
+        ? firstMessage
+        : data.message || fallback;
+};
+
+const applyApiErrors = (error: any) => {
+    const apiErrors = error?.response?.data?.errors || error?.errors;
+    if (!apiErrors || typeof apiErrors !== "object") return;
+
+    Object.entries(apiErrors).forEach(([field, messages]) => {
+        const message = Array.isArray(messages) ? messages[0] : messages;
+        if (typeof message === "string") {
+            errors.value[field] = message;
+        }
+    });
+};
+
 // Status config
 const statusConfig: Record<
     string,
@@ -81,7 +120,7 @@ const canEdit = computed(() => {
 
 // Current status config
 const currentStatusConfig = computed(() => {
-    return statusConfig[formData.value.status] || statusConfig.draft;
+    return statusConfig[getSelectValue(formData.value.status)] || statusConfig.draft;
 });
 const today = computed(() => getLocalDateKey());
 
@@ -93,7 +132,7 @@ const validateForm = (): boolean => {
         errors.value.nama_periode = "Nama periode wajib diisi";
     }
 
-    if (!formData.value.id_tahun_ajaran) {
+    if (!getSelectValue(formData.value.id_tahun_ajaran)) {
         errors.value.id_tahun_ajaran = "Tahun ajaran wajib dipilih";
     }
 
@@ -124,17 +163,6 @@ const validateForm = (): boolean => {
                 "Tanggal selesai harus setelah tanggal mulai";
         }
 
-        // Check duration (6-12 months)
-        const diffTime = Math.abs(end.getTime() - start.getTime());
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        const diffMonths = Math.round(diffDays / 30);
-
-        if (diffMonths < 6) {
-            errors.value.tanggal_selesai = "Durasi minimal 6 bulan";
-        }
-        if (diffMonths > 12) {
-            errors.value.tanggal_selesai = "Durasi maksimal 12 bulan";
-        }
     }
 
     return Object.keys(errors.value).length === 0;
@@ -187,20 +215,23 @@ const submit = async () => {
     submitting.value = true;
     try {
         const payload = {
-            nama_periode: formData.value.nama_periode,
-            id_tahun_ajaran: formData.value.id_tahun_ajaran,
-            tanggal_mulai: new Date(formData.value.tanggal_mulai).toISOString(),
-            tanggal_selesai: new Date(
-                formData.value.tanggal_selesai,
-            ).toISOString(),
-            status: formData.value.status,
-            deskripsi: formData.value.deskripsi || undefined,
+            nama_periode: formData.value.nama_periode.trim(),
+            id_tahun_ajaran: getSelectValue(formData.value.id_tahun_ajaran),
+            tanggal_mulai: toApiDate(formData.value.tanggal_mulai),
+            tanggal_selesai: toApiDate(formData.value.tanggal_selesai),
+            status: getSelectValue(formData.value.status) || "draft",
+            deskripsi: formData.value.deskripsi.trim() || undefined,
         };
 
         const response = await api.update(
             props.periode!.id_periode_pkl,
             payload,
         );
+
+        if (!response.success) {
+            applyApiErrors(response);
+            throw response;
+        }
 
         if (response.success) {
             toast.add({
@@ -211,9 +242,13 @@ const submit = async () => {
         }
     } catch (error: any) {
         console.error("Failed to update periode:", error);
+        applyApiErrors(error);
         toast.add({
             title: "Gagal mengupdate periode",
-            description: error.response?.data?.message || error.message,
+            description: getApiErrorMessage(
+                error,
+                "Periksa kembali data periode PKL",
+            ),
             color: "error",
         });
     } finally {
@@ -244,8 +279,10 @@ watch(
     { immediate: true },
 );
 
-// Fetch options on mount
-fetchTahunAjaran();
+// Fetch options on client after auth token is available.
+onMounted(() => {
+    fetchTahunAjaran();
+});
 </script>
 
 <template>
@@ -347,6 +384,7 @@ fetchTahunAjaran();
                             placeholder="Pilih tahun ajaran"
                             :disabled="submitting || !canEdit"
                             size="lg"
+                            value-key="value"
                             class="w-full"
                         />
                         <p
@@ -416,8 +454,7 @@ fetchTahunAjaran();
                             <USelectMenu
                                 v-model="formData.status"
                                 :items="statusOptions"
-                                option-attribute="value"
-                                value-attribute="value"
+                                value-key="value"
                                 :disabled="submitting"
                                 size="lg"
                                 class="flex-1"
@@ -482,7 +519,7 @@ fetchTahunAjaran();
                         <UTextarea
                             v-model="formData.deskripsi"
                             placeholder="Deskripsi periode PKL..."
-                            rows="3"
+                            :rows="3"
                             :disabled="submitting || !canEdit"
                             class="w-full"
                         />
